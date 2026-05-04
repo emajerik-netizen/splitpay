@@ -859,3 +859,32 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+.danger-btn {
+  color: #b04343;
+  border-color: color-mix(in srgb, #b04343 30%, transparent);
+}
+
+.danger-btn:hover {
+  color: #d14f4f;
+  border-color: color-mix(in srgb, #d14f4f 40%, transparent);
+}
+
+.owner-actions {
+  border: 1px solid color-mix(in srgb, #b04343 20%, transparent);
+  background: color-mix(in srgb, #b04343 4%, white);
+}
+
+.guest-claim-btn {
+  text-align: left;
+  background: #f9fbff;
+  border: 1px solid var(--stroke);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.guest-claim-btn:hover {
+  background: #ebf3ff;
+  border-color: var(--accent);
+  transform: translateX(2px);
+}

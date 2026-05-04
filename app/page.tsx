@@ -36,6 +36,7 @@ type Trip = {
   id: string;
   name: string;
   date: string;
+  owner: string;
   inviteCode: string;
   members: string[];
   expenses: TripExpense[];
@@ -62,19 +63,21 @@ type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balan
 
 const DEFAULT_TRIP: Trip = {
   id: 'default-trip',
-  name: 'Moj prvy vylet',
-  date: 'Doplnis datum',
+  name: 'Môj prvý výlet',
+  date: 'Doplň dátum',
+  owner: 'Ty',
   inviteCode: 'DEMO01',
   members: ['Ty'],
   expenses: [],
   pendingInvites: [],
 };
 
-function createTrip(name: string, date: string): Trip {
+function createTrip(name: string, date: string, owner: string = 'Ty'): Trip {
   return {
     id: makeId(),
     name,
     date,
+    owner,
     inviteCode: makeInviteCode(),
     members: ['Ty'],
     expenses: [],
@@ -415,14 +418,14 @@ export default function SplitPayWebApp() {
     const cleanedName = newTripName.trim();
     if (!cleanedName) return;
 
-    const trip = createTrip(cleanedName, newTripDate.trim() || 'Bez datumu');
+    const trip = createTrip(cleanedName, newTripDate.trim() || 'Bez dátumu', appSession?.name || 'Ty');
     setTrips((prev) => [trip, ...prev]);
     setSelectedTripId(trip.id);
     setAppScreen('trip-detail');
     setDetailScreen('overview');
     setNewTripName('');
     setNewTripDate('');
-    setInfoMessage(`Vylet ${trip.name} bol vytvoreny.`);
+    setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
   }
 
   function handleAddMember(event: FormEvent<HTMLFormElement>) {
@@ -446,6 +449,60 @@ export default function SplitPayWebApp() {
     setNewMember('');
   }
 
+  function removeMember(memberName: string) {
+    if (!currentTrip) return;
+    const isOwner = currentTrip.owner === (appSession?.name || 'Ty');
+    if (!isOwner) return;
+
+    updateCurrentTrip((trip) => ({
+      ...trip,
+      members: trip.members.filter((name) => name !== memberName),
+      expenses: trip.expenses.map((expense) => ({
+        ...expense,
+        payer: expense.payer === memberName ? trip.members[0] || 'Ty' : expense.payer,
+        participants: expense.participants.filter((name) => name !== memberName),
+      })),
+    }));
+    setInfoMessage(`${memberName} bol(a) odstránený(á) z výletu.`);
+  }
+
+  function deleteTrip(tripId: string) {
+    const tripToDelete = trips.find((t) => t.id === tripId);
+    if (!tripToDelete) return;
+    const isOwner = tripToDelete.owner === (appSession?.name || 'Ty');
+    if (!isOwner) return;
+
+    setTrips((prev) => prev.filter((trip) => trip.id !== tripId));
+    goToTripsHome();
+    setInfoMessage(`Výlet ${tripToDelete.name} bol vymazaný.`);
+  }
+
+  function handleGuestClaimIdentity(invitedName: string) {
+    if (!currentTrip) return;
+    const userName = appSession?.name || 'Ty';
+
+    updateCurrentTrip((trip) => ({
+      ...trip,
+      members: trip.members.map((name) => (name === userName ? invitedName : name)),
+      expenses: trip.expenses.map((expense) => ({
+        ...expense,
+        payer: expense.payer === userName ? invitedName : expense.payer,
+        participants: expense.participants.map((name) => (name === userName ? invitedName : name)),
+      })),
+      pendingInvites: trip.pendingInvites.map((invite) =>
+        invite.name === invitedName ? { ...invite, status: 'Prijate' } : invite
+      ),
+    }));
+
+    if (appSession) {
+      const updatedSession = { ...appSession, name: invitedName };
+      setAppSession(updatedSession);
+      window.localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(updatedSession));
+    }
+
+    setInfoMessage(`Tvoja identita v tomto výlete je teraz ${invitedName}.`);
+  }
+
   function handleAddInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentTrip) return;
@@ -467,7 +524,7 @@ export default function SplitPayWebApp() {
     }));
     setInviteName('');
     setInviteContact('');
-    setInfoMessage(`Pozvanka pre ${cleanedName} je pripravena. Kod: ${currentTrip.inviteCode}`);
+    setInfoMessage(`Pozvánka pre ${cleanedName} je pripravená. Kód: ${currentTrip.inviteCode}`);
   }
 
   function regenerateInviteCode() {
@@ -509,12 +566,12 @@ export default function SplitPayWebApp() {
     );
 
     if (!foundTripId) {
-      setInfoMessage('Kod neexistuje. Skontroluj ho a skus znova.');
+      setInfoMessage('Kód neexistuje. Skontroluj ho a skús znova.');
       return;
     }
 
     if (duplicateMember) {
-      setInfoMessage(`${cleanedName} uz je v tejto skupine.`);
+      setInfoMessage(`${cleanedName} už je v tejto skupine.`);
       return;
     }
 
@@ -523,7 +580,7 @@ export default function SplitPayWebApp() {
     setDetailScreen('overview');
     setJoinName('');
     setJoinCode('');
-    setInfoMessage(`${cleanedName} sa pridal(a) do vyletu.`);
+    setInfoMessage(`${cleanedName} sa pridal(a) do výletu.`);
   }
 
   function toggleParticipant(name: string) {
@@ -695,17 +752,17 @@ export default function SplitPayWebApp() {
             <>
               <section className="hero hero-panel">
                 <div>
-                  <p className="eyebrow">Moje vylety</p>
-                  <h1>Vyber si vylet alebo vytvor novy</h1>
+                  <p className="eyebrow">Moje výlety</p>
+                  <h1>Vyber si výlet alebo vytvor nový</h1>
                   <p>
-                    Toto je uvodna obrazovka po prihlaseni. Tu mas samostatne okna pre vytvorenie
-                    vyletu, pridanie sa do vyletu a prehlad vsetkych vyletov.
+                    Toto je úvodná obrazovka po prihlásení. Tu máš samostatné okná pre vytvorenie
+                    výletu, pridanie sa do výletu a prehľad všetkých výletov.
                   </p>
                 </div>
                 <div className="hero-actions">
-                  <p className="muted">Prihlaseny email: {appSession?.email}</p>
+                  <p className="muted">Prihlásený email: {appSession?.email}</p>
                   <button type="button" className="ghost" onClick={handleLogout}>
-                    Odhlasit
+                    Odhlásiť
                   </button>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
@@ -714,28 +771,28 @@ export default function SplitPayWebApp() {
               <section className="screen-grid">
                 <section className="screen-window section-card">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Novy vylet</p>
-                    <h2>Zalozit vylet</h2>
+                    <p className="eyebrow">Nový výlet</p>
+                    <h2>Založiť výlet</h2>
                   </div>
                   <form className="stack" onSubmit={handleCreateTrip}>
                     <input
                       value={newTripName}
                       onChange={(event) => setNewTripName(event.target.value)}
-                      placeholder="Nazov vyletu"
+                      placeholder="Názov výletu"
                     />
                     <input
                       value={newTripDate}
                       onChange={(event) => setNewTripDate(event.target.value)}
-                      placeholder="Datum (volitelne)"
+                      placeholder="Dátum (voliteľné)"
                     />
-                    <button type="submit">Vytvorit vylet</button>
+                    <button type="submit">Vytvoriť výlet</button>
                   </form>
                 </section>
 
                 <section className="screen-window section-card">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Join</p>
-                    <h2>Pridat sa do vyletu</h2>
+                    <p className="eyebrow">Pripojenie</p>
+                    <h2>Pridať sa do výletu</h2>
                   </div>
                   <form className="stack" onSubmit={handleJoinByCode}>
                     <input
@@ -746,17 +803,17 @@ export default function SplitPayWebApp() {
                     <input
                       value={joinCode}
                       onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                      placeholder="Kod od organizatora"
+                      placeholder="Kód od organizátora"
                     />
-                    <button type="submit">Pripojit sa</button>
+                    <button type="submit">Pripojiť sa</button>
                   </form>
                 </section>
               </section>
 
               <section className="app-section">
                 <div className="section-head">
-                  <p className="eyebrow">Prehlad</p>
-                  <h2>Moje vylety</h2>
+                  <p className="eyebrow">Prehľad</p>
+                  <h2>Moje výlety</h2>
                 </div>
                 <div className="trip-overview-list">
                   {trips.map((trip) => {
@@ -783,8 +840,8 @@ export default function SplitPayWebApp() {
                             </span>
                           </div>
                           <div className="trip-card-meta">
-                            <span>{trip.members.length} clenov</span>
-                            <span>{trip.expenses.length} vydavkov</span>
+                            <span>{trip.members.length} členov</span>
+                            <span>{trip.expenses.length} výdavkov</span>
                             <span>Spolu {eur(tripTotal)}</span>
                           </div>
                         </div>
@@ -799,18 +856,18 @@ export default function SplitPayWebApp() {
               <section className="hero hero-panel">
                 <div>
                   <button type="button" className="back-link" onClick={goToTripsHome}>
-                    ← Spat na moje vylety
+                    ← Späť na moje výlety
                   </button>
-                  <p className="eyebrow">Detail vyletu</p>
+                  <p className="eyebrow">Detail výletu</p>
                   <h1>{currentTrip.name}</h1>
                   <p>
-                    {currentTrip.date} · {members.length} clenov · {eur(totalSpent)} spolu
+                    {currentTrip.date} · {members.length} členov · {eur(totalSpent)} spolu
                   </p>
                 </div>
                 <div className="hero-actions hero-actions-end">
-                  <p className="muted">Kod vyletu: {currentTrip.inviteCode}</p>
+                  <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
                   <button type="button" className="ghost" onClick={handleLogout}>
-                    Odhlasit
+                    Odhlásiť
                   </button>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
@@ -822,28 +879,28 @@ export default function SplitPayWebApp() {
                   className={detailScreen === 'overview' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => setDetailScreen('overview')}
                 >
-                  Prehlad
+                  Prehľad
                 </button>
                 <button
                   type="button"
                   className={detailScreen === 'members' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => setDetailScreen('members')}
                 >
-                  Clenovia
+                  Členovia
                 </button>
                 <button
                   type="button"
                   className={detailScreen === 'invites' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => setDetailScreen('invites')}
                 >
-                  Pozvanky
+                  Pozvánky
                 </button>
                 <button
                   type="button"
                   className={detailScreen === 'expenses' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => setDetailScreen('expenses')}
                 >
-                  Vydavky
+                  Výdavky
                 </button>
                 <button
                   type="button"
@@ -857,30 +914,38 @@ export default function SplitPayWebApp() {
               {detailScreen === 'overview' ? (
                 <section className="screen-window section-card screen-single">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Prehlad vyletu</p>
-                    <h2>Zakladne informacie</h2>
+                    <p className="eyebrow">Prehľad výletu</p>
+                    <h2>Základné informácie</h2>
                   </div>
                   <div className="stat-grid">
                     <div className="stat-card">
-                      <span>Clenovia</span>
+                      <span>Členovia</span>
                       <strong>{members.length}</strong>
                     </div>
                     <div className="stat-card">
-                      <span>Vydavky</span>
+                      <span>Výdavky</span>
                       <strong>{normalizedExpenses.length}</strong>
                     </div>
                     <div className="stat-card">
-                      <span>Pozvanky</span>
+                      <span>Pozvánky</span>
                       <strong>{currentTrip.pendingInvites.length}</strong>
                     </div>
                     <div className="stat-card">
-                      <span>Spolu minuté</span>
+                      <span>Spolu minúté</span>
                       <strong>{eur(totalSpent)}</strong>
                     </div>
                   </div>
+                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                    <div className="mini-panel owner-actions">
+                      <h3>Správa výletu</h3>
+                      <button type="button" className="ghost danger-btn" onClick={() => deleteTrip(currentTrip.id)}>
+                        Vymazať výlet
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="screen-grid compact-grid">
                     <div className="mini-panel">
-                      <h3>Clenovia vyletu</h3>
+                      <h3>Členovia výletu</h3>
                       <div className="pill-list">
                         {members.map((name) => (
                           <div key={name} className="pill">
@@ -890,9 +955,9 @@ export default function SplitPayWebApp() {
                       </div>
                     </div>
                     <div className="mini-panel">
-                      <h3>Posledne vydavky</h3>
+                      <h3>Posledné výdavky</h3>
                       <div className="stack-list">
-                        {recentExpenses.length === 0 ? <p className="muted">Zatial ziadne zaznamy.</p> : null}
+                        {recentExpenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
                         {recentExpenses.map((expense) => (
                           <div className="row" key={expense.id}>
                             <div>
@@ -911,28 +976,63 @@ export default function SplitPayWebApp() {
               {detailScreen === 'members' ? (
                 <section className="screen-window section-card screen-single">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Tim</p>
-                    <h2>Clenovia vyletu</h2>
+                    <p className="eyebrow">Tím</p>
+                    <h2>Členovia výletu</h2>
                   </div>
-                  <form className="inline-form" onSubmit={handleAddMember}>
-                    <input
-                      value={newMember}
-                      onChange={(event) => setNewMember(event.target.value)}
-                      placeholder="Meno noveho clena"
-                    />
-                    <button type="submit">Pridat clena</button>
-                  </form>
+                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                    <form className="inline-form" onSubmit={handleAddMember}>
+                      <input
+                        value={newMember}
+                        onChange={(event) => setNewMember(event.target.value)}
+                        placeholder="Meno nového člena"
+                      />
+                      <button type="submit">Pridať člena</button>
+                    </form>
+                  ) : null}
                   <div className="member-list">
                     {members.map((name) => (
                       <div key={name} className="member-row">
                         <div className="member-avatar">{name.slice(0, 1)}</div>
                         <div>
                           <strong>{name}</strong>
-                          <p>{name === appSession?.name ? 'Tvoje aktivne meno v aplikacii' : 'Clen vyletu'}</p>
+                          <p>
+                            {name === appSession?.name ? 'Tvoje aktívne meno v aplikácii' : 'Člen výletu'}
+                            {currentTrip.owner === name ? ' (Vlastník)' : ''}
+                          </p>
                         </div>
+                        {currentTrip.owner === (appSession?.name || 'Ty') && name !== currentTrip.owner ? (
+                          <button
+                            type="button"
+                            className="ghost danger-btn"
+                            onClick={() => removeMember(name)}
+                          >
+                            ×
+                          </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>
+                  {!isAuthenticated && currentTrip.pendingInvites.length > 0 ? (
+                    <div className="mini-panel">
+                      <h3>Potvrď svoju identitu</h3>
+                      <p className="muted">Ak si hosť, vyber si jednu z pozvánok:</p>
+                      <div className="stack-list">
+                        {currentTrip.pendingInvites
+                          .filter((invite) => invite.status === 'Pozvany')
+                          .map((invite) => (
+                            <button
+                              key={invite.id}
+                              type="button"
+                              className="row guest-claim-btn"
+                              onClick={() => handleGuestClaimIdentity(invite.name)}
+                            >
+                              <span>{invite.name}</span>
+                              <strong>Toto som ja</strong>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
 
@@ -940,30 +1040,36 @@ export default function SplitPayWebApp() {
                 <section className="screen-window section-card screen-single">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Pozvanie</p>
-                    <h2>Pozvanky a pristupy</h2>
+                    <h2>Pozvánky a prístupy</h2>
                   </div>
-                  <div className="invite-code-box">
-                    <span>Aktivny kod</span>
-                    <strong>{currentTrip.inviteCode}</strong>
-                    <button type="button" className="ghost" onClick={regenerateInviteCode}>
-                      Vygenerovat novy kod
-                    </button>
-                  </div>
-                  <form className="stack" onSubmit={handleAddInvite}>
-                    <input
-                      value={inviteName}
-                      onChange={(event) => setInviteName(event.target.value)}
-                      placeholder="Meno spolucestujuceho"
-                    />
-                    <input
-                      value={inviteContact}
-                      onChange={(event) => setInviteContact(event.target.value)}
-                      placeholder="Kontakt (volitelne)"
-                    />
-                    <button type="submit">Pridat pozvanku</button>
-                  </form>
+                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                    <>
+                      <div className="invite-code-box">
+                        <span>Aktívny kód</span>
+                        <strong>{currentTrip.inviteCode}</strong>
+                        <button type="button" className="ghost" onClick={regenerateInviteCode}>
+                          Vygenerovať nový kód
+                        </button>
+                      </div>
+                      <form className="stack" onSubmit={handleAddInvite}>
+                        <input
+                          value={inviteName}
+                          onChange={(event) => setInviteName(event.target.value)}
+                          placeholder="Meno spoluputujúceho"
+                        />
+                        <input
+                          value={inviteContact}
+                          onChange={(event) => setInviteContact(event.target.value)}
+                          placeholder="Kontakt (voliteľné)"
+                        />
+                        <button type="submit">Pridať pozvánku</button>
+                      </form>
+                    </>
+                  ) : (
+                    <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
+                  )}
                   <div className="stack-list">
-                    {currentTrip.pendingInvites.length === 0 ? <p className="muted">Zatial ziadne pozvanky.</p> : null}
+                    {currentTrip.pendingInvites.length === 0 ? <p className="muted">Zatiaľ žiadne pozvánky.</p> : null}
                     {currentTrip.pendingInvites.map((invite) => (
                       <div key={invite.id} className="row">
                         <div>
@@ -980,17 +1086,17 @@ export default function SplitPayWebApp() {
               {detailScreen === 'expenses' ? (
                 <section className="screen-window section-card screen-single">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Vydavky</p>
-                    <h2>Pridat a spravovat vydavky</h2>
+                    <p className="eyebrow">Výdavky</p>
+                    <h2>Pridať a spravovať výdavky</h2>
                   </div>
                   <div className="screen-grid compact-grid">
                     <div className="mini-panel">
-                      <h3>Novy vydavok</h3>
+                      <h3>Nový výdavok</h3>
                       <form className="stack" onSubmit={handleAddExpense}>
                         <input
                           value={draft.title}
                           onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                          placeholder="Nazov vydavku"
+                          placeholder="Názov výdavku"
                         />
                         <input
                           value={draft.amount}
@@ -1055,26 +1161,26 @@ export default function SplitPayWebApp() {
                             className={draft.splitType === 'shares' ? 'active' : ''}
                             onClick={() => setDraft((prev) => ({ ...prev, splitType: 'shares' }))}
                           >
-                            Podla podielov
+                            Podľa podielov
                           </button>
                         </div>
 
                         <button type="submit" disabled={!canAddExpense}>
-                          Pridat vydavok
+                          Pridať výdavok
                         </button>
                       </form>
                     </div>
 
                     <div className="mini-panel">
-                      <h3>Historia vydavkov</h3>
+                      <h3>História výdavkov</h3>
                       <div className="stack-list">
-                        {currentTrip.expenses.length === 0 ? <p className="muted">Zatial ziadne zaznamy.</p> : null}
+                        {currentTrip.expenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
                         {currentTrip.expenses.map((expense) => (
                           <div className="row" key={expense.id}>
                             <div>
                               <strong>{expense.title}</strong>
                               <p>
-                                Platil {expense.payer}, ucastnici: {expense.participants.join(', ')}
+                                Platil {expense.payer}, účastníci: {expense.participants.join(', ')}
                               </p>
                             </div>
                             <button type="button" className="ghost" onClick={() => removeExpense(expense.id)}>
@@ -1092,11 +1198,11 @@ export default function SplitPayWebApp() {
                 <section className="screen-window section-card screen-single">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Bilancia</p>
-                    <h2>Kto komu kolko dlzi</h2>
+                    <h2>Kto komu koľko dlží</h2>
                   </div>
                   <div className="screen-grid compact-grid">
                     <div className="mini-panel">
-                      <h3>Aktualna bilancia</h3>
+                      <h3>Aktuálna bilancia</h3>
                       <div className="stack-list">
                         {Object.entries(balances).map(([name, value]) => (
                           <div className="row" key={name}>
@@ -1108,13 +1214,13 @@ export default function SplitPayWebApp() {
                     </div>
 
                     <div className="mini-panel">
-                      <h3>Navrh vyrovnania</h3>
-                      {settlements.length === 0 ? <p className="muted">Vsetko je vyrovnane.</p> : null}
+                      <h3>Návrh vyrovnania</h3>
+                      {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
                       <div className="stack-list">
                         {settlements.map((transfer, index) => (
                           <div className="row" key={`${transfer.from}-${transfer.to}-${index}`}>
                             <span>
-                              {transfer.from} zaplati {transfer.to}
+                              {transfer.from} zaplatí {transfer.to}
                             </span>
                             <strong>{eur(transfer.amount)}</strong>
                           </div>
