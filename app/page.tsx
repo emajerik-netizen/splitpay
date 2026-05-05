@@ -2031,13 +2031,13 @@ export default function SplitPayWebApp() {
                     <h2>Členovia výletu</h2>
                   </div>
                   {currentTrip.owner === (appSession?.name || 'Ty') ? (
-                    <form className="inline-form" onSubmit={handleAddMember}>
+                    <form className="inline-form compact-form" onSubmit={handleAddMember}>
                       <input
                         value={newMember}
                         onChange={(event) => setNewMember(event.target.value)}
-                        placeholder="Meno nového člena"
+                        placeholder="Meno člena"
                       />
-                      <button type="submit">Pridať člena</button>
+                      <button type="submit">Pridať</button>
                     </form>
                   ) : null}
                   <div className="member-list">
@@ -2046,10 +2046,11 @@ export default function SplitPayWebApp() {
                         <div className="member-avatar">{name.slice(0, 1)}</div>
                         <div>
                           <strong>{name}</strong>
-                          <p>
-                            {name === appSession?.name ? 'Tvoje aktívne meno v aplikácii' : 'Člen výletu'}
-                            {currentTrip.owner === name ? ' (Vlastník)' : ''}
-                          </p>
+                          {(name === appSession?.name || currentTrip.owner === name) && (
+                            <p>
+                              {currentTrip.owner === name ? 'Vlastník' : 'Ty'}
+                            </p>
+                          )}
                         </div>
                         {currentTrip.owner === (appSession?.name || 'Ty') && name !== currentTrip.owner ? (
                           <button
@@ -2096,57 +2097,55 @@ export default function SplitPayWebApp() {
                   {currentTrip.owner === (appSession?.name || 'Ty') ? (
                     <>
                       <div className="invite-code-box">
-                        <span>Aktívny kód</span>
+                        <span>Kód</span>
                         <strong>{currentTrip.inviteCode}</strong>
                         <div className="share-buttons">
-                          <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>Kopíruj kód</button>
-                          <button type="button" className="ghost" onClick={shareViaEmail}>Poslať emailom</button>
-                          <button type="button" className="ghost" onClick={shareViaWhatsApp}>Poslať cez WhatsApp</button>
-                          <button type="button" className="ghost" onClick={shareViaSMS}>Poslať SMS</button>
+                          <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>Kopírovať</button>
+                          <button type="button" className="ghost" onClick={shareViaEmail}>Email</button>
+                          <button type="button" className="ghost" onClick={shareViaWhatsApp}>WhatsApp</button>
+                          <button type="button" className="ghost" onClick={shareViaSMS}>SMS</button>
                           <button
                             type="button"
                             className="ghost"
                             onClick={() => setShowInviteQr((prev) => !prev)}
                           >
-                            {showInviteQr ? 'Skryť QR' : 'Zdieľať cez QR'}
+                            {showInviteQr ? 'Skryť' : 'QR'}
                           </button>
                         </div>
                         {showInviteQr ? (
                           <div className="qr-share-box">
-                            <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={180} includeMargin />
+                            <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
                             <div>
-                              <p className="muted">Naskenuj QR a otvorí sa pripojenie ku výletu.</p>
-                              <p className="muted">Link: {inviteJoinUrl}</p>
+                              <p className="muted">Naskenuj QR na pripojenie</p>
                             </div>
                           </div>
                         ) : null}
                       </div>
-                      <form className="stack" onSubmit={handleAddInvite}>
+                      <form className="stack compact-form" onSubmit={handleAddInvite}>
                         <input
                           value={inviteName}
                           onChange={(event) => setInviteName(event.target.value)}
-                          placeholder="Meno spoluputujúceho"
+                          placeholder="Meno"
                         />
                         <input
                           value={inviteContact}
                           onChange={(event) => setInviteContact(event.target.value)}
                           placeholder="Kontakt (voliteľné)"
                         />
-                        <button type="submit">Pridať pozvánku</button>
+                        <button type="submit">Pridať</button>
                       </form>
                     </>
                   ) : (
                     <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
                   )}
                   <div className="stack-list">
-                    {currentTrip.pendingInvites.length === 0 ? <p className="muted">Zatiaľ žiadne pozvánky.</p> : null}
                     {currentTrip.pendingInvites.map((invite) => (
                       <div key={invite.id} className="row">
                         <div>
                           <strong>{invite.name}</strong>
-                          <p>{invite.contact || 'Bez kontaktu'}</p>
+                          {invite.contact && <p>{invite.contact}</p>}
                         </div>
-                        <strong>{invite.status}</strong>
+                        <p className="muted">{invite.status}</p>
                       </div>
                     ))}
                   </div>

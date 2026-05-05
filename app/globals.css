@@ -521,6 +521,17 @@ body {
   margin-bottom: 0.8rem;
 }
 
+.compact-form {
+  gap: 0.5rem;
+}
+
+.compact-form input,
+.compact-form button {
+  min-height: 3rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+}
+
 .stack {
   flex-direction: column;
 }
@@ -799,17 +810,17 @@ button:disabled {
 .member-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .member-row {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.65rem;
   border: 1px solid #ebf0fb;
   background: #fbfdff;
-  border-radius: 0.85rem;
-  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.65rem;
 }
 
 .member-row > div:last-child {
@@ -818,71 +829,76 @@ button:disabled {
 
 .member-row strong {
   overflow-wrap: anywhere;
+  font-size: 0.95rem;
 }
 
 .member-row p {
-  margin: 0.2rem 0 0;
+  margin: 0.15rem 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 
 .member-avatar {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #f7f8f6;
   font-weight: 800;
+  font-size: 0.9rem;
 }
 
 .invite-code-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.8rem;
   flex-wrap: wrap;
-  border-radius: 0.9rem;
+  border-radius: 0.8rem;
   background: #f5f9ff;
   border: 1px solid var(--stroke);
-  padding: 0.7rem 0.8rem;
+  padding: 0.55rem 0.7rem;
 }
 
 .invite-code-box span {
   color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .invite-code-box strong {
-  font-size: 1.2rem;
+  font-size: 1rem;
   overflow-wrap: anywhere;
+  font-weight: 700;
 }
 
 .share-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.35rem;
   width: 100%;
 }
 
 .share-buttons button {
   flex: 1 1 auto;
-  min-width: 5rem;
-  font-size: 0.85rem;
-  padding: 0.6rem 0.8rem;
+  min-width: 4.2rem;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.65rem;
+  min-height: 2.6rem;
 }
 
 .qr-share-box {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   width: 100%;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
   border-radius: 0.8rem;
   border: 1px dashed color-mix(in srgb, var(--accent) 42%, transparent);
   background: color-mix(in srgb, var(--accent-soft) 55%, #ffffff);
-  padding: 0.65rem;
+  padding: 0.5rem;
 }
 
 .qr-share-box svg {
@@ -979,18 +995,18 @@ button:disabled {
 .stack-list {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.65rem;
+  gap: 0.5rem;
   border: 1px solid #ebf0fb;
   background: #fbfdff;
-  border-radius: 0.85rem;
-  padding: 0.6rem 0.72rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.65rem;
 }
 
 .row > div,
@@ -1001,12 +1017,13 @@ button:disabled {
 .row strong,
 .row span {
   overflow-wrap: anywhere;
+  font-size: 0.95rem;
 }
 
 .row p {
-  margin: 0.2rem 0 0;
+  margin: 0.12rem 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 
 .positive {
@@ -1151,16 +1168,16 @@ button:disabled {
   }
 
   .trip-theme .share-buttons {
-    gap: 0.4rem;
+    gap: 0.3rem;
   }
 
   .trip-theme .share-buttons button,
   .trip-theme .expense-actions button {
     flex: 0 0 auto;
-    min-height: 2.2rem;
+    min-height: 2.1rem;
     min-width: auto;
-    padding: 0.4rem 0.55rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
   }
 
   .trip-theme .pill button {
@@ -1172,7 +1189,17 @@ button:disabled {
 
   .row,
   .member-row {
-    padding: 0.55rem 0.62rem;
+    padding: 0.45rem 0.55rem;
+    gap: 0.5rem;
+  }
+
+  .member-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .share-buttons button {
+    min-height: 2.35rem;
   }
 }
 
