@@ -240,8 +240,6 @@ export default function SplitPayWebApp() {
   const [authMessage, setAuthMessage] = useState('');
   const [appSession, setAppSession] = useState<AppSession | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
-  const [appScreen, setAppScreen] = useState<AppScreen>('trips');
-  const [detailScreen, setDetailScreen] = useState<TripDetailScreen>('overview');
   const [newTripName, setNewTripName] = useState('');
   const [newTripDate, setNewTripDate] = useState('');
   const [newMember, setNewMember] = useState('');
@@ -702,8 +700,6 @@ export default function SplitPayWebApp() {
 
   async function handleLogout() {
     setAppSession(null);
-    setAppScreen('trips');
-    setDetailScreen('overview');
     window.localStorage.removeItem(SESSION_CACHE_KEY);
     router.push('/');
 
@@ -756,10 +752,10 @@ export default function SplitPayWebApp() {
     [routeTripKey, trips]
   );
   const activeAppScreen: AppScreen =
-    pathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : appScreen;
+    pathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : 'trips';
   const activeDetailScreen = routeTripKey
     ? detailScreenFromPath(pathSegments[2])
-    : detailScreen;
+    : 'overview';
   const activeTripId = routeTrip?.id || selectedTripId;
 
   const currentTrip = useMemo(() => {
@@ -879,20 +875,15 @@ export default function SplitPayWebApp() {
     const tripKey = tripKeyOverride || selectedTrip?.inviteCode;
     if (!tripKey) return;
 
-    setAppScreen('trip-detail');
-    setDetailScreen(nextScreen);
     setSelectedTripId(tripId);
     router.push(tripPath(tripKey, nextScreen));
   }
 
   function goToTripsHome() {
-    setAppScreen('trips');
-    setDetailScreen('overview');
     router.push('/');
   }
 
   function goToAdmin() {
-    setAppScreen('admin');
     router.push('/admin');
   }
 
@@ -1359,6 +1350,7 @@ export default function SplitPayWebApp() {
 
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
+  const isTripRoutePending = activeAppScreen === 'trip-detail' && !currentTrip;
   const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
   const tripThemeStyle = useMemo(() => {
     if (!currentTrip) return undefined;
@@ -1702,7 +1694,12 @@ export default function SplitPayWebApp() {
           ) : null}
 
           {activeAppScreen !== 'admin' ? (
-            !showTripDetail ? (
+            isTripRoutePending ? (
+            <section className="section-card route-loading-card">
+              <p className="eyebrow">Načítavam výlet</p>
+              <h2>Pripravujem údaje...</h2>
+            </section>
+          ) : !showTripDetail ? (
             <>
               <section className="hero hero-panel">
                 <div>

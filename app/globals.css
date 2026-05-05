@@ -461,6 +461,16 @@ body {
   gap: 1rem;
 }
 
+.route-loading-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.route-loading-card h2 {
+  margin: 0;
+}
+
 .two-col-sections {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
