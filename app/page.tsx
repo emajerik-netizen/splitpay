@@ -1959,7 +1959,7 @@ export default function SplitPayWebApp() {
                   </div>
                   {currentTrip.owner === (appSession?.name || 'Ty') ? (
                     <div className="mini-panel owner-actions">
-                      <h3>Správa výletu</h3>
+                      <h3>Nastavenia</h3>
                       <label className="field-block">
                         <span>Mena</span>
                         <select
@@ -1974,7 +1974,7 @@ export default function SplitPayWebApp() {
                         </select>
                       </label>
                       <label className="field-block">
-                        <span>Farba výletu</span>
+                        <span>Farba</span>
                         <input
                           type="color"
                           value={currentTrip.color}
@@ -1987,10 +1987,10 @@ export default function SplitPayWebApp() {
                           checked={currentTrip.archived}
                           onChange={(event) => updateTripSettings({ archived: event.target.checked })}
                         />
-                        Archivovať výlet
+                        Archivovať
                       </label>
                       <button type="button" className="ghost danger-btn" onClick={() => deleteTrip(currentTrip.id)}>
-                        Vymazať výlet
+                        Vymazať
                       </button>
                     </div>
                   ) : null}
