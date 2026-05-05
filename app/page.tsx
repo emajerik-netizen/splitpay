@@ -782,6 +782,9 @@ function friendlyAuthError(message: string) {
   if (msg.includes('invalid login credentials')) return 'Nespravny email alebo heslo.';
   if (msg.includes('email not confirmed')) return 'Email este nie je potvrdeny.';
   if (msg.includes('already registered')) return 'Tento email uz je zaregistrovany.';
+  if (msg.includes('error sending confirmation email') || msg.includes('error sending email')) {
+    return 'Konto sa vytvorilo, ale potvrdzovaci email sa nepodarilo odoslat.';
+  }
   if (msg.includes('network')) return 'Chyba siete. Skus to znova.';
   return message;
 }
@@ -1392,7 +1395,9 @@ export default function SplitPayWebApp() {
           },
         });
 
-        if (error && !isSignupMailDeliveryError(error.message)) {
+        const signupHadMailError = Boolean(error && isSignupMailDeliveryError(error.message));
+
+        if (error && !signupHadMailError) {
           setAuthMessage(friendlyAuthError(error.message));
           return;
         }
@@ -1432,6 +1437,11 @@ export default function SplitPayWebApp() {
           });
           setShowRegistrationNotice(true);
           setAuthMessage('');
+          return;
+        }
+
+        if (signupHadMailError && loginAfterSignupError.message.toLowerCase().includes('invalid login credentials')) {
+          setAuthMessage(friendlyAuthError(error?.message || t('genericTryAgain')));
           return;
         }
 
