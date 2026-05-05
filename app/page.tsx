@@ -3,6 +3,7 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
@@ -237,6 +238,7 @@ export default function SplitPayWebApp() {
   const [newMember, setNewMember] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviteContact, setInviteContact] = useState('');
+  const [showInviteQr, setShowInviteQr] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
@@ -261,6 +263,7 @@ export default function SplitPayWebApp() {
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
   const [localStateHydrated, setLocalStateHydrated] = useState(false);
+  const [dbLoadTick, setDbLoadTick] = useState(0);
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
@@ -277,6 +280,7 @@ export default function SplitPayWebApp() {
   const dbLoadedRef = useRef(false);
   const skipFirstSaveRef = useRef(true);
   const expenseCountRef = useRef<Record<string, number>>({});
+  const appliedJoinCodeRef = useRef('');
 
   useEffect(() => {
     if (!showStartup) return;
@@ -378,7 +382,8 @@ export default function SplitPayWebApp() {
   }, [appSession]);
 
   useEffect(() => {
-    if (!supabase || !appSession?.userId || !authResolved || dbLoadedRef.current) return;
+    if (!supabase || !authResolved || !appSession?.userId || dbLoadedRef.current) return;
+
     const supabaseClient = supabase;
     const userId = appSession.userId;
 
@@ -395,6 +400,7 @@ export default function SplitPayWebApp() {
 
       if (error) {
         dbLoadedRef.current = true;
+        setDbLoadTick((prev) => prev + 1);
         return;
       }
 
@@ -406,6 +412,7 @@ export default function SplitPayWebApp() {
       }
 
       dbLoadedRef.current = true;
+      setDbLoadTick((prev) => prev + 1);
     }
 
     loadStateFromDb();
@@ -546,7 +553,7 @@ export default function SplitPayWebApp() {
         supabaseClient.from('user_presence').select('user_id, user_email, user_name, last_seen').order('last_seen', { ascending: false }).limit(100),
         supabaseClient.from('user_roles').select('user_id, role'),
         supabaseClient.from('trip_states').select('user_id', { count: 'exact', head: true }),
-        supabaseClient.from('app_visits').select('id, user_email, visited_at').order('visited_at', { ascending: false }).limit(30),
+        supabaseClient.from('app_visits').select('id, user_email, visited_at').order('visited_at', { ascending: false }).limit(250),
         supabaseClient.from('app_visits').select('user_email, visited_at').order('visited_at', { ascending: false }).limit(500),
       ]);
 
@@ -573,7 +580,14 @@ export default function SplitPayWebApp() {
       }).length;
       setActiveUsersCount(active);
 
-      setRecentVisits((recentRes.data || []) as AdminVisitRow[]);
+      const uniqueRecentVisits = ((recentRes.data || []) as AdminVisitRow[])
+        .reduce<AdminVisitRow[]>((acc, row) => {
+          if (acc.some((item) => item.user_email === row.user_email)) return acc;
+          acc.push(row);
+          return acc;
+        }, [])
+        .slice(0, 30);
+      setRecentVisits(uniqueRecentVisits);
 
       const visits = recentForTopRes.data || [];
       const totals = visits.reduce<Record<string, number>>((acc, row) => {
@@ -737,11 +751,29 @@ export default function SplitPayWebApp() {
   }, [activeTripId, trips]);
 
   useEffect(() => {
+    const shouldWaitForDbLoad = Boolean(
+      supabase && authResolved && appSession?.userId && !dbLoadedRef.current
+    );
+
     if (!routeTripId) return;
     if (!localStateHydrated) return;
+    if (shouldWaitForDbLoad) return;
     if (trips.some((trip) => trip.id === routeTripId)) return;
     router.replace('/');
-  }, [localStateHydrated, routeTripId, router, trips]);
+  }, [appSession?.userId, authResolved, dbLoadTick, localStateHydrated, routeTripId, router, supabase, trips]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = (params.get('joinCode') || '').trim().toUpperCase();
+    if (!codeFromUrl) return;
+    if (appliedJoinCodeRef.current === codeFromUrl) return;
+
+    appliedJoinCodeRef.current = codeFromUrl;
+    setJoinCode(codeFromUrl);
+    setInfoMessage(`Kód ${codeFromUrl} bol načítaný z QR. Zadaj meno a pripoj sa.`);
+  }, [pathname]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -1282,6 +1314,17 @@ export default function SplitPayWebApp() {
       '--trip-accent-border': `${currentTrip.color}66`,
       '--trip-accent-shadow': hexToRgba(currentTrip.color, 0.24),
     } as CSSProperties;
+  }, [currentTrip]);
+
+  const inviteJoinUrl = useMemo(() => {
+    if (!currentTrip) return '';
+
+    const configuredBase = (process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/$/, '');
+    const runtimeBase =
+      typeof window !== 'undefined' ? window.location.origin.replace(/\/$/, '') : '';
+    const baseUrl = configuredBase || runtimeBase || 'https://splitpay.sk';
+
+    return `${baseUrl}/?joinCode=${encodeURIComponent(currentTrip.inviteCode)}`;
   }, [currentTrip]);
 
   function money(value: number) {
@@ -1966,8 +2009,24 @@ export default function SplitPayWebApp() {
                           <button type="button" className="ghost" onClick={shareViaEmail}>Poslať emailom</button>
                           <button type="button" className="ghost" onClick={shareViaWhatsApp}>Poslať cez WhatsApp</button>
                           <button type="button" className="ghost" onClick={shareViaSMS}>Poslať SMS</button>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => setShowInviteQr((prev) => !prev)}
+                          >
+                            {showInviteQr ? 'Skryť QR' : 'Zdieľať cez QR'}
+                          </button>
                           <button type="button" className="ghost" onClick={regenerateInviteCode}>Vygenerovať nový kód</button>
                         </div>
+                        {showInviteQr ? (
+                          <div className="qr-share-box">
+                            <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={180} includeMargin />
+                            <div>
+                              <p className="muted">Naskenuj QR a otvorí sa pripojenie ku výletu.</p>
+                              <p className="muted">Link: {inviteJoinUrl}</p>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <form className="stack" onSubmit={handleAddInvite}>
                         <input

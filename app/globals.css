@@ -268,6 +268,47 @@ body {
   margin: 0;
 }
 
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.hero-brand > div {
+  min-width: 0;
+}
+
+.hero-brand .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.hero-app-icon {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 10px 18px rgba(31, 103, 223, 0.2);
+  background: #ffffff;
+}
+
+.compact-brand {
+  margin-top: 0.5rem;
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.hero-metrics span {
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.82rem;
+  color: #22427c;
+  border: 1px solid #d6e3ff;
+  background: #eef4ff;
+}
+
 .hero p {
   color: var(--muted);
   margin-top: 0.7rem;
@@ -721,6 +762,26 @@ button:disabled {
   min-width: 5rem;
   font-size: 0.85rem;
   padding: 0.6rem 0.8rem;
+}
+
+.qr-share-box {
+  margin-top: 0.75rem;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  border-radius: 1rem;
+  border: 1px dashed color-mix(in srgb, var(--accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 55%, #ffffff);
+  padding: 0.8rem;
+}
+
+.qr-share-box svg {
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 0.35rem;
+  border: 1px solid #e7eefc;
 }
 
 .trip-theme .hero-panel {
