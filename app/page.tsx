@@ -757,6 +757,7 @@ export default function SplitPayWebApp() {
 
     if (!routeTripId) return;
     if (!localStateHydrated) return;
+    if (!authResolved) return;
     if (shouldWaitForDbLoad) return;
     if (trips.some((trip) => trip.id === routeTripId)) return;
     router.replace('/');
@@ -1682,24 +1683,32 @@ export default function SplitPayWebApp() {
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
 
-              <section className="screen-grid">
+              <section className="screen-grid onboarding-grid">
                 <section className="screen-window section-card">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Nový výlet</p>
                     <h2>Založiť výlet</h2>
+                    <p className="muted card-subtitle">Vytvor základ, pozvi ľudí a zdieľaj link alebo QR.</p>
                   </div>
-                  <form className="stack" onSubmit={handleCreateTrip}>
-                    <input
-                      value={newTripName}
-                      onChange={(event) => setNewTripName(event.target.value)}
-                      placeholder="Názov výletu"
-                    />
-                    <input
-                      value={newTripDate}
-                      onChange={(event) => setNewTripDate(event.target.value)}
-                      placeholder="Dátum (voliteľné)"
-                    />
-                    <button type="submit">Vytvoriť výlet</button>
+                  <form className="stack onboarding-form" onSubmit={handleCreateTrip}>
+                    <label className="field-block">
+                      <span>Názov výletu</span>
+                      <input
+                        value={newTripName}
+                        onChange={(event) => setNewTripName(event.target.value)}
+                        placeholder="Napr. Tatry víkend"
+                      />
+                    </label>
+                    <label className="field-block">
+                      <span>Dátum</span>
+                      <input
+                        value={newTripDate}
+                        onChange={(event) => setNewTripDate(event.target.value)}
+                        placeholder="Voliteľné"
+                      />
+                    </label>
+                    <button type="submit" className="primary-cta">Vytvoriť výlet</button>
+                    <p className="muted field-hint">Po vytvorení dostaneš okamžite kód na pozvanie ostatných.</p>
                   </form>
                 </section>
 
@@ -1707,19 +1716,27 @@ export default function SplitPayWebApp() {
                   <div className="section-head compact-head">
                     <p className="eyebrow">Pripojenie</p>
                     <h2>Pridať sa do výletu</h2>
+                    <p className="muted card-subtitle">Zadaj svoje meno a kód organizátora.</p>
                   </div>
-                  <form className="stack" onSubmit={handleJoinByCode}>
-                    <input
-                      value={joinName}
-                      onChange={(event) => setJoinName(event.target.value)}
-                      placeholder="Tvoje meno"
-                    />
-                    <input
-                      value={joinCode}
-                      onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                      placeholder="Kód od organizátora"
-                    />
-                    <button type="submit">Pripojiť sa</button>
+                  <form className="stack onboarding-form" onSubmit={handleJoinByCode}>
+                    <label className="field-block">
+                      <span>Tvoje meno</span>
+                      <input
+                        value={joinName}
+                        onChange={(event) => setJoinName(event.target.value)}
+                        placeholder="Napr. Martin"
+                      />
+                    </label>
+                    <label className="field-block">
+                      <span>Kód od organizátora</span>
+                      <input
+                        value={joinCode}
+                        onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                        placeholder="Napr. A1B2C3"
+                      />
+                    </label>
+                    <button type="submit" className="primary-cta">Pripojiť sa</button>
+                    <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky.</p>
                   </form>
                 </section>
               </section>
