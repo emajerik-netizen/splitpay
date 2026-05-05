@@ -136,7 +136,7 @@ function normalizeTrip(trip: Trip): Trip {
 }
 
 function readInitialState(): { trips: Trip[]; selectedTripId: string } {
-  return { trips: [DEFAULT_TRIP], selectedTripId: DEFAULT_TRIP.id };
+  return { trips: [], selectedTripId: '' };
 }
 
 function friendlyAuthError(message: string) {
@@ -354,7 +354,6 @@ export default function SplitPayWebApp() {
         const normalized = remote.trips.map(normalizeTrip);
         setTrips(normalized);
         setSelectedTripId(remote.selectedTripId || normalized[0].id);
-        setDbSyncMessage('Výlety načítané z databázy.');
       }
 
       dbLoadedRef.current = true;
@@ -699,6 +698,7 @@ export default function SplitPayWebApp() {
   const recentExpenses = useMemo(() => normalizedExpenses.slice(0, 3), [normalizedExpenses]);
 
   const canAddExpense =
+    !currentTrip?.archived &&
     draft.title.trim().length > 0 &&
     Number(draft.amount) > 0 &&
     safePayer.trim().length > 0 &&
@@ -1374,6 +1374,60 @@ export default function SplitPayWebApp() {
                         <strong>{formatDateTime(visit.visited_at)}</strong>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="screen-grid compact-grid admin-grid">
+                <div className="mini-panel">
+                  <h3>Aktívne výlety</h3>
+                  <div className="stack-list">
+                    {trips.filter((t) => !t.archived).length === 0 ? (
+                      <p className="muted">Zatiaľ žiadne aktívne výlety.</p>
+                    ) : null}
+                    {trips
+                      .filter((t) => !t.archived)
+                      .map((trip) => (
+                        <div className="row" key={trip.id}>
+                          <div>
+                            <strong>{trip.name}</strong>
+                            <p className="muted">{trip.members.length} členov</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => openTrip(trip.id, 'overview')}
+                          >
+                            Otvoriť
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="mini-panel">
+                  <h3>Archivované výlety</h3>
+                  <div className="stack-list">
+                    {trips.filter((t) => t.archived).length === 0 ? (
+                      <p className="muted">Zatiaľ žiadne archivované výlety.</p>
+                    ) : null}
+                    {trips
+                      .filter((t) => t.archived)
+                      .map((trip) => (
+                        <div className="row" key={trip.id}>
+                          <div>
+                            <strong>{trip.name}</strong>
+                            <p className="muted">{trip.members.length} členov</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => openTrip(trip.id, 'overview')}
+                          >
+                            Otvoriť
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </div>
