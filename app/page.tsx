@@ -1331,9 +1331,12 @@ export default function SplitPayWebApp() {
     setAuthMessage('');
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedName = fullName.trim() || normalizedEmail.split('@')[0] || 'Pouzivatel';
+
       if (authMode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           password,
         });
 
@@ -1341,12 +1344,20 @@ export default function SplitPayWebApp() {
           if (error.message.toLowerCase().includes('email not confirmed')) {
             const resendResult = await supabase.auth.resend({
               type: 'signup',
-              email: email.trim().toLowerCase(),
+              email: normalizedEmail,
               options: {
                 emailRedirectTo: window.location.origin,
               },
             });
-            setAuthMessage(
+
+            setPendingVerification({
+              email: normalizedEmail,
+              password,
+              fullName: normalizedName,
+            });
+            setShowRegistrationNotice(true);
+            setAuthMessage('');
+            setInfoMessage(
               resendResult.error ? t('verificationEmailResendFailed') : t('verificationEmailResent')
             );
             return;
@@ -1360,8 +1371,6 @@ export default function SplitPayWebApp() {
         setShowRegistrationNotice(false);
         setAuthMessage(t('loginSuccess'));
       } else {
-        const normalizedEmail = email.trim().toLowerCase();
-        const normalizedName = fullName.trim() || 'Pouzivatel';
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
