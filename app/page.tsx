@@ -987,7 +987,7 @@ export default function SplitPayWebApp() {
     setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
   }
 
-  function updateTripSettings(partial: Partial<Pick<Trip, 'currency' | 'color' | 'archived'>>) {
+  function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'currency' | 'color' | 'archived'>>) {
     if (!currentTrip) return;
     updateCurrentTrip((trip) => ({ ...trip, ...partial }));
   }
@@ -1247,8 +1247,14 @@ export default function SplitPayWebApp() {
       }));
       setEditingExpenseId(null);
       setInfoMessage('Transakcia bola upravená.');
+      sendNotification(`${currentTrip?.name || 'Výlet'} - Transakcia upravená`, {
+        body: `${expense.title} (${eur(expense.amount)})`,
+      });
     } else {
       updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
+      sendNotification(`${currentTrip?.name || 'Výlet'} - Nová transakcia`, {
+        body: `${expense.title} (${eur(expense.amount)})`,
+      });
     }
 
     setDraft((prev) => ({
@@ -1328,6 +1334,16 @@ export default function SplitPayWebApp() {
         ? 'Notifikácie sú zapnuté.'
         : 'Notifikácie neboli povolené.'
     );
+  }
+
+  function sendNotification(title: string, options?: NotificationOptions) {
+    if (typeof Notification === 'undefined' || !notificationsEnabled) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, options);
+    } catch (error) {
+      console.error('Chyba pri posielaní notifikácie:', error);
+    }
   }
 
   useEffect(() => {
@@ -1960,6 +1976,15 @@ export default function SplitPayWebApp() {
                   {currentTrip.owner === (appSession?.name || 'Ty') ? (
                     <div className="mini-panel owner-actions">
                       <h3>Nastavenia</h3>
+                      <label className="field-block">
+                        <span>Názov výletu</span>
+                        <input
+                          type="text"
+                          value={currentTrip.name}
+                          onChange={(event) => updateTripSettings({ name: event.target.value })}
+                          placeholder="Názov výletu"
+                        />
+                      </label>
                       <label className="field-block">
                         <span>Mena</span>
                         <select
