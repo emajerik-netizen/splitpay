@@ -2338,6 +2338,42 @@ button:disabled {
   position: relative;
 }
 
+.lang-picker {
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lang-picker-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.lang-picker-flags {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.lang-flag-btn {
+  min-height: 2.2rem;
+  width: 2.4rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.lang-flag-btn.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(44, 121, 246, 0.2);
+}
+
 .full-window {
   min-height: auto;
 }

@@ -24,10 +24,10 @@ function eur(value: number) {
   return `${value.toFixed(2)} EUR`;
 }
 
-function memberCountLabel(count: number) {
-  if (count === 1) return '1 člen';
-  if (count >= 2 && count <= 4) return `${count} členovia`;
-  return `${count} členov`;
+function memberCountLabel(count: number, l: Lang = 'sk') {
+  if (count === 1) return T[l].member1;
+  if (l === 'sk' && count >= 2 && count <= 4) return `${count} ${T[l].members2to4suffix}`;
+  return `${count} ${T[l].membersPlural}`;
 }
 
 function makeId() {
@@ -73,6 +73,314 @@ const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
 const INVITE_PENDING_KEY = 'splitpay-invite-pending';
+const LANG_KEY = 'splitpay-lang';
+
+type Lang = 'sk' | 'en';
+
+const T = {
+  sk: {
+    resumingSession: 'Obnovujeme session',
+    checkingSavedLogin: 'Kontrolujeme ulozene prihlasenie.',
+    appTagline: 'Jednoduche rozdelenie vydavkov medzi priatelov',
+    inviteBannerTitle: 'Boli ste pozvaní na výlet!',
+    inviteBannerDesc: 'Po prihlásení alebo registrácii si vyberiete meno a vstúpite do výletu.',
+    signIn: 'Prihlasenie',
+    createAccount: 'Vytvorenie uctu',
+    signInSubtitle: 'Vitaj spat! Prihlas sa do svojho uctu.',
+    registerSubtitle: 'Zaregistruj sa a zacni pouzivat Split Pay aj na webe.',
+    name: 'Meno',
+    namePlaceholder: 'Zadaj svoje meno',
+    email: 'Email',
+    emailPlaceholder: 'Zadaj svoj email',
+    password: 'Heslo',
+    passwordPlaceholder: 'Zadaj svoje heslo',
+    forgotPassword: 'Zabudli ste heslo?',
+    signInBtn: 'Prihlasit sa',
+    createAccountBtn: 'Vytvorit ucet',
+    or: 'alebo',
+    continueWithGoogle: 'Pokracovat s Google',
+    noAccount: 'Nemate ucet?',
+    alreadyHaveAccount: 'Uz mate ucet?',
+    myProfile: 'Môj profil',
+    myTrips: 'Moje výlety',
+    adminSection: 'Admin sekcia',
+    notificationsOn: 'Notifikácie: zapnuté',
+    notificationsOff: 'Notifikácie: vypnuté',
+    deleteAccount: 'Vymazať účet',
+    signOut: 'Odhlásiť sa',
+    language: 'Jazyk',
+    heroTitle: 'Výlety, rozpočet a vyrovnanie bez chaosu',
+    heroDesc: 'Vytvor výlet, pozvi ľudí cez kód a maj výdavky pod kontrolou od prvého nákupu až po posledné vyrovnanie.',
+    quickInvites: 'Rýchle pozvánky',
+    fairSplit: 'Spravodlivé rozdelenie',
+    instantBalance: 'Okamžitá bilancia',
+    loggedInEmail: 'Prihlásený email:',
+    showArchived: 'Zobraziť archivované výlety',
+    expenses: 'výdavkov',
+    totalMeta: 'Spolu',
+    archived: 'Archivované',
+    overviewTab: 'Prehľad',
+    newTrip: 'Nový výlet',
+    createTrip: 'Založiť výlet',
+    createTripDesc: 'Vytvor nový výlet a získaj kód na zdieľanie.',
+    joinTripEyebrow: 'Pripojenie',
+    joinTripTitle: 'Pridať sa do výletu',
+    joinTripDesc: 'Máš kód? Otvor formulár a pridaj sa.',
+    tripName: 'Názov výletu',
+    tripNamePlaceholder: 'Napr. Tatry víkend',
+    date: 'Dátum',
+    createTripBtn: 'Vytvoriť výlet',
+    createTripHint: 'Po vytvorení dostaneš okamžite kód na pozvanie ostatných.',
+    close: 'Zavrieť',
+    yourName: 'Tvoje meno',
+    yourNamePlaceholder: 'Napr. Martin',
+    organizerCode: 'Kód od organizátora',
+    codePlaceholder: 'Napr. A1B2C3',
+    joinBtn: 'Pripojiť sa',
+    joinHint: 'Ak si otvoril QR link, kód sa vyplní automaticky. Môžeš sa pripojiť ako nový člen alebo ako existujúci člen, ak si bol pozvaný.',
+    tripDetail: 'Detail výletu',
+    backToTrips: '← Späť na moje výlety',
+    tripCode: 'Kód výletu:',
+    settings: 'Nastavenie',
+    membersTab: 'Členovia',
+    invitesTab: 'Pozvánky',
+    expensesTab: 'Výdavky',
+    balanceTab: 'Bilancia',
+    tripOverview: 'Prehľad výletu',
+    basicInfo: 'Základné informácie',
+    addExpense: 'Pridať výdavok',
+    membersLabel: 'Členovia',
+    expensesLabel: 'Výdavky',
+    invitesLabel: 'Pozvánky',
+    totalSpent: 'Spolu minuté',
+    tripMembers: 'Členovia výletu',
+    recentExpenses: 'Posledné výdavky',
+    noRecords: 'Zatiaľ žiadne záznamy.',
+    paidBy: 'Platil',
+    team: 'Tím',
+    membersTitle: 'Členovia výletu',
+    memberNamePlaceholder: 'Meno člena',
+    addBtn: 'Pridať',
+    ownerLabel: 'Vlastník',
+    confirmIdentity: 'Potvrď svoju identitu',
+    guestPickInvite: 'Ak si hosť, vyber si jednu z pozvánok:',
+    thatsMe: 'Toto som ja',
+    invitation: 'Pozvanie',
+    invitesTitle: 'Pozvánky a prístupy',
+    code: 'Kód',
+    copy: 'Kopírovať',
+    hideQr: 'Skryť QR',
+    showQr: 'QR kód',
+    contactPlaceholder: 'Kontakt (voliteľné)',
+    namePlaceholderInvite: 'Meno',
+    scanQr: 'Naskenuj QR na pripojenie',
+    expensesTitle: 'Prehľad a história výdavkov',
+    addExpenseBtn: '+ Pridať výdavok',
+    expenseHistory: 'História výdavkov',
+    sent: 'poslal(a)',
+    participantsLabel: 'účastníci:',
+    editBtn: 'Upraviť',
+    deleteBtn: 'Vymazať',
+    balanceTitle: 'Kto komu koľko dlží',
+    balanceSwitcher: 'Prepínač bilancie',
+    allTab: 'Všetky',
+    settlementsTab: 'Vyrovnania',
+    currentBalances: 'Aktuálne stavy bilancie',
+    noMembers: 'Žiadni členovia.',
+    receives: 'dostane',
+    pays: 'zaplatí',
+    receivesTotal: 'dostane spolu',
+    paysTotal: 'zaplatí spolu',
+    fewestTransfers: 'Najmenej prevodov na vyrovnanie',
+    allSettled: 'Všetko je vyrovnané.',
+    balanceTip: 'Pošli kamarátom svoje číslo účtu alebo vyrovnajte v hotovosti.',
+    expenseModalEyebrow: 'Výdavok',
+    editExpenseTitle: 'Upraviť výdavok',
+    addExpenseTitle: 'Pridať výdavok',
+    newExpense: 'Nový výdavok',
+    transferOption: 'Transfer (vyrovnanie)',
+    transferNamePlaceholder: 'Názov transferu (voliteľné)',
+    expenseNamePlaceholder: 'Názov výdavku',
+    amountPlaceholder: 'Suma',
+    sendTo: 'Komu posielam',
+    equalSplit: 'Rovnomerne',
+    individualSplit: 'Individuálne',
+    individualSum: 'Súčet individuálnych súm:',
+    totalLabel: 'Celkom:',
+    saveChanges: 'Uložiť zmeny transakcie',
+    cancelEdit: 'Zrušiť úpravu',
+    inviteEyebrow: 'Pozvánka',
+    joinTripModal: 'Vstup do výletu',
+    invitedToTrip: 'Ste pozvaní na výlet',
+    chooseNameDesc: 'Vyberte si meno, pod ktorým budete figurovať vo výlete.',
+    availableSlots: 'Voľné sloty:',
+    customName: '+ Vlastné meno',
+    yourNameInTrip: 'Vaše meno vo výlete',
+    yourNameInTripPlaceholder: 'Napr. Jano',
+    adding: 'Pridávam...',
+    joinTripConfirm: 'Vstúpiť do výletu',
+    tripSettingsEyebrow: 'Nastavenie výletu',
+    currency: 'Mena',
+    tripColor: 'Farba výletu',
+    archiveTrip: 'Archivovať výlet',
+    deleteTrip: 'Vymazať výlet',
+    noDate: 'Bez dátumu',
+    member1: '1 člen',
+    membersPlural: 'členov',
+    members2to4suffix: 'členovia',
+  },
+  en: {
+    resumingSession: 'Resuming session',
+    checkingSavedLogin: 'Checking saved login.',
+    appTagline: 'Simple expense splitting among friends',
+    inviteBannerTitle: "You've been invited to a trip!",
+    inviteBannerDesc: 'After signing in or registering, you will choose a name and join the trip.',
+    signIn: 'Sign In',
+    createAccount: 'Create Account',
+    signInSubtitle: 'Welcome back! Sign in to your account.',
+    registerSubtitle: 'Register and start using Split Pay on the web.',
+    name: 'Name',
+    namePlaceholder: 'Enter your name',
+    email: 'Email',
+    emailPlaceholder: 'Enter your email',
+    password: 'Password',
+    passwordPlaceholder: 'Enter your password',
+    forgotPassword: 'Forgot password?',
+    signInBtn: 'Sign in',
+    createAccountBtn: 'Create account',
+    or: 'or',
+    continueWithGoogle: 'Continue with Google',
+    noAccount: "Don't have an account?",
+    alreadyHaveAccount: 'Already have an account?',
+    myProfile: 'My Profile',
+    myTrips: 'My Trips',
+    adminSection: 'Admin Section',
+    notificationsOn: 'Notifications: on',
+    notificationsOff: 'Notifications: off',
+    deleteAccount: 'Delete Account',
+    signOut: 'Sign Out',
+    language: 'Language',
+    heroTitle: 'Trips, budget and settlements without chaos',
+    heroDesc: 'Create a trip, invite people via code and keep expenses under control from the first purchase to the last settlement.',
+    quickInvites: 'Quick Invites',
+    fairSplit: 'Fair Split',
+    instantBalance: 'Instant Balance',
+    loggedInEmail: 'Logged in:',
+    showArchived: 'Show archived trips',
+    expenses: 'expenses',
+    totalMeta: 'Total',
+    archived: 'Archived',
+    overviewTab: 'Overview',
+    newTrip: 'New Trip',
+    createTrip: 'Create Trip',
+    createTripDesc: 'Create a new trip and get a sharing code.',
+    joinTripEyebrow: 'Join',
+    joinTripTitle: 'Join a Trip',
+    joinTripDesc: 'Have a code? Open the form and join.',
+    tripName: 'Trip name',
+    tripNamePlaceholder: 'E.g. Paris weekend',
+    date: 'Date',
+    createTripBtn: 'Create trip',
+    createTripHint: 'After creating, you will immediately get an invite code to share.',
+    close: 'Close',
+    yourName: 'Your name',
+    yourNamePlaceholder: 'E.g. Martin',
+    organizerCode: "Organizer's code",
+    codePlaceholder: 'E.g. A1B2C3',
+    joinBtn: 'Join',
+    joinHint: 'If you opened a QR link, the code is filled in automatically. You can join as a new member or as an existing member if you were invited.',
+    tripDetail: 'Trip Detail',
+    backToTrips: '← Back to my trips',
+    tripCode: 'Trip code:',
+    settings: 'Settings',
+    membersTab: 'Members',
+    invitesTab: 'Invites',
+    expensesTab: 'Expenses',
+    balanceTab: 'Balance',
+    tripOverview: 'Trip Overview',
+    basicInfo: 'Basic Information',
+    addExpense: 'Add Expense',
+    membersLabel: 'Members',
+    expensesLabel: 'Expenses',
+    invitesLabel: 'Invites',
+    totalSpent: 'Total Spent',
+    tripMembers: 'Trip Members',
+    recentExpenses: 'Recent Expenses',
+    noRecords: 'No records yet.',
+    paidBy: 'Paid by',
+    team: 'Team',
+    membersTitle: 'Trip Members',
+    memberNamePlaceholder: 'Member name',
+    addBtn: 'Add',
+    ownerLabel: 'Owner',
+    confirmIdentity: 'Confirm your identity',
+    guestPickInvite: 'If you are a guest, pick one of the invites:',
+    thatsMe: "That's me",
+    invitation: 'Invite',
+    invitesTitle: 'Invites & Access',
+    code: 'Code',
+    copy: 'Copy',
+    hideQr: 'Hide QR',
+    showQr: 'QR Code',
+    contactPlaceholder: 'Contact (optional)',
+    namePlaceholderInvite: 'Name',
+    scanQr: 'Scan QR to join',
+    expensesTitle: 'Expense Overview & History',
+    addExpenseBtn: '+ Add Expense',
+    expenseHistory: 'Expense History',
+    sent: 'sent',
+    participantsLabel: 'participants:',
+    editBtn: 'Edit',
+    deleteBtn: 'Delete',
+    balanceTitle: 'Who owes whom',
+    balanceSwitcher: 'Balance switcher',
+    allTab: 'All',
+    settlementsTab: 'Settlements',
+    currentBalances: 'Current balance states',
+    noMembers: 'No members.',
+    receives: 'receives',
+    pays: 'pays',
+    receivesTotal: 'receives in total',
+    paysTotal: 'pays in total',
+    fewestTransfers: 'Fewest transfers to settle',
+    allSettled: 'Everything is settled.',
+    balanceTip: 'Share your bank account number or settle in cash.',
+    expenseModalEyebrow: 'Expense',
+    editExpenseTitle: 'Edit Expense',
+    addExpenseTitle: 'Add Expense',
+    newExpense: 'New Expense',
+    transferOption: 'Transfer (settlement)',
+    transferNamePlaceholder: 'Transfer name (optional)',
+    expenseNamePlaceholder: 'Expense name',
+    amountPlaceholder: 'Amount',
+    sendTo: 'Send to',
+    equalSplit: 'Equal',
+    individualSplit: 'Individual',
+    individualSum: 'Sum of individual amounts:',
+    totalLabel: 'Total:',
+    saveChanges: 'Save transaction changes',
+    cancelEdit: 'Cancel edit',
+    inviteEyebrow: 'Invitation',
+    joinTripModal: 'Join Trip',
+    invitedToTrip: 'You are invited to the trip',
+    chooseNameDesc: 'Choose the name you will appear under in the trip.',
+    availableSlots: 'Available slots:',
+    customName: '+ Custom name',
+    yourNameInTrip: 'Your name in the trip',
+    yourNameInTripPlaceholder: 'E.g. Jano',
+    adding: 'Adding...',
+    joinTripConfirm: 'Join Trip',
+    tripSettingsEyebrow: 'Trip Settings',
+    currency: 'Currency',
+    tripColor: 'Trip Color',
+    archiveTrip: 'Archive trip',
+    deleteTrip: 'Delete trip',
+    noDate: 'No date',
+    member1: '1 member',
+    membersPlural: 'members',
+    members2to4suffix: 'members',
+  },
+} as const;
 
 type Invite = {
   id: string;
@@ -302,6 +610,10 @@ export default function SplitPayWebApp() {
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
   const [localStateHydrated, setLocalStateHydrated] = useState(false);
+    const [lang, setLang] = useState<Lang>(() => {
+      if (typeof window === 'undefined') return 'sk';
+      return (window.localStorage.getItem(LANG_KEY) as Lang) || 'sk';
+    });
   const [dbLoadTick, setDbLoadTick] = useState(0);
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
@@ -321,6 +633,12 @@ export default function SplitPayWebApp() {
   const expenseCountRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
+
+  const t = (key: keyof typeof T.sk) => T[lang][key];
+
+  useEffect(() => {
+    window.localStorage.setItem(LANG_KEY, lang);
+  }, [lang]);
 
   useEffect(() => {
     if (!showStartup) return;
@@ -1148,9 +1466,12 @@ export default function SplitPayWebApp() {
     if (!cleanedName) return;
 
     const inviteCode = makeUniqueInviteCode(trips);
+    const dateLocale = lang === 'en' ? 'en-GB' : 'sk-SK';
     const trip = createTrip(
       cleanedName,
-      newTripDate.trim() ? new Date(newTripDate).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Bez dátumu',
+      newTripDate.trim()
+        ? new Date(newTripDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' })
+        : t('noDate'),
       inviteCode,
       appSession?.name || 'Ty'
     );
@@ -1643,7 +1964,8 @@ export default function SplitPayWebApp() {
 
   function money(value: number) {
     const currency = currentTrip?.currency || 'EUR';
-    return new Intl.NumberFormat('sk-SK', {
+    const moneyLocale = lang === 'en' ? 'en-GB' : 'sk-SK';
+    return new Intl.NumberFormat(moneyLocale, {
       style: 'currency',
       currency,
       minimumFractionDigits: 2,
@@ -1669,8 +1991,8 @@ export default function SplitPayWebApp() {
       {!authResolved ? (
         <main className="page-wrap">
           <section className="card">
-            <h1>Obnovujeme session</h1>
-            <p className="muted">Kontrolujeme ulozene prihlasenie.</p>
+              <h1>{t('resumingSession')}</h1>
+              <p className="muted">{t('checkingSavedLogin')}</p>
           </section>
         </main>
       ) : !isAuthenticated ? (
@@ -1680,87 +2002,87 @@ export default function SplitPayWebApp() {
               <Image src="/icon.png" alt="Split Pay" width={150} height={150} className="auth-logo" priority />
             </div>
             <h1>Split Pay</h1>
-            <p>Jednoduche rozdelenie vydavkov medzi priatelov</p>
+              <p>{t('appTagline')}</p>
           </section>
 
           {invitePendingCode ? (
             <div className="invite-auth-banner">
               <span className="invite-auth-banner-icon">🎉</span>
               <div>
-                <strong>Boli ste pozvaní na výlet!</strong>
-                <p>Po prihlásení alebo registrácii si vyberiete meno a vstúpite do výletu.</p>
+                  <strong>{t('inviteBannerTitle')}</strong>
+                  <p>{t('inviteBannerDesc')}</p>
               </div>
             </div>
           ) : null}
 
           <section className="auth-card">
-            <h2>{authMode === 'login' ? 'Prihlasenie' : 'Vytvorenie uctu'}</h2>
+              <h2>{authMode === 'login' ? t('signIn') : t('createAccount')}</h2>
             <p className="auth-subtitle">
               {authMode === 'login'
-                ? 'Vitaj spat! Prihlas sa do svojho uctu.'
-                : 'Zaregistruj sa a zacni pouzivat Split Pay aj na webe.'}
+                  ? t('signInSubtitle')
+                  : t('registerSubtitle')}
             </p>
 
             <form className="auth-form" onSubmit={handleEmailAuth}>
               {authMode === 'register' ? (
                 <label className="field-block">
-                  <span>Meno</span>
+                    <span>{t('name')}</span>
                   <input
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Zadaj svoje meno"
+                      placeholder={t('namePlaceholder')}
                   />
                 </label>
               ) : null}
 
               <label className="field-block">
-                <span>Email</span>
+                  <span>{t('email')}</span>
                 <input
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Zadaj svoj email"
+                    placeholder={t('emailPlaceholder')}
                   type="email"
                 />
               </label>
 
               <label className="field-block">
-                <span>Heslo</span>
+                  <span>{t('password')}</span>
                 <input
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Zadaj svoje heslo"
+                    placeholder={t('passwordPlaceholder')}
                   type="password"
                 />
               </label>
 
               {authMode === 'login' ? (
                 <button type="button" className="link-button" onClick={handleResetPassword}>
-                  Zabudli ste heslo?
+                    {t('forgotPassword')}
                 </button>
               ) : null}
 
               <button type="submit" className="primary-cta" disabled={authLoading}>
-                {authMode === 'login' ? 'Prihlasit sa' : 'Vytvorit ucet'}
+                  {authMode === 'login' ? t('signInBtn') : t('createAccountBtn')}
               </button>
             </form>
 
             <div className="auth-divider">
               <span />
-              <p>alebo</p>
+                <p>{t('or')}</p>
               <span />
             </div>
 
-            <button type="button" className="google-btn auth-google" onClick={handleGoogleLogin} disabled={authLoading}>
-              Pokracovat s Google
+              <button type="button" className="google-btn auth-google" onClick={handleGoogleLogin} disabled={authLoading}>
+                {t('continueWithGoogle')}
             </button>
 
             {authMessage ? <p className="auth-message">{authMessage}</p> : null}
           </section>
 
           <section className="auth-switch-card">
-            <span>{authMode === 'login' ? 'Nemate ucet?' : 'Uz mate ucet?'}</span>
+              <span>{authMode === 'login' ? t('noAccount') : t('alreadyHaveAccount')}</span>
             <button type="button" className="link-button strong" onClick={toggleAuthMode}>
-              {authMode === 'login' ? 'Vytvorit ucet' : 'Prihlasit sa'}
+                {authMode === 'login' ? t('createAccountBtn') : t('signInBtn')}
             </button>
           </section>
         </main>
@@ -1772,22 +2094,43 @@ export default function SplitPayWebApp() {
             </button>
             {profileOpen ? (
               <section className="profile-menu section-card">
-                <h3>Môj profil</h3>
+                  <h3>{t('myProfile')}</h3>
                 <p className="muted">{appSession?.name}</p>
                 <p className="muted">{appSession?.email}</p>
-                <button type="button" className="ghost" onClick={goToTripsHome}>Moje výlety</button>
-                {isAdmin ? <button type="button" className="ghost" onClick={goToAdmin}>Admin sekcia</button> : null}
+                  <button type="button" className="ghost" onClick={goToTripsHome}>{t('myTrips')}</button>
+                  {isAdmin ? <button type="button" className="ghost" onClick={goToAdmin}>{t('adminSection')}</button> : null}
                 <button type="button" className="ghost" onClick={toggleNotifications}>
-                  {notificationsEnabled ? 'Notifikácie: zapnuté' : 'Notifikácie: vypnuté'}
+                    {notificationsEnabled ? t('notificationsOn') : t('notificationsOff')}
                 </button>
                 <button
                   type="button"
                   className="ghost danger-btn"
                   onClick={() => setInfoMessage('Vymazanie účtu vyžaduje serverovú funkciu (service role).')}
                 >
-                  Vymazať účet
+                    {t('deleteAccount')}
                 </button>
-                <button type="button" className="ghost" onClick={handleLogout}>Odhlásiť sa</button>
+                  <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
+                  <div className="lang-picker">
+                    <span className="lang-picker-label">{t('language')}</span>
+                    <div className="lang-picker-flags">
+                      <button
+                        type="button"
+                        className={`lang-flag-btn${lang === 'sk' ? ' active' : ''}`}
+                        onClick={() => setLang('sk')}
+                        title="Slovenčina"
+                      >
+                        🇸🇰
+                      </button>
+                      <button
+                        type="button"
+                        className={`lang-flag-btn${lang === 'en' ? ' active' : ''}`}
+                        onClick={() => setLang('en')}
+                        title="English"
+                      >
+                        🇬🇧
+                      </button>
+                    </div>
+                  </div>
               </section>
             ) : null}
           </div>
@@ -1919,7 +2262,7 @@ export default function SplitPayWebApp() {
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length)}</p>
+                            <p className="muted">{memberCountLabel(trip.members.length, lang)}</p>
                           </div>
                           <button
                             type="button"
@@ -1945,7 +2288,7 @@ export default function SplitPayWebApp() {
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length)}</p>
+                            <p className="muted">{memberCountLabel(trip.members.length, lang)}</p>
                           </div>
                           <button
                             type="button"
@@ -1979,28 +2322,25 @@ export default function SplitPayWebApp() {
                     <Image src="/icon.png" alt="Split Pay" width={56} height={56} className="hero-app-icon" />
                     <div>
                       <p className="eyebrow">Split Pay</p>
-                      <h1>Výlety, rozpočet a vyrovnanie bez chaosu</h1>
+                        <h1>{t('heroTitle')}</h1>
                     </div>
                   </div>
-                  <p>
-                    Vytvor výlet, pozvi ľudí cez kód a maj výdavky pod kontrolou od prvého nákupu
-                    až po posledné vyrovnanie.
-                  </p>
+                    <p>{t('heroDesc')}</p>
                   <div className="hero-metrics">
-                    <span>Rýchle pozvánky</span>
-                    <span>Spravodlivé rozdelenie</span>
-                    <span>Okamžitá bilancia</span>
+                      <span>{t('quickInvites')}</span>
+                      <span>{t('fairSplit')}</span>
+                      <span>{t('instantBalance')}</span>
                   </div>
                 </div>
                 <div className="hero-actions">
-                  <p className="muted">Prihlásený email: {appSession?.email}</p>
+                    <p className="muted">{t('loggedInEmail')} {appSession?.email}</p>
                   <label className="muted archived-toggle">
                     <input
                       type="checkbox"
                       checked={showArchived}
                       onChange={(event) => setShowArchived(event.target.checked)}
                     />
-                    Zobraziť archivované výlety
+                      {t('showArchived')}
                   </label>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
@@ -2008,8 +2348,8 @@ export default function SplitPayWebApp() {
 
               <section className="app-section">
                 <div className="section-head">
-                  <p className="eyebrow">Prehľad</p>
-                  <h2>Moje výlety</h2>
+                  <p className="eyebrow">{t('overviewTab')}</p>
+                  <h2>{t('myTrips')}</h2>
                 </div>
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
@@ -2048,11 +2388,11 @@ export default function SplitPayWebApp() {
                             </span>
                           </div>
                           <div className="trip-card-meta">
-                            <span>{memberCountLabel(trip.members.length)}</span>
-                            <span>{trip.expenses.length} výdavkov</span>
-                            <span>Spolu {money(tripTotal)}</span>
+                            <span>{memberCountLabel(trip.members.length, lang)}</span>
+                             <span>{trip.expenses.length} {t('expenses')}</span>
+                             <span>{t('totalMeta')} {money(tripTotal)}</span>
                             <span>{trip.currency}</span>
-                            {trip.archived ? <span>Archivované</span> : null}
+                             {trip.archived ? <span>{t('archived')}</span> : null}
                           </div>
                         </div>
                       </button>
@@ -2067,9 +2407,9 @@ export default function SplitPayWebApp() {
                   className="section-card action-tile action-tile-create"
                   onClick={() => setShowCreateTripModal(true)}
                 >
-                  <p className="eyebrow">Nový výlet</p>
-                  <h2>Založiť výlet</h2>
-                  <p className="muted card-subtitle">Vytvor nový výlet a získaj kód na zdieľanie.</p>
+                    <p className="eyebrow">{t('newTrip')}</p>
+                    <h2>{t('createTrip')}</h2>
+                    <p className="muted card-subtitle">{t('createTripDesc')}</p>
                 </button>
 
                 <button
@@ -2077,41 +2417,41 @@ export default function SplitPayWebApp() {
                   className="section-card action-tile action-tile-join"
                   onClick={() => setShowJoinTripModal(true)}
                 >
-                  <p className="eyebrow">Pripojenie</p>
-                  <h2>Pridať sa do výletu</h2>
-                  <p className="muted card-subtitle">Máš kód? Otvor formulár a pridaj sa.</p>
+                    <p className="eyebrow">{t('joinTripEyebrow')}</p>
+                    <h2>{t('joinTripTitle')}</h2>
+                    <p className="muted card-subtitle">{t('joinTripDesc')}</p>
                 </button>
               </section>
 
               {showCreateTripModal ? (
                 <div className="modal-overlay" role="presentation" onClick={() => setShowCreateTripModal(false)}>
-                  <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label="Založiť výlet" onClick={(event) => event.stopPropagation()}>
+                    <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label={t('createTrip')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
-                        <p className="eyebrow">Nový výlet</p>
-                        <h2>Založiť výlet</h2>
+                          <p className="eyebrow">{t('newTrip')}</p>
+                          <h2>{t('createTrip')}</h2>
                       </div>
-                      <button type="button" className="ghost" onClick={() => setShowCreateTripModal(false)}>Zavrieť</button>
+                        <button type="button" className="ghost" onClick={() => setShowCreateTripModal(false)}>{t('close')}</button>
                     </div>
                     <form className="stack onboarding-form" onSubmit={handleCreateTrip}>
                       <label className="field-block">
-                        <span>Názov výletu</span>
+                          <span>{t('tripName')}</span>
                         <input
                           value={newTripName}
                           onChange={(event) => setNewTripName(event.target.value)}
-                          placeholder="Napr. Tatry víkend"
+                            placeholder={t('tripNamePlaceholder')}
                         />
                       </label>
                       <label className="field-block">
-                        <span>Dátum</span>
+                          <span>{t('date')}</span>
                         <input
                           type="date"
                           value={newTripDate}
                           onChange={(event) => setNewTripDate(event.target.value)}
                         />
                       </label>
-                      <button type="submit" className="primary-cta">Vytvoriť výlet</button>
-                      <p className="muted field-hint">Po vytvorení dostaneš okamžite kód na pozvanie ostatných.</p>
+                        <button type="submit" className="primary-cta">{t('createTripBtn')}</button>
+                        <p className="muted field-hint">{t('createTripHint')}</p>
                     </form>
                   </section>
                 </div>
@@ -2119,33 +2459,33 @@ export default function SplitPayWebApp() {
 
               {showJoinTripModal ? (
                 <div className="modal-overlay" role="presentation" onClick={() => setShowJoinTripModal(false)}>
-                  <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label="Pridať sa do výletu" onClick={(event) => event.stopPropagation()}>
+                    <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label={t('joinTripTitle')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
-                        <p className="eyebrow">Pripojenie</p>
-                        <h2>Pridať sa do výletu</h2>
+                          <p className="eyebrow">{t('joinTripEyebrow')}</p>
+                          <h2>{t('joinTripTitle')}</h2>
                       </div>
-                      <button type="button" className="ghost" onClick={() => setShowJoinTripModal(false)}>Zavrieť</button>
+                        <button type="button" className="ghost" onClick={() => setShowJoinTripModal(false)}>{t('close')}</button>
                     </div>
                     <form className="stack onboarding-form" onSubmit={handleJoinByCode}>
                       <label className="field-block">
-                        <span>Tvoje meno</span>
+                          <span>{t('yourName')}</span>
                         <input
                           value={joinName}
                           onChange={(event) => setJoinName(event.target.value)}
-                          placeholder="Napr. Martin"
+                            placeholder={t('yourNamePlaceholder')}
                         />
                       </label>
                       <label className="field-block">
-                        <span>Kód od organizátora</span>
+                          <span>{t('organizerCode')}</span>
                         <input
                           value={joinCode}
                           onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                          placeholder="Napr. A1B2C3"
+                            placeholder={t('codePlaceholder')}
                         />
                       </label>
-                      <button type="submit" className="primary-cta">Pripojiť sa</button>
-                      <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky. Môžeš sa pripojiť ako nový člen alebo ako existujúci člen, ak si bol pozvaný.</p>
+                        <button type="submit" className="primary-cta">{t('joinBtn')}</button>
+                        <p className="muted field-hint">{t('joinHint')}</p>
                     </form>
                   </section>
                 </div>
@@ -2156,25 +2496,25 @@ export default function SplitPayWebApp() {
               <section className="hero hero-panel">
                 <div>
                   <button type="button" className="back-link" onClick={goToTripsHome}>
-                    ← Späť na moje výlety
+                      {t('backToTrips')}
                   </button>
                   <div className="hero-brand compact-brand">
                     <Image src="/icon.png" alt="Split Pay" width={44} height={44} className="hero-app-icon" />
                     <div>
-                      <p className="eyebrow">Detail výletu</p>
+                        <p className="eyebrow">{t('tripDetail')}</p>
                       <h1>{currentTrip.name}</h1>
                     </div>
                   </div>
                   <p>
-                    {currentTrip.date} · {memberCountLabel(members.length)} · {eur(totalSpent)} spolu
+                      {currentTrip.date} · {memberCountLabel(members.length, lang)} · {eur(totalSpent)} {t('totalMeta').toLowerCase()}
                   </p>
                 </div>
                 <div className="hero-actions hero-actions-end">
-                  <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
+                    <p className="muted">{t('tripCode')} {currentTrip.inviteCode}</p>
                   {currentTripOwnerIsSelf ? (
                     <button type="button" className="ghost trip-settings-open-btn" onClick={() => setShowTripSettingsModal(true)}>
                       <Settings2 size={15} aria-hidden="true" />
-                      <span>Nastavenie</span>
+                        <span>{t('settings')}</span>
                     </button>
                   ) : null}
                 </div>
@@ -2183,26 +2523,26 @@ export default function SplitPayWebApp() {
 
               {showTripSettingsModal && currentTripOwnerIsSelf ? (
                 <div className="modal-overlay modal-overlay-top-right" role="presentation" onClick={() => setShowTripSettingsModal(false)}>
-                  <section className="section-card trip-settings-modal" role="dialog" aria-modal="true" aria-label="Nastavenia výletu" onClick={(event) => event.stopPropagation()}>
+                  <section className="section-card trip-settings-modal" role="dialog" aria-modal="true" aria-label={t('tripSettingsEyebrow')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
-                        <p className="eyebrow">Nastavenie výletu</p>
+                        <p className="eyebrow">{t('tripSettingsEyebrow')}</p>
                         <h2>{currentTrip.name}</h2>
                       </div>
-                      <button type="button" className="ghost" onClick={() => setShowTripSettingsModal(false)}>Zavrieť</button>
+                      <button type="button" className="ghost" onClick={() => setShowTripSettingsModal(false)}>{t('close')}</button>
                     </div>
                     <form className="stack trip-settings-form" onSubmit={(event) => event.preventDefault()}>
                       <label className="field-block">
-                        <span>Názov výletu</span>
+                        <span>{t('tripName')}</span>
                         <input
                           type="text"
                           value={currentTrip.name}
                           onChange={(event) => updateTripSettings({ name: event.target.value })}
-                          placeholder="Názov výletu"
+                          placeholder={t('tripName')}
                         />
                       </label>
                       <label className="field-block">
-                        <span>Mena</span>
+                        <span>{t('currency')}</span>
                         <select
                           value={currentTrip.currency}
                           onChange={(event) =>
@@ -2215,7 +2555,7 @@ export default function SplitPayWebApp() {
                         </select>
                       </label>
                       <label className="field-block">
-                        <span>Farba výletu</span>
+                        <span>{t('tripColor')}</span>
                         <input
                           type="color"
                           value={currentTrip.color}
@@ -2228,7 +2568,7 @@ export default function SplitPayWebApp() {
                           checked={currentTrip.archived}
                           onChange={(event) => updateTripSettings({ archived: event.target.checked })}
                         />
-                        Archivovať výlet
+                        {t('archiveTrip')}
                       </label>
                       <button
                         type="button"
@@ -2238,7 +2578,7 @@ export default function SplitPayWebApp() {
                           setShowTripSettingsModal(false);
                         }}
                       >
-                        Vymazať výlet
+                        {t('deleteTrip')}
                       </button>
                     </form>
                   </section>
@@ -2253,7 +2593,7 @@ export default function SplitPayWebApp() {
                 >
                   <span className="screen-pill-inner">
                     <Share2 size={15} aria-hidden="true" />
-                    <span>Prehľad</span>
+                      <span>{t('overviewTab')}</span>
                   </span>
                 </button>
                 <button
@@ -2263,7 +2603,7 @@ export default function SplitPayWebApp() {
                 >
                   <span className="screen-pill-inner">
                     <Users size={15} aria-hidden="true" />
-                    <span>Členovia</span>
+                      <span>{t('membersTab')}</span>
                   </span>
                 </button>
                 <button
@@ -2273,7 +2613,7 @@ export default function SplitPayWebApp() {
                 >
                   <span className="screen-pill-inner">
                     <Link2 size={15} aria-hidden="true" />
-                    <span>Pozvánky</span>
+                      <span>{t('invitesTab')}</span>
                   </span>
                 </button>
                 <button
@@ -2283,7 +2623,7 @@ export default function SplitPayWebApp() {
                 >
                   <span className="screen-pill-inner">
                     <Receipt size={15} aria-hidden="true" />
-                    <span>Výdavky</span>
+                      <span>{t('expensesTab')}</span>
                   </span>
                 </button>
                 <button
@@ -2293,7 +2633,7 @@ export default function SplitPayWebApp() {
                 >
                   <span className="screen-pill-inner">
                     <Coins size={15} aria-hidden="true" />
-                    <span>Bilancia</span>
+                      <span>{t('balanceTab')}</span>
                   </span>
                 </button>
               </section>
@@ -2302,40 +2642,40 @@ export default function SplitPayWebApp() {
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head overview-head">
                     <div>
-                      <p className="eyebrow">Prehľad výletu</p>
-                      <h2>Základné informácie</h2>
+                        <p className="eyebrow">{t('tripOverview')}</p>
+                        <h2>{t('basicInfo')}</h2>
                     </div>
                     <button
                       type="button"
                       className="expense-open-modal-btn"
                       onClick={() => setShowExpenseModal(true)}
-                      title="Pridať výdavok"
+                        title={t('addExpense')}
                     >
                       <Plus size={16} />
-                      <span>Pridať výdavok</span>
+                        <span>{t('addExpense')}</span>
                     </button>
                   </div>
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
-                      <span>Členovia</span>
+                        <span>{t('membersLabel')}</span>
                       <strong>{members.length}</strong>
                     </div>
                     <div className="stat-card overview-stat-card">
-                      <span>Výdavky</span>
+                        <span>{t('expensesLabel')}</span>
                       <strong>{normalizedExpenses.length}</strong>
                     </div>
                     <div className="stat-card overview-stat-card">
-                      <span>Pozvánky</span>
+                        <span>{t('invitesLabel')}</span>
                       <strong>{currentTrip.pendingInvites.length}</strong>
                     </div>
                     <div className="stat-card overview-stat-card">
-                      <span>Spolu minuté</span>
+                        <span>{t('totalSpent')}</span>
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
                   <div className="screen-grid compact-grid overview-compact-grid">
                     <div className="mini-panel overview-mini-panel">
-                      <h3>Členovia výletu</h3>
+                        <h3>{t('tripMembers')}</h3>
                       <div className="pill-list">
                         {members.map((name) => (
                           <div key={name} className="pill">
@@ -2345,14 +2685,14 @@ export default function SplitPayWebApp() {
                       </div>
                     </div>
                     <div className="mini-panel overview-mini-panel">
-                      <h3>Posledné výdavky</h3>
+                        <h3>{t('recentExpenses')}</h3>
                       <div className="stack-list">
-                        {recentExpenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
+                          {recentExpenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                         {recentExpenses.map((expense) => (
                           <div className="row overview-row" key={expense.id}>
                             <div>
                               <strong>{expense.title}</strong>
-                              <p>Platil {expense.payer}</p>
+                                <p>{t('paidBy')} {expense.payer}</p>
                             </div>
                             <strong>{money(expense.amount)}</strong>
                           </div>
@@ -2366,17 +2706,17 @@ export default function SplitPayWebApp() {
               {activeDetailScreen === 'members' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Tím</p>
-                    <h2>Členovia výletu</h2>
+                      <p className="eyebrow">{t('team')}</p>
+                      <h2>{t('membersTitle')}</h2>
                   </div>
                   {currentTripOwnerIsSelf ? (
                     <form className="inline-form compact-form" onSubmit={handleAddMember}>
                       <input
                         value={newMember}
                         onChange={(event) => setNewMember(event.target.value)}
-                        placeholder="Meno člena"
+                          placeholder={t('memberNamePlaceholder')}
                       />
-                      <button type="submit">Pridať</button>
+                        <button type="submit">{t('addBtn')}</button>
                     </form>
                   ) : null}
                   {currentTripOwnerIsSelf && members.length === 1 ? (
@@ -2401,7 +2741,7 @@ export default function SplitPayWebApp() {
                           <strong>{formatMemberName(name)}</strong>
                           {(isSelfName(name) || currentTrip.owner === name) && (
                             <p>
-                              {currentTrip.owner === name ? 'Vlastník' : displayCurrentUserName}
+                              {currentTrip.owner === name ? t('ownerLabel') : displayCurrentUserName}
                             </p>
                           )}
                         </div>
@@ -2419,8 +2759,8 @@ export default function SplitPayWebApp() {
                   </div>
                   {!isAuthenticated && currentTrip.pendingInvites.length > 0 ? (
                     <div className="mini-panel">
-                      <h3>Potvrď svoju identitu</h3>
-                      <p className="muted">Ak si hosť, vyber si jednu z pozvánok:</p>
+                        <h3>{t('confirmIdentity')}</h3>
+                        <p className="muted">{t('guestPickInvite')}</p>
                       <div className="stack-list">
                         {currentTrip.pendingInvites
                           .filter((invite) => invite.status === 'Pozvany')
@@ -2432,7 +2772,7 @@ export default function SplitPayWebApp() {
                               onClick={() => handleGuestClaimIdentity(invite.name)}
                             >
                               <span>{invite.name}</span>
-                              <strong>Toto som ja</strong>
+                                <strong>{t('thatsMe')}</strong>
                             </button>
                           ))}
                       </div>
@@ -2444,18 +2784,18 @@ export default function SplitPayWebApp() {
               {activeDetailScreen === 'invites' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Pozvanie</p>
-                    <h2>Pozvánky a prístupy</h2>
+                      <p className="eyebrow">{t('invitation')}</p>
+                      <h2>{t('invitesTitle')}</h2>
                   </div>
                   {currentTripOwnerIsSelf ? (
                     <>
                       <div className="invite-code-box">
-                        <span>Kód</span>
+                          <span>{t('code')}</span>
                         <strong>{currentTrip.inviteCode}</strong>
                         <div className="share-buttons">
                           <button type="button" className="ghost share-action-btn" onClick={copyInviteCodeToClipboard}>
                             <Clipboard size={14} aria-hidden="true" />
-                            <span>Kopírovať</span>
+                              <span>{t('copy')}</span>
                           </button>
                           <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
                             <Mail size={14} aria-hidden="true" />
@@ -2475,14 +2815,14 @@ export default function SplitPayWebApp() {
                             onClick={() => setShowInviteQr((prev) => !prev)}
                           >
                             <QrCode size={14} aria-hidden="true" />
-                            <span>{showInviteQr ? 'Skryť QR' : 'QR kód'}</span>
+                              <span>{showInviteQr ? t('hideQr') : t('showQr')}</span>
                           </button>
                         </div>
                         {showInviteQr ? (
                           <div className="qr-share-box">
                             <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
                             <div>
-                              <p className="muted">Naskenuj QR na pripojenie</p>
+                                <p className="muted">{t('scanQr')}</p>
                             </div>
                           </div>
                         ) : null}
@@ -2491,18 +2831,18 @@ export default function SplitPayWebApp() {
                         <input
                           value={inviteName}
                           onChange={(event) => setInviteName(event.target.value)}
-                          placeholder="Meno"
+                            placeholder={t('namePlaceholderInvite')}
                         />
                         <input
                           value={inviteContact}
                           onChange={(event) => setInviteContact(event.target.value)}
-                          placeholder="Kontakt (voliteľné)"
+                            placeholder={t('contactPlaceholder')}
                         />
-                        <button type="submit">Pridať</button>
+                          <button type="submit">{t('addBtn')}</button>
                       </form>
                     </>
                   ) : (
-                    <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
+                      <p className="muted">{t('tripCode')} {currentTrip.inviteCode}</p>
                   )}
                   <div className="stack-list">
                     {currentTrip.pendingInvites.map((invite) => (
@@ -2522,34 +2862,34 @@ export default function SplitPayWebApp() {
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head expenses-head">
                     <div>
-                      <p className="eyebrow">Výdavky</p>
-                      <h2>Prehľad a história výdavkov</h2>
+                        <p className="eyebrow">{t('expensesTab')}</p>
+                        <h2>{t('expensesTitle')}</h2>
                     </div>
-                    <button type="button" className="expense-open-modal-btn" onClick={openExpenseModalForCreate}>
-                      + Pridať výdavok
+                      <button type="button" className="expense-open-modal-btn" onClick={openExpenseModalForCreate}>
+                        {t('addExpenseBtn')}
                     </button>
                   </div>
 
                   <div className="mini-panel expenses-list-panel">
-                    <h3>História výdavkov</h3>
+                      <h3>{t('expenseHistory')}</h3>
                     <div className="stack-list">
-                      {currentTrip.expenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
+                        {currentTrip.expenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                       {currentTrip.expenses.map((expense) => (
                         <div className="row" key={expense.id}>
                           <div>
                             <strong>{expense.title}</strong>
                             <p>
                               {expense.expenseType === 'transfer'
-                                ? `${expense.payer} poslal(a) ${expense.transferTo || expense.participants[0] || '-'}.`
-                                : `Platil ${expense.payer}, účastníci: ${expense.participants.join(', ')}`}
+                                  ? `${expense.payer} ${t('sent')} ${expense.transferTo || expense.participants[0] || '-'}.`
+                                  : `${t('paidBy')} ${expense.payer}, ${t('participantsLabel')} ${expense.participants.join(', ')}`}
                             </p>
                           </div>
                           <div className="expense-actions">
-                            <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
-                              Upraviť
+                              <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
+                                {t('editBtn')}
                             </button>
-                            <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
-                              Vymazať
+                              <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
+                                {t('deleteBtn')}
                             </button>
                             <strong>{money(expense.amount)}</strong>
                           </div>
@@ -2565,11 +2905,11 @@ export default function SplitPayWebApp() {
               {activeDetailScreen === 'balances' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
-                    <p className="eyebrow">Bilancia</p>
-                    <h2>Kto komu koľko dlží</h2>
+                      <p className="eyebrow">{t('balanceTab')}</p>
+                      <h2>{t('balanceTitle')}</h2>
                   </div>
-                  <div className="balance-shell">
-                    <div className="balance-segmented" role="tablist" aria-label="Prepínač bilancie">
+                    <div className="balance-shell">
+                      <div className="balance-segmented" role="tablist" aria-label={t('balanceSwitcher')}>
                       <button
                         type="button"
                         role="tab"
@@ -2577,7 +2917,7 @@ export default function SplitPayWebApp() {
                         aria-selected={balanceTab === 'all'}
                         onClick={() => setBalanceTab('all')}
                       >
-                        Všetky
+                          {t('allTab')}
                       </button>
                       <button
                         type="button"
@@ -2586,18 +2926,18 @@ export default function SplitPayWebApp() {
                         aria-selected={balanceTab === 'settlements'}
                         onClick={() => setBalanceTab('settlements')}
                       >
-                        Vyrovnania
+                          {t('settlementsTab')}
                       </button>
                     </div>
 
                     {balanceTab === 'all' ? (
                       <div className="balance-main-card">
-                        <h3>Kto komu koľko dlží</h3>
-                        <p className="muted balance-subtitle">Aktuálne stavy bilancie</p>
+                          <h3>{t('balanceTitle')}</h3>
+                          <p className="muted balance-subtitle">{t('currentBalances')}</p>
 
-                        {Object.entries(balances).length === 0 ? (
-                          <p className="muted">Žiadni členkovia.</p>
-                        ) : null}
+                          {Object.entries(balances).length === 0 ? (
+                            <p className="muted">{t('noMembers')}</p>
+                          ) : null}
 
                         <div className="stack-list balance-transfer-list">
                           {Object.entries(balances).map(([name, value]) => {
@@ -2609,7 +2949,7 @@ export default function SplitPayWebApp() {
                                 <span className="balance-arrow" aria-hidden="true">{value >= 0 ? '←' : '→'}</span>
                                 <span className="balance-target">
                                   <span className="balance-avatar">€</span>
-                                  {value >= 0 ? 'dostane' : 'zaplatí'}
+                                    {value >= 0 ? t('receives') : t('pays')}
                                 </span>
                                 <strong className={`balance-amount ${value >= 0 ? 'positive' : 'negative'}`}>
                                   {eur(Math.abs(value))}
@@ -2621,7 +2961,7 @@ export default function SplitPayWebApp() {
 
                         <div className="balance-total-card">
                           <p>
-                            {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
+                              {selfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
                           </p>
                           <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
                             {eur(Math.abs(selfBalance))}
@@ -2632,10 +2972,10 @@ export default function SplitPayWebApp() {
 
                     {balanceTab === 'settlements' ? (
                       <div className="balance-main-card">
-                        <h3>Kto komu koľko dlží</h3>
-                        <p className="muted balance-subtitle">Najmenej prevodov na vyrovnanie</p>
+                          <h3>{t('balanceTitle')}</h3>
+                          <p className="muted balance-subtitle">{t('fewestTransfers')}</p>
 
-                        {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
+                          {settlements.length === 0 ? <p className="muted">{t('allSettled')}</p> : null}
 
                         <div className="stack-list balance-transfer-list">
                           {settlements.map((transfer, index) => {
@@ -2658,7 +2998,7 @@ export default function SplitPayWebApp() {
 
                         <div className="balance-total-card">
                           <p>
-                            {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
+                              {selfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
                           </p>
                           <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
                             {eur(Math.abs(selfBalance))}
@@ -2668,7 +3008,7 @@ export default function SplitPayWebApp() {
                     ) : null}
 
                     <div className="balance-tip muted">
-                      Pošli kamarátom svoje číslo účtu alebo vyrovnajte v hotovosti.
+                        {t('balanceTip')}
                     </div>
                   </div>
                 </section>
@@ -2676,13 +3016,13 @@ export default function SplitPayWebApp() {
 
               {showExpenseModal ? (
                 <div className="modal-overlay" role="presentation" onClick={() => setShowExpenseModal(false)}>
-                  <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label="Pridať výdavok" onClick={(event) => event.stopPropagation()}>
+                  <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label={t('addExpenseTitle')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
-                        <p className="eyebrow">Výdavok</p>
-                        <h2>{editingExpenseId ? 'Upraviť výdavok' : 'Pridať výdavok'}</h2>
+                        <p className="eyebrow">{t('expenseModalEyebrow')}</p>
+                        <h2>{editingExpenseId ? t('editExpenseTitle') : t('addExpenseTitle')}</h2>
                       </div>
-                      <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>Zavrieť</button>
+                      <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>{t('close')}</button>
                     </div>
                     <form className="stack" onSubmit={handleAddExpense}>
                       <select
@@ -2694,23 +3034,23 @@ export default function SplitPayWebApp() {
                           }))
                         }
                       >
-                        <option value="expense">Nový výdavok</option>
-                        <option value="transfer">Transfer (vyrovnanie)</option>
+                        <option value="expense">{t('newExpense')}</option>
+                        <option value="transfer">{t('transferOption')}</option>
                       </select>
                       <input
                         value={draft.title}
                         onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
                         placeholder={
                           draft.expenseType === 'transfer'
-                            ? 'Názov transferu (voliteľné)'
-                            : 'Názov výdavku'
+                            ? t('transferNamePlaceholder')
+                            : t('expenseNamePlaceholder')
                         }
                       />
                       <input
                         value={draft.amount}
                         onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
                         inputMode="decimal"
-                        placeholder="Suma"
+                        placeholder={t('amountPlaceholder')}
                       />
                       <select
                         value={safePayer}
@@ -2730,7 +3070,7 @@ export default function SplitPayWebApp() {
                             setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
                           }
                         >
-                          <option value="">Komu posielam</option>
+                            <option value="">{t('sendTo')}</option>
                           {members
                             .filter((name) => name !== safePayer)
                             .map((name) => (
@@ -2780,31 +3120,31 @@ export default function SplitPayWebApp() {
                               className={draft.splitType === 'equal' ? 'active' : ''}
                               onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal', participants: members }))}
                             >
-                              Rovnomerne
+                                {t('equalSplit')}
                             </button>
                             <button
                               type="button"
                               className={draft.splitType === 'individual' ? 'active' : ''}
                               onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
                             >
-                              Individuálne
+                                {t('individualSplit')}
                             </button>
                           </div>
 
                           {draft.splitType === 'individual' ? (
                             <p className="muted">
-                              Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
+                                {t('individualSum')} {money(individualTotal)} / {t('totalLabel')} {money(amountNumber || 0)}
                             </p>
                           ) : null}
                         </>
                       )}
 
                       <button type="submit" disabled={!canAddExpense}>
-                        {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
+                          {editingExpenseId ? t('saveChanges') : t('addExpenseTitle')}
                       </button>
                       {editingExpenseId ? (
-                        <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
-                          Zrušiť úpravu
+                          <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
+                            {t('cancelEdit')}
                         </button>
                       ) : null}
                     </form>
@@ -2824,25 +3164,25 @@ export default function SplitPayWebApp() {
             className="section-card modal-card invite-join-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Vstup do výletu"
+              aria-label={t('joinTripModal')}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="modal-head">
               <div>
-                <p className="eyebrow">Pozvánka</p>
-                <h2>Vstup do výletu</h2>
+                  <p className="eyebrow">{t('inviteEyebrow')}</p>
+                  <h2>{t('joinTripModal')}</h2>
               </div>
-              <button type="button" className="ghost" onClick={clearInvite}>Zavrieť</button>
+                <button type="button" className="ghost" onClick={clearInvite}>{t('close')}</button>
             </div>
 
             <p className="muted invite-join-desc">
-              Ste pozvaný na výlet <strong>{inviteTrip.tripName}</strong>.
-              Vyberte si meno, pod ktorým budete figurovať vo výlete.
+                {t('invitedToTrip')} <strong>{inviteTrip.tripName}</strong>.
+                {' '}{t('chooseNameDesc')}
             </p>
 
             {inviteTrip.slots.length > 0 ? (
               <>
-                <p className="invite-slots-label">Voľné sloty:</p>
+                  <p className="invite-slots-label">{t('availableSlots')}</p>
                 <div className="slot-picker">
                   {inviteTrip.slots.map((slot) => (
                     <button
@@ -2859,7 +3199,7 @@ export default function SplitPayWebApp() {
                     className={`slot-btn slot-btn-custom${inviteUseCustom ? ' active' : ''}`}
                     onClick={() => { setInviteUseCustom(true); setInviteChosenSlot(''); }}
                   >
-                    + Vlastné meno
+                      {t('customName')}
                   </button>
                 </div>
               </>
@@ -2867,11 +3207,11 @@ export default function SplitPayWebApp() {
 
             {(inviteUseCustom || inviteTrip.slots.length === 0) ? (
               <label className="field-block invite-name-field">
-                <span>Vaše meno vo výlete</span>
+                  <span>{t('yourNameInTrip')}</span>
                 <input
                   value={inviteCustomName}
                   onChange={(event) => setInviteCustomName(event.target.value)}
-                  placeholder="Napr. Jano"
+                    placeholder={t('yourNameInTripPlaceholder')}
                   autoFocus
                 />
               </label>
@@ -2889,7 +3229,7 @@ export default function SplitPayWebApp() {
                   : !inviteCustomName.trim()
               )}
             >
-              {inviteLoading ? 'Pridávam...' : 'Vstúpiť do výletu'}
+                {inviteLoading ? t('adding') : t('joinTripConfirm')}
             </button>
           </section>
         </div>
