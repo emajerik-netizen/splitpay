@@ -43,6 +43,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
+const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
 
 type Invite = {
   id: string;
@@ -153,6 +154,19 @@ function normalizeTrip(trip: Trip): Trip {
   };
 }
 
+function sanitizeLoadedState(state: { trips?: Trip[]; selectedTripId?: string }) {
+  const trips = (state.trips || [])
+    .map((trip) => normalizeTrip(trip))
+    .filter((trip) => trip.id !== 'default-trip');
+
+  const selectedTripId =
+    state.selectedTripId && trips.some((trip) => trip.id === state.selectedTripId)
+      ? state.selectedTripId
+      : trips[0]?.id || '';
+
+  return { trips, selectedTripId };
+}
+
 function readInitialState(): { trips: Trip[]; selectedTripId: string } {
   return { trips: [], selectedTripId: '' };
 }
@@ -202,7 +216,10 @@ function makeUserSession(userId: string, email: string, fullName?: string | null
 export default function SplitPayWebApp() {
   const router = useRouter();
   const pathname = usePathname();
-  const [showStartup, setShowStartup] = useState(true);
+  const [showStartup, setShowStartup] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.sessionStorage.getItem(STARTUP_SEEN_KEY) !== '1';
+  });
   const [trips, setTrips] = useState<Trip[]>(() => readInitialState().trips);
   const [selectedTripId, setSelectedTripId] = useState<string>(() => readInitialState().selectedTripId);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -261,9 +278,17 @@ export default function SplitPayWebApp() {
   const expenseCountRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
+    if (!showStartup) return;
+
     const timer = window.setTimeout(() => setShowStartup(false), 3200);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [showStartup]);
+
+  useEffect(() => {
+    if (!showStartup) {
+      window.sessionStorage.setItem(STARTUP_SEEN_KEY, '1');
+    }
+  }, [showStartup]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -278,9 +303,9 @@ export default function SplitPayWebApp() {
 
         const parsed = JSON.parse(raw) as { trips?: Trip[]; selectedTripId?: string };
         if (Array.isArray(parsed.trips) && parsed.trips.length > 0) {
-          const normalized = parsed.trips.map((trip) => normalizeTrip(trip));
-          setTrips(normalized);
-          setSelectedTripId(parsed.selectedTripId || normalized[0].id);
+          const sanitized = sanitizeLoadedState(parsed);
+          setTrips(sanitized.trips);
+          setSelectedTripId(sanitized.selectedTripId);
         }
       } catch {
         // Ignore invalid local state and keep the deterministic fallback.
@@ -372,9 +397,9 @@ export default function SplitPayWebApp() {
 
       const remote = data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null;
       if (remote?.trips?.length) {
-        const normalized = remote.trips.map(normalizeTrip);
-        setTrips(normalized);
-        setSelectedTripId(remote.selectedTripId || normalized[0].id);
+        const sanitized = sanitizeLoadedState(remote);
+        setTrips(sanitized.trips);
+        setSelectedTripId(sanitized.selectedTripId);
       }
 
       dbLoadedRef.current = true;
@@ -701,10 +726,18 @@ export default function SplitPayWebApp() {
     : detailScreen;
   const activeTripId = routeTripId || selectedTripId;
 
-  const currentTrip = useMemo(
-    () => trips.find((trip) => trip.id === activeTripId) || trips[0] || null,
-    [activeTripId, trips]
-  );
+  const currentTrip = useMemo(() => {
+    if (activeTripId) {
+      return trips.find((trip) => trip.id === activeTripId) || null;
+    }
+    return trips[0] || null;
+  }, [activeTripId, trips]);
+
+  useEffect(() => {
+    if (!routeTripId) return;
+    if (trips.some((trip) => trip.id === routeTripId)) return;
+    router.replace('/');
+  }, [routeTripId, router, trips]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -759,8 +792,6 @@ export default function SplitPayWebApp() {
 
   function openTrip(tripId: string, nextScreen: TripDetailScreen = 'overview') {
     setSelectedTripId(tripId);
-    setDetailScreen(nextScreen);
-    setAppScreen('trip-detail');
     router.push(tripPath(tripId, nextScreen));
   }
 
