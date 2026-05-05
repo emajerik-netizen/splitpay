@@ -289,6 +289,9 @@ const T = {
     registrationSuccess: 'Registracia prebehla. Skontroluj email pre potvrdenie uctu.',
     registrationSuccessInstant: 'Registracia prebehla a si prihlaseny.',
     registrationPendingLocalAccess: 'Konto bolo vytvorene. Potvrdzovaci email bol odoslany znova a do appky si vpusteny docasne. Po potvrdeni emailu sa prihlas bez obmedzeni.',
+    registrationCreatedNotice: 'Uzivatel je vytvoreny. Potvrdzovaci email pride do par minut.',
+    registrationCreatedAction: 'Po kliknuti na OK ta pustime do appky.',
+    emailVerificationCompleted: 'Email bol overeny. Prihlasenie je dokoncene.',
     verificationEmailResent: 'Email este nie je potvrdeny. Poslali sme novy verifikacny email.',
     verificationEmailResendFailed: 'Email este nie je potvrdeny a nepodarilo sa poslat novy verifikacny email.',
     loggedOut: 'Odhlasene.',
@@ -555,6 +558,9 @@ const T = {
     registrationSuccess: 'Registration completed. Check your email to confirm the account.',
     registrationSuccessInstant: 'Registration completed and you are signed in.',
     registrationPendingLocalAccess: 'Account was created. Verification email was resent and temporary app access is enabled. After email confirmation, sign in for full access.',
+    registrationCreatedNotice: 'User account has been created. Verification email should arrive in a few minutes.',
+    registrationCreatedAction: 'After clicking OK, you can enter the app.',
+    emailVerificationCompleted: 'Email has been verified. Sign-in is now complete.',
     verificationEmailResent: 'Email is not confirmed yet. We sent a new verification email.',
     verificationEmailResendFailed: 'Email is not confirmed and resending verification email failed.',
     loggedOut: 'Signed out.',
@@ -703,6 +709,12 @@ type TopUser = {
   visits: number;
 };
 
+type PendingVerification = {
+  email: string;
+  password: string;
+  fullName: string;
+};
+
 type AppScreen = 'trips' | 'trip-detail' | 'admin';
 type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances';
 
@@ -823,6 +835,8 @@ export default function SplitPayWebApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
   const [appSession, setAppSession] = useState<AppSession | null>(null);
+  const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
+  const [showRegistrationNotice, setShowRegistrationNotice] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [newTripName, setNewTripName] = useState('');
   const [newTripDate, setNewTripDate] = useState('');
@@ -1039,6 +1053,35 @@ export default function SplitPayWebApp() {
 
     window.localStorage.removeItem(SESSION_CACHE_KEY);
   }, [appSession]);
+
+  useEffect(() => {
+    if (!pendingVerification || !supabase) return;
+
+    let cancelled = false;
+    const langPack = T[lang];
+
+    const checkVerifiedAndSignIn = async () => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: pendingVerification.email,
+        password: pendingVerification.password,
+      });
+
+      if (cancelled) return;
+      if (error || !data.session) return;
+
+      setPendingVerification(null);
+      setShowRegistrationNotice(false);
+      setInfoMessage(langPack.emailVerificationCompleted);
+    };
+
+    const interval = window.setInterval(checkVerifiedAndSignIn, 15000);
+    checkVerifiedAndSignIn();
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [pendingVerification, supabase, lang]);
 
   useEffect(() => {
     if (!supabase || !authResolved || !appSession?.userId || dbLoadedRef.current) return;
@@ -1313,6 +1356,8 @@ export default function SplitPayWebApp() {
           return;
         }
 
+        setPendingVerification(null);
+        setShowRegistrationNotice(false);
         setAuthMessage(t('loginSuccess'));
       } else {
         const normalizedEmail = email.trim().toLowerCase();
@@ -1334,6 +1379,8 @@ export default function SplitPayWebApp() {
         }
 
         if (data.session) {
+          setPendingVerification(null);
+          setShowRegistrationNotice(false);
           setAuthMessage(t('registrationSuccessInstant'));
           return;
         }
@@ -1344,6 +1391,8 @@ export default function SplitPayWebApp() {
         });
 
         if (!loginAfterSignupError) {
+          setPendingVerification(null);
+          setShowRegistrationNotice(false);
           setAuthMessage(t('registrationSuccessInstant'));
           return;
         }
@@ -1357,12 +1406,13 @@ export default function SplitPayWebApp() {
             },
           });
 
-          // Temporary local session keeps the user in app until email is confirmed.
-          setAppSession({
-            ...makeUserSession(`pending:${normalizedEmail}`, normalizedEmail, normalizedName),
-            guest: true,
+          setPendingVerification({
+            email: normalizedEmail,
+            password,
+            fullName: normalizedName,
           });
-          setAuthMessage(t('registrationPendingLocalAccess'));
+          setShowRegistrationNotice(true);
+          setAuthMessage('');
           return;
         }
 
@@ -1400,6 +1450,8 @@ export default function SplitPayWebApp() {
 
   async function handleLogout() {
     setAppSession(null);
+    setPendingVerification(null);
+    setShowRegistrationNotice(false);
     window.localStorage.removeItem(SESSION_CACHE_KEY);
     router.push('/');
 
@@ -1506,7 +1558,26 @@ export default function SplitPayWebApp() {
 
   function toggleAuthMode() {
     setAuthMessage('');
+    setShowRegistrationNotice(false);
     setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'));
+  }
+
+  function handleRegistrationNoticeConfirm() {
+    if (!pendingVerification) {
+      setShowRegistrationNotice(false);
+      return;
+    }
+
+    setAppSession({
+      ...makeUserSession(
+        `pending:${pendingVerification.email}`,
+        pendingVerification.email,
+        pendingVerification.fullName
+      ),
+      guest: true,
+    });
+    setShowRegistrationNotice(false);
+    setInfoMessage(t('registrationPendingLocalAccess'));
   }
 
   function clearInvite() {
@@ -3657,6 +3728,30 @@ export default function SplitPayWebApp() {
         ) : null}
         </main>
       )}
+
+      {showRegistrationNotice ? (
+        <div className="modal-overlay" role="presentation" onClick={handleRegistrationNoticeConfirm}>
+          <section
+            className="section-card modal-card support-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('registrationSuccess')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">{t('createAccount')}</p>
+                <h2>{t('registrationSuccess')}</h2>
+              </div>
+            </div>
+
+            <p className="muted">{t('registrationCreatedNotice')}</p>
+            <p className="muted">{t('registrationCreatedAction')}</p>
+
+            <button type="button" onClick={handleRegistrationNoticeConfirm}>OK</button>
+          </section>
+        </div>
+      ) : null}
 
       {/* Invite slot picker modal - shows after auth when pending invite exists */}
       {showSupportModal ? (
