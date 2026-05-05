@@ -260,6 +260,7 @@ export default function SplitPayWebApp() {
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
+  const [localStateHydrated, setLocalStateHydrated] = useState(false);
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
@@ -309,6 +310,8 @@ export default function SplitPayWebApp() {
         }
       } catch {
         // Ignore invalid local state and keep the deterministic fallback.
+      } finally {
+        setLocalStateHydrated(true);
       }
     });
   }, []);
@@ -735,9 +738,10 @@ export default function SplitPayWebApp() {
 
   useEffect(() => {
     if (!routeTripId) return;
+    if (!localStateHydrated) return;
     if (trips.some((trip) => trip.id === routeTripId)) return;
     router.replace('/');
-  }, [routeTripId, router, trips]);
+  }, [localStateHydrated, routeTripId, router, trips]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -1604,12 +1608,22 @@ export default function SplitPayWebApp() {
             <>
               <section className="hero hero-panel">
                 <div>
-                  <p className="eyebrow">Moje výlety</p>
-                  <h1>Vyber si výlet alebo vytvor nový</h1>
+                  <div className="hero-brand">
+                    <Image src="/icon.png" alt="Split Pay" width={56} height={56} className="hero-app-icon" />
+                    <div>
+                      <p className="eyebrow">Split Pay</p>
+                      <h1>Výlety, rozpočet a vyrovnanie bez chaosu</h1>
+                    </div>
+                  </div>
                   <p>
-                    Toto je úvodná obrazovka po prihlásení. Tu máš samostatné okná pre vytvorenie
-                    výletu, pridanie sa do výletu a prehľad všetkých výletov.
+                    Vytvor výlet, pozvi ľudí cez kód a maj výdavky pod kontrolou od prvého nákupu
+                    až po posledné vyrovnanie.
                   </p>
+                  <div className="hero-metrics">
+                    <span>Rýchle pozvánky</span>
+                    <span>Spravodlivé rozdelenie</span>
+                    <span>Okamžitá bilancia</span>
+                  </div>
                 </div>
                 <div className="hero-actions">
                   <p className="muted">Prihlásený email: {appSession?.email}</p>
@@ -1727,8 +1741,13 @@ export default function SplitPayWebApp() {
                   <button type="button" className="back-link" onClick={goToTripsHome}>
                     ← Späť na moje výlety
                   </button>
-                  <p className="eyebrow">Detail výletu</p>
-                  <h1>{currentTrip.name}</h1>
+                  <div className="hero-brand compact-brand">
+                    <Image src="/icon.png" alt="Split Pay" width={44} height={44} className="hero-app-icon" />
+                    <div>
+                      <p className="eyebrow">Detail výletu</p>
+                      <h1>{currentTrip.name}</h1>
+                    </div>
+                  </div>
                   <p>
                     {currentTrip.date} · {members.length} členov · {eur(totalSpent)} spolu
                   </p>
