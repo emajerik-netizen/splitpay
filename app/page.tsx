@@ -248,6 +248,8 @@ export default function SplitPayWebApp() {
   const [inviteName, setInviteName] = useState('');
   const [inviteContact, setInviteContact] = useState('');
   const [showInviteQr, setShowInviteQr] = useState(false);
+  const [showCreateTripModal, setShowCreateTripModal] = useState(false);
+  const [showJoinTripModal, setShowJoinTripModal] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
@@ -800,8 +802,22 @@ export default function SplitPayWebApp() {
 
     appliedJoinCodeRef.current = codeFromUrl;
     setJoinCode(codeFromUrl);
+    setShowJoinTripModal(true);
     setInfoMessage(`Kód ${codeFromUrl} bol načítaný z QR. Zadaj meno a pripoj sa.`);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!showCreateTripModal && !showJoinTripModal) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowCreateTripModal(false);
+      setShowJoinTripModal(false);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showCreateTripModal, showJoinTripModal]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -976,6 +992,7 @@ export default function SplitPayWebApp() {
     openTrip(trip.id, 'overview', trip.inviteCode);
     setNewTripName('');
     setNewTripDate('');
+    setShowCreateTripModal(false);
     setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
   }
 
@@ -1164,6 +1181,7 @@ export default function SplitPayWebApp() {
     openTrip(foundTripId, 'overview');
     setJoinName('');
     setJoinCode('');
+    setShowJoinTripModal(false);
     setInfoMessage(`${cleanedName} sa pridal(a) do výletu.`);
   }
 
@@ -1719,64 +1737,6 @@ export default function SplitPayWebApp() {
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
 
-              <section className="screen-grid onboarding-grid">
-                <section className="screen-window section-card">
-                  <div className="section-head compact-head">
-                    <p className="eyebrow">Nový výlet</p>
-                    <h2>Založiť výlet</h2>
-                    <p className="muted card-subtitle">Vytvor základ, pozvi ľudí a zdieľaj link alebo QR.</p>
-                  </div>
-                  <form className="stack onboarding-form" onSubmit={handleCreateTrip}>
-                    <label className="field-block">
-                      <span>Názov výletu</span>
-                      <input
-                        value={newTripName}
-                        onChange={(event) => setNewTripName(event.target.value)}
-                        placeholder="Napr. Tatry víkend"
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>Dátum</span>
-                      <input
-                        value={newTripDate}
-                        onChange={(event) => setNewTripDate(event.target.value)}
-                        placeholder="Voliteľné"
-                      />
-                    </label>
-                    <button type="submit" className="primary-cta">Vytvoriť výlet</button>
-                    <p className="muted field-hint">Po vytvorení dostaneš okamžite kód na pozvanie ostatných.</p>
-                  </form>
-                </section>
-
-                <section className="screen-window section-card">
-                  <div className="section-head compact-head">
-                    <p className="eyebrow">Pripojenie</p>
-                    <h2>Pridať sa do výletu</h2>
-                    <p className="muted card-subtitle">Zadaj svoje meno a kód organizátora.</p>
-                  </div>
-                  <form className="stack onboarding-form" onSubmit={handleJoinByCode}>
-                    <label className="field-block">
-                      <span>Tvoje meno</span>
-                      <input
-                        value={joinName}
-                        onChange={(event) => setJoinName(event.target.value)}
-                        placeholder="Napr. Martin"
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>Kód od organizátora</span>
-                      <input
-                        value={joinCode}
-                        onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                        placeholder="Napr. A1B2C3"
-                      />
-                    </label>
-                    <button type="submit" className="primary-cta">Pripojiť sa</button>
-                    <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky.</p>
-                  </form>
-                </section>
-              </section>
-
               <section className="app-section">
                 <div className="section-head">
                   <p className="eyebrow">Prehľad</p>
@@ -1829,6 +1789,96 @@ export default function SplitPayWebApp() {
                   })}
                 </div>
               </section>
+
+              <section className="screen-grid action-tiles-grid">
+                <button
+                  type="button"
+                  className="section-card action-tile"
+                  onClick={() => setShowCreateTripModal(true)}
+                >
+                  <p className="eyebrow">Nový výlet</p>
+                  <h2>Založiť výlet</h2>
+                  <p className="muted card-subtitle">Vytvor nový výlet a získaj kód na zdieľanie.</p>
+                </button>
+
+                <button
+                  type="button"
+                  className="section-card action-tile"
+                  onClick={() => setShowJoinTripModal(true)}
+                >
+                  <p className="eyebrow">Pripojenie</p>
+                  <h2>Pridať sa do výletu</h2>
+                  <p className="muted card-subtitle">Máš kód? Otvor formulár a pridaj sa.</p>
+                </button>
+              </section>
+
+              {showCreateTripModal ? (
+                <div className="modal-overlay" role="presentation" onClick={() => setShowCreateTripModal(false)}>
+                  <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label="Založiť výlet" onClick={(event) => event.stopPropagation()}>
+                    <div className="modal-head">
+                      <div>
+                        <p className="eyebrow">Nový výlet</p>
+                        <h2>Založiť výlet</h2>
+                      </div>
+                      <button type="button" className="ghost" onClick={() => setShowCreateTripModal(false)}>Zavrieť</button>
+                    </div>
+                    <form className="stack onboarding-form" onSubmit={handleCreateTrip}>
+                      <label className="field-block">
+                        <span>Názov výletu</span>
+                        <input
+                          value={newTripName}
+                          onChange={(event) => setNewTripName(event.target.value)}
+                          placeholder="Napr. Tatry víkend"
+                        />
+                      </label>
+                      <label className="field-block">
+                        <span>Dátum</span>
+                        <input
+                          value={newTripDate}
+                          onChange={(event) => setNewTripDate(event.target.value)}
+                          placeholder="Voliteľné"
+                        />
+                      </label>
+                      <button type="submit" className="primary-cta">Vytvoriť výlet</button>
+                      <p className="muted field-hint">Po vytvorení dostaneš okamžite kód na pozvanie ostatných.</p>
+                    </form>
+                  </section>
+                </div>
+              ) : null}
+
+              {showJoinTripModal ? (
+                <div className="modal-overlay" role="presentation" onClick={() => setShowJoinTripModal(false)}>
+                  <section className="section-card modal-card" role="dialog" aria-modal="true" aria-label="Pridať sa do výletu" onClick={(event) => event.stopPropagation()}>
+                    <div className="modal-head">
+                      <div>
+                        <p className="eyebrow">Pripojenie</p>
+                        <h2>Pridať sa do výletu</h2>
+                      </div>
+                      <button type="button" className="ghost" onClick={() => setShowJoinTripModal(false)}>Zavrieť</button>
+                    </div>
+                    <form className="stack onboarding-form" onSubmit={handleJoinByCode}>
+                      <label className="field-block">
+                        <span>Tvoje meno</span>
+                        <input
+                          value={joinName}
+                          onChange={(event) => setJoinName(event.target.value)}
+                          placeholder="Napr. Martin"
+                        />
+                      </label>
+                      <label className="field-block">
+                        <span>Kód od organizátora</span>
+                        <input
+                          value={joinCode}
+                          onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                          placeholder="Napr. A1B2C3"
+                        />
+                      </label>
+                      <button type="submit" className="primary-cta">Pripojiť sa</button>
+                      <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky.</p>
+                    </form>
+                  </section>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="trip-theme" style={tripThemeStyle}>
