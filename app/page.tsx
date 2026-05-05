@@ -96,6 +96,15 @@ const T = {
     password: 'Heslo',
     passwordPlaceholder: 'Zadaj svoje heslo',
     forgotPassword: 'Zabudli ste heslo?',
+    resetPasswordTitle: 'Nastavenie noveho hesla',
+    resetPasswordSubtitle: 'Zadaj nove heslo pre svoj ucet.',
+    confirmPassword: 'Potvrd heslo',
+    confirmPasswordPlaceholder: 'Zopakuj nove heslo',
+    saveNewPasswordBtn: 'Ulozit nove heslo',
+    passwordResetSuccess: 'Heslo bolo uspesne zmenene. Prihlas sa novym heslom.',
+    passwordMismatch: 'Hesla sa nezhoduju.',
+    passwordTooShort: 'Heslo musi mat aspon 6 znakov.',
+    resetLinkExpired: 'Link na obnovu hesla je neplatny alebo expiroval. Posli si novy.',
     signInBtn: 'Prihlasit sa',
     createAccountBtn: 'Vytvorit ucet',
     or: 'alebo',
@@ -365,6 +374,15 @@ const T = {
     password: 'Password',
     passwordPlaceholder: 'Enter your password',
     forgotPassword: 'Forgot password?',
+    resetPasswordTitle: 'Set a new password',
+    resetPasswordSubtitle: 'Enter a new password for your account.',
+    confirmPassword: 'Confirm password',
+    confirmPasswordPlaceholder: 'Repeat your new password',
+    saveNewPasswordBtn: 'Save new password',
+    passwordResetSuccess: 'Password was updated successfully. Sign in with your new password.',
+    passwordMismatch: 'Passwords do not match.',
+    passwordTooShort: 'Password must be at least 6 characters long.',
+    resetLinkExpired: 'Recovery link is invalid or expired. Request a new one.',
     signInBtn: 'Sign in',
     createAccountBtn: 'Create account',
     or: 'or',
@@ -847,6 +865,9 @@ export default function SplitPayWebApp() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
+  const [showPasswordResetForm, setShowPasswordResetForm] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [appSession, setAppSession] = useState<AppSession | null>(null);
   const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
   const [showRegistrationNotice, setShowRegistrationNotice] = useState(false);
@@ -1007,6 +1028,38 @@ export default function SplitPayWebApp() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+    const errorCode = params.get('error_code') || '';
+    const error = params.get('error') || '';
+    const flowType = params.get('type') || '';
+
+    if (errorCode === 'otp_expired' || error === 'access_denied') {
+      queueMicrotask(() => {
+        setShowPasswordResetForm(false);
+        setAuthMode('login');
+        setAuthMessage(T[lang].resetLinkExpired);
+      });
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      return;
+    }
+
+    if (flowType === 'recovery') {
+      queueMicrotask(() => {
+        setShowPasswordResetForm(true);
+        setAuthMode('login');
+        setAuthMessage('');
+      });
+    }
+
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  }, [lang]);
+
+  useEffect(() => {
     if (!supabase) {
       queueMicrotask(() => setAuthResolved(true));
       return;
@@ -1027,7 +1080,13 @@ export default function SplitPayWebApp() {
       setAuthResolved(true);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowPasswordResetForm(true);
+        setAuthMode('login');
+        setAuthMessage('');
+      }
+
       const nextSession = session?.user?.email
         ? makeUserSession(
             session.user.id,
@@ -1512,6 +1571,44 @@ export default function SplitPayWebApp() {
     }
 
     setAuthMessage(t('resetEmailSent'));
+  }
+
+  async function handleSetNewPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase) {
+      setAuthMessage(t('supabaseNotConfiguredShort'));
+      return;
+    }
+
+    if (newPassword.trim().length < 6) {
+      setAuthMessage(t('passwordTooShort'));
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setAuthMessage(t('passwordMismatch'));
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage('');
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setAuthMessage(friendlyAuthError(error.message));
+        return;
+      }
+
+      setShowPasswordResetForm(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setAuthMode('login');
+      setAuthMessage(t('passwordResetSuccess'));
+    } finally {
+      setAuthLoading(false);
+    }
   }
 
   async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
@@ -2573,7 +2670,7 @@ export default function SplitPayWebApp() {
               <p className="muted">{t('checkingSavedLogin')}</p>
           </section>
         </main>
-      ) : !isAuthenticated ? (
+      ) : !isAuthenticated || showPasswordResetForm ? (
         <main className="auth-page">
           <section className="auth-brand">
             <div className="auth-logo-wrap">
@@ -2594,74 +2691,130 @@ export default function SplitPayWebApp() {
           ) : null}
 
           <section className="auth-card">
-              <h2>{authMode === 'login' ? t('signIn') : t('createAccount')}</h2>
+              <h2>
+                {showPasswordResetForm
+                  ? t('resetPasswordTitle')
+                  : authMode === 'login'
+                    ? t('signIn')
+                    : t('createAccount')}
+              </h2>
             <p className="auth-subtitle">
-              {authMode === 'login'
+              {showPasswordResetForm
+                ? t('resetPasswordSubtitle')
+                : authMode === 'login'
                   ? t('signInSubtitle')
                   : t('registerSubtitle')}
             </p>
 
-            <form className="auth-form" onSubmit={handleEmailAuth}>
-              {authMode === 'register' ? (
+            {showPasswordResetForm ? (
+              <form className="auth-form" onSubmit={handleSetNewPassword}>
                 <label className="field-block">
-                    <span>{t('name')}</span>
+                  <span>{t('password')}</span>
                   <input
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                      placeholder={t('namePlaceholder')}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder={t('passwordPlaceholder')}
+                    type="password"
                   />
                 </label>
-              ) : null}
 
-              <label className="field-block">
-                  <span>{t('email')}</span>
-                <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                    placeholder={t('emailPlaceholder')}
-                  type="email"
-                />
-              </label>
+                <label className="field-block">
+                  <span>{t('confirmPassword')}</span>
+                  <input
+                    value={confirmNewPassword}
+                    onChange={(event) => setConfirmNewPassword(event.target.value)}
+                    placeholder={t('confirmPasswordPlaceholder')}
+                    type="password"
+                  />
+                </label>
 
-              <label className="field-block">
-                  <span>{t('password')}</span>
-                <input
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                    placeholder={t('passwordPlaceholder')}
-                  type="password"
-                />
-              </label>
-
-              {authMode === 'login' ? (
-                <button type="button" className="link-button" onClick={handleResetPassword}>
-                    {t('forgotPassword')}
+                <button type="submit" className="primary-cta" disabled={authLoading}>
+                  {t('saveNewPasswordBtn')}
                 </button>
-              ) : null}
+              </form>
+            ) : (
+              <form className="auth-form" onSubmit={handleEmailAuth}>
+                {authMode === 'register' ? (
+                  <label className="field-block">
+                      <span>{t('name')}</span>
+                    <input
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                        placeholder={t('namePlaceholder')}
+                    />
+                  </label>
+                ) : null}
 
-              <button type="submit" className="primary-cta" disabled={authLoading}>
-                  {authMode === 'login' ? t('signInBtn') : t('createAccountBtn')}
-              </button>
-            </form>
+                <label className="field-block">
+                    <span>{t('email')}</span>
+                  <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                      placeholder={t('emailPlaceholder')}
+                    type="email"
+                  />
+                </label>
 
-            <div className="auth-divider">
-              <span />
-                <p>{t('or')}</p>
-              <span />
-            </div>
+                <label className="field-block">
+                    <span>{t('password')}</span>
+                  <input
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                      placeholder={t('passwordPlaceholder')}
+                    type="password"
+                  />
+                </label>
 
-              <button type="button" className="google-btn auth-google" onClick={handleGoogleLogin} disabled={authLoading}>
-                {t('continueWithGoogle')}
-            </button>
+                {authMode === 'login' ? (
+                  <button type="button" className="link-button" onClick={handleResetPassword}>
+                      {t('forgotPassword')}
+                  </button>
+                ) : null}
+
+                <button type="submit" className="primary-cta" disabled={authLoading}>
+                    {authMode === 'login' ? t('signInBtn') : t('createAccountBtn')}
+                </button>
+              </form>
+            )}
+
+            {!showPasswordResetForm ? (
+              <>
+                <div className="auth-divider">
+                  <span />
+                    <p>{t('or')}</p>
+                  <span />
+                </div>
+
+                  <button type="button" className="google-btn auth-google" onClick={handleGoogleLogin} disabled={authLoading}>
+                    {t('continueWithGoogle')}
+                </button>
+              </>
+            ) : null}
 
             {authMessage ? <p className="auth-message">{authMessage}</p> : null}
           </section>
 
           <section className="auth-switch-card">
-              <span>{authMode === 'login' ? t('noAccount') : t('alreadyHaveAccount')}</span>
-            <button type="button" className="link-button strong" onClick={toggleAuthMode}>
-                {authMode === 'login' ? t('createAccountBtn') : t('signInBtn')}
-            </button>
+            {showPasswordResetForm ? (
+              <button
+                type="button"
+                className="link-button strong"
+                onClick={() => {
+                  setShowPasswordResetForm(false);
+                  setAuthMode('login');
+                  setAuthMessage('');
+                }}
+              >
+                {t('signInBtn')}
+              </button>
+            ) : (
+              <>
+                  <span>{authMode === 'login' ? t('noAccount') : t('alreadyHaveAccount')}</span>
+                <button type="button" className="link-button strong" onClick={toggleAuthMode}>
+                    {authMode === 'login' ? t('createAccountBtn') : t('signInBtn')}
+                </button>
+              </>
+            )}
           </section>
           <section className="auth-switch-card">
             <button type="button" className="link-button strong" onClick={() => setShowSupportModal(true)}>
