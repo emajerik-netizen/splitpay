@@ -4,6 +4,17 @@ import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from '
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
+import {
+  Clipboard,
+  Coins,
+  Link2,
+  Mail,
+  MessageSquare,
+  QrCode,
+  Receipt,
+  Share2,
+  Users,
+} from 'lucide-react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
@@ -248,6 +259,7 @@ export default function SplitPayWebApp() {
   const [showInviteQr, setShowInviteQr] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
@@ -803,17 +815,18 @@ export default function SplitPayWebApp() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!showCreateTripModal && !showJoinTripModal) return;
+    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setShowCreateTripModal(false);
       setShowJoinTripModal(false);
+      setShowExpenseModal(false);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCreateTripModal, showJoinTripModal]);
+  }, [showCreateTripModal, showJoinTripModal, showExpenseModal]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -1298,6 +1311,30 @@ export default function SplitPayWebApp() {
         return acc;
       }, {}),
     }));
+
+    setShowExpenseModal(false);
+  }
+
+  function openExpenseModalForCreate() {
+    setEditingExpenseId(null);
+    setDraft({
+      title: '',
+      amount: '',
+      expenseType: 'expense',
+      payer: safePayer,
+      transferTo: '',
+      participants: safePayer ? [safePayer] : [],
+      splitType: 'equal',
+      participantWeights: members.reduce<Record<string, number>>((acc, name) => {
+        acc[name] = 1;
+        return acc;
+      }, {}),
+      participantAmounts: members.reduce<Record<string, number>>((acc, name) => {
+        acc[name] = 0;
+        return acc;
+      }, {}),
+    });
+    setShowExpenseModal(true);
   }
 
   function editExpense(expenseId: string) {
@@ -1318,6 +1355,7 @@ export default function SplitPayWebApp() {
       participantAmounts: found.participantAmounts || {},
     });
     openTrip(currentTrip.id, 'expenses');
+    setShowExpenseModal(true);
   }
 
   function removeExpense(expenseId: string) {
@@ -1828,7 +1866,7 @@ export default function SplitPayWebApp() {
               <section className="screen-grid action-tiles-grid">
                 <button
                   type="button"
-                  className="section-card action-tile"
+                  className="section-card action-tile action-tile-create"
                   onClick={() => setShowCreateTripModal(true)}
                 >
                   <p className="eyebrow">Nový výlet</p>
@@ -1838,7 +1876,7 @@ export default function SplitPayWebApp() {
 
                 <button
                   type="button"
-                  className="section-card action-tile"
+                  className="section-card action-tile action-tile-join"
                   onClick={() => setShowJoinTripModal(true)}
                 >
                   <p className="eyebrow">Pripojenie</p>
@@ -1945,35 +1983,50 @@ export default function SplitPayWebApp() {
                   className={activeDetailScreen === 'overview' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => openTrip(currentTrip.id, 'overview')}
                 >
-                  Prehľad
+                  <span className="screen-pill-inner">
+                    <Share2 size={15} aria-hidden="true" />
+                    <span>Prehľad</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={activeDetailScreen === 'members' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => openTrip(currentTrip.id, 'members')}
                 >
-                  Členovia
+                  <span className="screen-pill-inner">
+                    <Users size={15} aria-hidden="true" />
+                    <span>Členovia</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={activeDetailScreen === 'invites' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => openTrip(currentTrip.id, 'invites')}
                 >
-                  Pozvánky
+                  <span className="screen-pill-inner">
+                    <Link2 size={15} aria-hidden="true" />
+                    <span>Pozvánky</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={activeDetailScreen === 'expenses' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => openTrip(currentTrip.id, 'expenses')}
                 >
-                  Výdavky
+                  <span className="screen-pill-inner">
+                    <Receipt size={15} aria-hidden="true" />
+                    <span>Výdavky</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   className={activeDetailScreen === 'balances' ? 'screen-pill active' : 'screen-pill'}
                   onClick={() => openTrip(currentTrip.id, 'balances')}
                 >
-                  Bilancia
+                  <span className="screen-pill-inner">
+                    <Coins size={15} aria-hidden="true" />
+                    <span>Bilancia</span>
+                  </span>
                 </button>
               </section>
 
@@ -2167,16 +2220,29 @@ export default function SplitPayWebApp() {
                         <span>Kód</span>
                         <strong>{currentTrip.inviteCode}</strong>
                         <div className="share-buttons">
-                          <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>Kopírovať</button>
-                          <button type="button" className="ghost" onClick={shareViaEmail}>Email</button>
-                          <button type="button" className="ghost" onClick={shareViaWhatsApp}>WhatsApp</button>
-                          <button type="button" className="ghost" onClick={shareViaSMS}>SMS</button>
+                          <button type="button" className="ghost share-action-btn" onClick={copyInviteCodeToClipboard}>
+                            <Clipboard size={14} aria-hidden="true" />
+                            <span>Kopírovať</span>
+                          </button>
+                          <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
+                            <Mail size={14} aria-hidden="true" />
+                            <span>Email</span>
+                          </button>
+                          <button type="button" className="ghost share-action-btn" onClick={shareViaWhatsApp}>
+                            <Share2 size={14} aria-hidden="true" />
+                            <span>WhatsApp</span>
+                          </button>
+                          <button type="button" className="ghost share-action-btn" onClick={shareViaSMS}>
+                            <MessageSquare size={14} aria-hidden="true" />
+                            <span>SMS</span>
+                          </button>
                           <button
                             type="button"
-                            className="ghost"
+                            className="ghost share-action-btn"
                             onClick={() => setShowInviteQr((prev) => !prev)}
                           >
-                            {showInviteQr ? 'Skryť' : 'QR'}
+                            <QrCode size={14} aria-hidden="true" />
+                            <span>{showInviteQr ? 'Skryť QR' : 'QR kód'}</span>
                           </button>
                         </div>
                         {showInviteQr ? (
@@ -2221,167 +2287,181 @@ export default function SplitPayWebApp() {
 
               {activeDetailScreen === 'expenses' ? (
                 <section className="screen-window section-card screen-single full-window">
-                  <div className="section-head compact-head">
-                    <p className="eyebrow">Výdavky</p>
-                    <h2>Pridať a spravovať výdavky</h2>
+                  <div className="section-head compact-head expenses-head">
+                    <div>
+                      <p className="eyebrow">Výdavky</p>
+                      <h2>Prehľad a história výdavkov</h2>
+                    </div>
+                    <button type="button" className="primary-cta expense-open-modal-btn" onClick={openExpenseModalForCreate}>
+                      + Pridať výdavok
+                    </button>
                   </div>
-                  <div className="screen-grid compact-grid">
-                    <div className="mini-panel">
-                      <h3>Nový výdavok</h3>
-                      <form className="stack" onSubmit={handleAddExpense}>
-                        <select
-                          value={draft.expenseType}
-                          onChange={(event) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              expenseType: event.target.value as ExpenseDraft['expenseType'],
-                            }))
-                          }
-                        >
-                          <option value="expense">Nový výdavok</option>
-                          <option value="transfer">Transfer (vyrovnanie)</option>
-                        </select>
-                        <input
-                          value={draft.title}
-                          onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                          placeholder={
-                            draft.expenseType === 'transfer'
-                              ? 'Názov transferu (voliteľné)'
-                              : 'Názov výdavku'
-                          }
-                        />
-                        <input
-                          value={draft.amount}
-                          onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
-                          inputMode="decimal"
-                          placeholder="Suma"
-                        />
-                        <select
-                          value={safePayer}
-                          onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}
-                        >
-                          {members.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
 
-                        {draft.expenseType === 'transfer' ? (
+                  <div className="mini-panel expenses-list-panel">
+                    <h3>História výdavkov</h3>
+                    <div className="stack-list">
+                      {currentTrip.expenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
+                      {currentTrip.expenses.map((expense) => (
+                        <div className="row" key={expense.id}>
+                          <div>
+                            <strong>{expense.title}</strong>
+                            <p>
+                              {expense.expenseType === 'transfer'
+                                ? `${expense.payer} poslal(a) ${expense.transferTo || expense.participants[0] || '-'}.`
+                                : `Platil ${expense.payer}, účastníci: ${expense.participants.join(', ')}`}
+                            </p>
+                          </div>
+                          <div className="expense-actions">
+                            <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
+                              Upraviť
+                            </button>
+                            <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
+                              Vymazať
+                            </button>
+                            <strong>{money(expense.amount)}</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {showExpenseModal ? (
+                    <div className="modal-overlay" role="presentation" onClick={() => setShowExpenseModal(false)}>
+                      <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label="Pridať výdavok" onClick={(event) => event.stopPropagation()}>
+                        <div className="modal-head">
+                          <div>
+                            <p className="eyebrow">Výdavok</p>
+                            <h2>{editingExpenseId ? 'Upraviť výdavok' : 'Pridať výdavok'}</h2>
+                          </div>
+                          <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>Zavrieť</button>
+                        </div>
+                        <form className="stack" onSubmit={handleAddExpense}>
                           <select
-                            value={safeTransferTo}
+                            value={draft.expenseType}
                             onChange={(event) =>
-                              setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
+                              setDraft((prev) => ({
+                                ...prev,
+                                expenseType: event.target.value as ExpenseDraft['expenseType'],
+                              }))
                             }
                           >
-                            <option value="">Komu posielam</option>
-                            {members
-                              .filter((name) => name !== safePayer)
-                              .map((name) => (
-                                <option key={name} value={name}>
-                                  {name}
-                                </option>
-                              ))}
+                            <option value="expense">Nový výdavok</option>
+                            <option value="transfer">Transfer (vyrovnanie)</option>
                           </select>
-                        ) : (
-                          <>
-                            <div className="participants">
-                              {members.map((name) => {
-                                const selected = safeParticipants.includes(name);
-                                return (
-                                  <label key={name} className={selected ? 'participant active' : 'participant'}>
-                                    <input
-                                      type="checkbox"
-                                      checked={selected}
-                                      onChange={() => toggleParticipant(name)}
-                                    />
-                                    <span>{name}</span>
-                                    {draft.splitType === 'individual' && selected ? (
+                          <input
+                            value={draft.title}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                            placeholder={
+                              draft.expenseType === 'transfer'
+                                ? 'Názov transferu (voliteľné)'
+                                : 'Názov výdavku'
+                            }
+                          />
+                          <input
+                            value={draft.amount}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
+                            inputMode="decimal"
+                            placeholder="Suma"
+                          />
+                          <select
+                            value={safePayer}
+                            onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}
+                          >
+                            {members.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {draft.expenseType === 'transfer' ? (
+                            <select
+                              value={safeTransferTo}
+                              onChange={(event) =>
+                                setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
+                              }
+                            >
+                              <option value="">Komu posielam</option>
+                              {members
+                                .filter((name) => name !== safePayer)
+                                .map((name) => (
+                                  <option key={name} value={name}>
+                                    {name}
+                                  </option>
+                                ))}
+                            </select>
+                          ) : (
+                            <>
+                              <div className="participants">
+                                {members.map((name) => {
+                                  const selected = safeParticipants.includes(name);
+                                  return (
+                                    <label key={name} className={selected ? 'participant active' : 'participant'}>
                                       <input
-                                        className="weight"
-                                        inputMode="decimal"
-                                        value={String(draft.participantAmounts[name] || 0)}
-                                        onChange={(event) => {
-                                          const next = Number(event.target.value);
-                                          setDraft((prev) => ({
-                                            ...prev,
-                                            participantAmounts: {
-                                              ...prev.participantAmounts,
-                                              [name]: Number.isFinite(next) && next >= 0 ? next : 0,
-                                            },
-                                          }));
-                                        }}
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={() => toggleParticipant(name)}
                                       />
-                                    ) : null}
-                                  </label>
-                                );
-                              })}
-                            </div>
+                                      <span>{name}</span>
+                                      {draft.splitType === 'individual' && selected ? (
+                                        <input
+                                          className="weight"
+                                          inputMode="decimal"
+                                          value={String(draft.participantAmounts[name] || 0)}
+                                          onChange={(event) => {
+                                            const next = Number(event.target.value);
+                                            setDraft((prev) => ({
+                                              ...prev,
+                                              participantAmounts: {
+                                                ...prev.participantAmounts,
+                                                [name]: Number.isFinite(next) && next >= 0 ? next : 0,
+                                              },
+                                            }));
+                                          }}
+                                        />
+                                      ) : null}
+                                    </label>
+                                  );
+                                })}
+                              </div>
 
-                            <div className="split-switch">
-                              <button
-                                type="button"
-                                className={draft.splitType === 'equal' ? 'active' : ''}
-                                onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal' }))}
-                              >
-                                Rovnomerne
-                              </button>
-                              <button
-                                type="button"
-                                className={draft.splitType === 'individual' ? 'active' : ''}
-                                onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
-                              >
-                                Individuálne
-                              </button>
-                            </div>
+                              <div className="split-switch">
+                                <button
+                                  type="button"
+                                  className={draft.splitType === 'equal' ? 'active' : ''}
+                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal' }))}
+                                >
+                                  Rovnomerne
+                                </button>
+                                <button
+                                  type="button"
+                                  className={draft.splitType === 'individual' ? 'active' : ''}
+                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
+                                >
+                                  Individuálne
+                                </button>
+                              </div>
 
-                            {draft.splitType === 'individual' ? (
-                              <p className="muted">
-                                Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
-                              </p>
-                            ) : null}
-                          </>
-                        )}
+                              {draft.splitType === 'individual' ? (
+                                <p className="muted">
+                                  Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
+                                </p>
+                              ) : null}
+                            </>
+                          )}
 
-                        <button type="submit" disabled={!canAddExpense}>
-                          {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
-                        </button>
-                        {editingExpenseId ? (
-                          <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
-                            Zrušiť úpravu
+                          <button type="submit" disabled={!canAddExpense}>
+                            {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
                           </button>
-                        ) : null}
-                      </form>
+                          {editingExpenseId ? (
+                            <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
+                              Zrušiť úpravu
+                            </button>
+                          ) : null}
+                        </form>
+                      </section>
                     </div>
-
-                    <div className="mini-panel">
-                      <h3>História výdavkov</h3>
-                      <div className="stack-list">
-                        {currentTrip.expenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
-                        {currentTrip.expenses.map((expense) => (
-                          <div className="row" key={expense.id}>
-                            <div>
-                              <strong>{expense.title}</strong>
-                              <p>
-                                {expense.expenseType === 'transfer'
-                                  ? `${expense.payer} poslal(a) ${expense.transferTo || expense.participants[0] || '-'}.`
-                                  : `Platil ${expense.payer}, účastníci: ${expense.participants.join(', ')}`}
-                              </p>
-                            </div>
-                            <div className="expense-actions">
-                              <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
-                                Upraviť
-                              </button>
-                              <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
-                                Vymazať
-                              </button>
-                              <strong>{money(expense.amount)}</strong>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  ) : null}
                 </section>
               ) : null}
 
@@ -2391,8 +2471,43 @@ export default function SplitPayWebApp() {
                     <p className="eyebrow">Bilancia</p>
                     <h2>Kto komu koľko dlží</h2>
                   </div>
-                  <div className="screen-grid compact-grid">
-                    <div className="mini-panel">
+                  <div className="balance-shell">
+                    <div className="balance-segmented" role="tablist" aria-label="Prepínač bilancie">
+                      <button type="button" role="tab" className="balance-tab active" aria-selected="true">Všetky</button>
+                      <button type="button" role="tab" className="balance-tab" aria-selected="false">Vyrovnania</button>
+                    </div>
+
+                    <div className="balance-main-card">
+                      <h3>Kto komu koľko dlží</h3>
+                      <p className="muted balance-subtitle">Najmenej prevodov na vyrovnanie</p>
+
+                      {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
+
+                      <div className="stack-list balance-transfer-list">
+                        {settlements.map((transfer, index) => (
+                          <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
+                            <span className="balance-person">{transfer.from === (appSession?.name || 'Ty') ? 'Ty' : transfer.from}</span>
+                            <span className="balance-arrow" aria-hidden="true">→</span>
+                            <span className="balance-target">
+                              <span className="balance-avatar">{(transfer.to === (appSession?.name || 'Ty') ? 'T' : transfer.to.slice(0, 1)).toUpperCase()}</span>
+                              {transfer.to === (appSession?.name || 'Ty') ? 'Ty' : transfer.to}
+                            </span>
+                            <strong className="balance-amount">{money(transfer.amount)}</strong>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="balance-total-card">
+                        <p>
+                          {(balances[appSession?.name || 'Ty'] ?? 0) >= 0 ? 'Ty dostaneš spolu' : 'Ty zaplatíš spolu'}
+                        </p>
+                        <strong className={(balances[appSession?.name || 'Ty'] ?? 0) >= 0 ? 'positive' : 'negative'}>
+                          {eur(Math.abs(balances[appSession?.name || 'Ty'] ?? 0))}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="mini-panel balance-current-panel">
                       <h3>Aktuálna bilancia</h3>
                       <div className="stack-list">
                         {Object.entries(balances).map(([name, value]) => (
@@ -2404,23 +2519,8 @@ export default function SplitPayWebApp() {
                       </div>
                     </div>
 
-                    <div className="mini-panel">
-                      <h3>Návrh vyrovnania</h3>
-                      {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
-                      <div className="stack-list">
-                        {settlements.map((transfer, index) => (
-                          <div className="row" key={`${transfer.from}-${transfer.to}-${index}`}>
-                            <span>
-                              {transfer.to === (appSession?.name || 'Ty')
-                                ? `${transfer.from} zaplatí tebe`
-                                : transfer.from === (appSession?.name || 'Ty')
-                                  ? `Ty zaplatíš ${transfer.to}`
-                                  : `${transfer.from} zaplatí ${transfer.to}`}
-                            </span>
-                            <strong>{money(transfer.amount)}</strong>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="balance-tip muted">
+                      Pošli kamarátom svoje číslo účtu alebo vyrovnajte v hotovosti.
                     </div>
                   </div>
                 </section>

@@ -392,6 +392,20 @@ body {
   border-color: color-mix(in srgb, var(--accent) 35%, #bfd3f8);
 }
 
+.action-tile-create {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(106, 199, 79, 0.24), transparent 48%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.98), rgba(243, 255, 248, 0.96));
+  border-color: rgba(129, 197, 138, 0.7);
+}
+
+.action-tile-join {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(255, 176, 84, 0.26), transparent 48%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 238, 0.96));
+  border-color: rgba(231, 182, 121, 0.72);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -414,12 +428,45 @@ body {
   padding: 1.5rem;
 }
 
+.expense-modal-card {
+  width: min(38rem, 100%);
+}
+
+.expenses-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.expense-open-modal-btn {
+  min-height: 2.9rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  box-shadow: 0 14px 24px color-mix(in srgb, var(--trip-accent, var(--accent)) 28%, transparent);
+}
+
+.expenses-list-panel {
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 22%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 18%, #ffffff);
+}
+
 @media (max-width: 640px) {
   .modal-card {
     width: min(100%, calc(100vw - 1.5rem));
     max-height: min(90vh, 36rem);
     border-radius: 1rem;
     padding: 1.2rem;
+  }
+
+  .expenses-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .expense-open-modal-btn {
+    width: 100%;
+    min-height: 3rem;
   }
 }
 
@@ -625,9 +672,22 @@ button:disabled {
 }
 
 .ghost {
-  background: transparent;
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 46%, #ffffff);
+  color: color-mix(in srgb, var(--accent) 88%, #18335f);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--stroke));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 6px 12px rgba(44, 121, 246, 0.08);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ghost:hover {
+  background: color-mix(in srgb, var(--accent-soft) 66%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke));
+}
+
+.ghost:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 5px rgba(44, 121, 246, 0.12);
 }
 
 .pill-list {
@@ -791,6 +851,17 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.screen-pill-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.screen-pill svg {
+  opacity: 0.85;
+}
+
 .screen-pill.active {
   background: var(--accent);
   color: #f7f8f6;
@@ -916,6 +987,33 @@ button:disabled {
   min-height: 2.6rem;
 }
 
+.share-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border-radius: 0.75rem;
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 34%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 32%, #ffffff);
+  color: color-mix(in srgb, var(--trip-accent, var(--accent)) 86%, #18335f);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.share-action-btn:hover {
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 48%, #ffffff);
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 56%, var(--stroke));
+}
+
+.share-action-btn svg {
+  flex: 0 0 auto;
+}
+
+.share-action-btn span {
+  line-height: 1;
+}
+
 .qr-share-box {
   margin-top: 0.5rem;
   width: 100%;
@@ -947,6 +1045,29 @@ button:disabled {
 .trip-theme .screen-pill.active {
   background: var(--trip-accent);
   border-color: var(--trip-accent);
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--trip-accent) 26%, transparent);
+}
+
+.trip-theme .screen-pill {
+  background: color-mix(in srgb, var(--trip-accent-soft) 30%, #ffffff);
+  border-color: color-mix(in srgb, var(--trip-accent) 22%, var(--stroke));
+}
+
+.trip-theme .screen-pill:hover {
+  border-color: color-mix(in srgb, var(--trip-accent) 42%, var(--stroke));
+  transform: translateY(-1px);
+}
+
+.trip-theme .ghost {
+  background: color-mix(in srgb, var(--trip-accent-soft) 48%, #ffffff);
+  color: color-mix(in srgb, var(--trip-accent) 84%, #18335f);
+  border-color: color-mix(in srgb, var(--trip-accent) 34%, var(--stroke));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 7px 14px color-mix(in srgb, var(--trip-accent) 16%, transparent);
+}
+
+.trip-theme .ghost:hover {
+  background: color-mix(in srgb, var(--trip-accent-soft) 66%, #ffffff);
+  border-color: color-mix(in srgb, var(--trip-accent) 52%, var(--stroke));
 }
 
 .trip-theme .section-card {
@@ -1052,6 +1173,145 @@ button:disabled {
   margin: 0.12rem 0 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.balance-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.balance-segmented {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  width: min(22rem, 100%);
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 25%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 35%, #ffffff);
+}
+
+.balance-tab {
+  min-height: 2.35rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.balance-tab:hover {
+  transform: none;
+}
+
+.balance-tab.active {
+  background: var(--trip-accent, var(--accent));
+  color: #f7f8f6;
+}
+
+.balance-main-card {
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 22%, var(--stroke));
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--trip-accent, var(--accent)) 14%, transparent);
+  padding: 1rem;
+}
+
+.balance-main-card h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.balance-subtitle {
+  margin: 0.25rem 0 0.85rem;
+  font-size: 0.9rem;
+}
+
+.balance-transfer-list {
+  gap: 0.35rem;
+}
+
+.balance-transfer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid #edf2fb;
+}
+
+.balance-transfer-row:last-child {
+  border-bottom: 0;
+}
+
+.balance-person,
+.balance-target {
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.balance-arrow {
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.balance-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.balance-avatar {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f7f8f6;
+  background: linear-gradient(135deg, var(--trip-accent, var(--accent)), color-mix(in srgb, var(--trip-accent, var(--accent)) 70%, #ffffff));
+}
+
+.balance-amount {
+  font-weight: 800;
+  color: var(--trip-accent, var(--accent));
+  white-space: nowrap;
+}
+
+.balance-total-card {
+  margin-top: 0.7rem;
+  border-radius: 0.95rem;
+  border: 1px solid #edf2fb;
+  background: #ffffff;
+  padding: 0.8rem;
+  text-align: center;
+}
+
+.balance-total-card p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.balance-total-card strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.85rem;
+}
+
+.balance-current-panel {
+  border-style: dashed;
+}
+
+.balance-tip {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 14%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 45%, #ffffff);
+  padding: 0.7rem 0.8rem;
+  font-size: 0.9rem;
 }
 
 .positive {
@@ -1195,6 +1455,15 @@ button:disabled {
     line-height: 1.15;
   }
 
+  .trip-theme .screen-pill .screen-pill-inner {
+    gap: 0.28rem;
+  }
+
+  .trip-theme .screen-pill .screen-pill-inner svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .trip-theme .share-buttons {
     gap: 0.3rem;
   }
@@ -1229,6 +1498,25 @@ button:disabled {
   .share-buttons button {
     min-height: 2.35rem;
   }
+
+  .balance-segmented {
+
+  .share-action-btn {
+    min-width: 0;
+    gap: 0.28rem;
+    padding: 0.5rem 0.55rem;
+  }
+
+  .share-action-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+    width: 100%;
+  }
+
+  .balance-main-card {
+    padding: 0.9rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1237,12 +1525,34 @@ button:disabled {
   }
 
   .page-wrap {
-    padding: 1.5rem 0.75rem 2.5rem;
+    max-width: none;
+    width: 100%;
+    padding: 1.2rem 0.45rem 2.2rem;
     padding-top: 4.5rem;
   }
 
   .app-shell {
+    width: 100%;
     gap: 1.2rem;
+  }
+
+  .trip-theme {
+    width: 100%;
+  }
+
+  .trip-theme .hero-panel,
+  .trip-theme .screen-nav,
+  .trip-theme .screen-window,
+  .trip-theme .section-card,
+  .screen-grid,
+  .trip-overview-list,
+  .section-card,
+  .card,
+  .hero-panel {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .info-banner {
@@ -1344,7 +1654,7 @@ button:disabled {
   .section-card,
   .card,
   .mini-panel {
-    padding: 1rem;
+    padding: 0.95rem;
     border-radius: 1rem;
   }
 
@@ -1363,17 +1673,17 @@ button:disabled {
   }
 
   .screen-nav {
-    gap: 0.5rem;
-    display: flex;
-    flex-wrap: wrap;
+    gap: 0.45rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 0.8rem;
   }
 
   .screen-pill {
-    flex: 1 1 auto;
+    width: 100%;
     min-height: 2.6rem;
     font-size: 0.88rem;
-    padding: 0.5rem 0.7rem;
+    padding: 0.5rem 0.55rem;
     border-radius: 0.8rem;
   }
 
@@ -1383,6 +1693,30 @@ button:disabled {
 
   .screen-single {
     gap: 1.2rem;
+  }
+
+  .balance-main-card h3 {
+    font-size: 1.18rem;
+  }
+
+  .balance-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .balance-transfer-row {
+    gap: 0.35rem;
+    padding: 0.5rem 0.1rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  }
+
+  .balance-person,
+  .balance-target,
+  .balance-amount {
+    font-size: 0.9rem;
+  }
+
+  .balance-total-card strong {
+    font-size: 1.65rem;
   }
 
   .full-window {
@@ -1761,7 +2095,7 @@ button:disabled {
 }
 
 .full-window {
-  min-height: 68vh;
+  min-height: auto;
 }
 
 .archived-toggle {
