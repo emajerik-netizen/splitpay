@@ -880,6 +880,7 @@ export default function SplitPayWebApp() {
   const dbLoadedRef = useRef(false);
   const skipFirstSaveRef = useRef(true);
   const expenseCountRef = useRef<Record<string, number>>({});
+  const memberSnapshotRef = useRef<Record<string, string[]>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -1512,12 +1513,6 @@ export default function SplitPayWebApp() {
     clearInvite();
     openTrip(data.tripId, 'overview');
     setInfoMessage(`${t('welcomeAdded')} ${inviteTrip.tripName}.`);
-
-    // Notify owner if notifications enabled
-    sendNotification(`${inviteTrip.tripName} - ${t('ownerNewMemberTitleSuffix')}`, {
-      body: `${memberName} ${t('ownerNewMemberBody')}`,
-      icon: '/icon.png',
-    });
   }
 
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -2278,7 +2273,14 @@ export default function SplitPayWebApp() {
     if (!notificationsEnabled || !appSession) return;
 
     const selfName = appSession.name;
+    const normalizedSelfName = selfName.trim().toLowerCase();
     const langPack = T[lang];
+    const isSelf = (name: string) => {
+      const normalizedName = name.trim().toLowerCase();
+      if (!normalizedName) return false;
+      if (normalizedName === 'ty') return true;
+      return Boolean(normalizedSelfName) && normalizedName === normalizedSelfName;
+    };
     trips.forEach((trip) => {
       const previous = expenseCountRef.current[trip.id] ?? trip.expenses.length;
       if (trip.expenses.length > previous) {
@@ -2290,6 +2292,29 @@ export default function SplitPayWebApp() {
         }
       }
       expenseCountRef.current[trip.id] = trip.expenses.length;
+
+      const previousMembers = memberSnapshotRef.current[trip.id] ?? trip.members;
+      if (isSelf(trip.owner) && trip.members.length > previousMembers.length) {
+        const previousSet = new Set(previousMembers.map((name) => name.trim().toLowerCase()));
+        const addedMembers = trip.members.filter(
+          (name) => !previousSet.has(name.trim().toLowerCase())
+        );
+        const newestMember = addedMembers[addedMembers.length - 1];
+
+        if (
+          newestMember &&
+          !isSelf(newestMember) &&
+          typeof Notification !== 'undefined' &&
+          Notification.permission === 'granted'
+        ) {
+          new Notification(`${trip.name} - ${langPack.ownerNewMemberTitleSuffix}`, {
+            body: `${newestMember} ${langPack.ownerNewMemberBody}`,
+            icon: '/icon.png',
+          });
+        }
+      }
+
+      memberSnapshotRef.current[trip.id] = [...trip.members];
     });
   }, [appSession, lang, notificationsEnabled, trips]);
 
