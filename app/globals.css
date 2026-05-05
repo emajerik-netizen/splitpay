@@ -597,10 +597,18 @@ body {
 
 .section-head {
   padding: 0 0.25rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .compact-head {
   padding: 0;
+}
+
+.overview-head {
+  align-items: center;
 }
 
 .section-head h2 {
@@ -1769,11 +1777,21 @@ button:disabled {
 
   .section-head {
     margin-bottom: 0.8rem;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .section-head h2 {
     font-size: 1.5rem;
     margin-bottom: 0.3rem;
+  }
+
+  .overview-head {
+    align-items: stretch;
+  }
+
+  .overview-head .expense-open-modal-btn {
+    width: 100%;
   }
 
   .eyebrow {

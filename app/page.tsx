@@ -10,6 +10,7 @@ import {
   Link2,
   Mail,
   MessageSquare,
+  Plus,
   QrCode,
   Receipt,
   Settings2,
@@ -2128,9 +2129,20 @@ export default function SplitPayWebApp() {
 
               {activeDetailScreen === 'overview' ? (
                 <section className="screen-window section-card screen-single full-window">
-                  <div className="section-head compact-head">
-                    <p className="eyebrow">Prehľad výletu</p>
-                    <h2>Základné informácie</h2>
+                  <div className="section-head compact-head overview-head">
+                    <div>
+                      <p className="eyebrow">Prehľad výletu</p>
+                      <h2>Základné informácie</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="expense-open-modal-btn"
+                      onClick={() => setShowExpenseModal(true)}
+                      title="Pridať výdavok"
+                    >
+                      <Plus size={16} />
+                      <span>Pridať výdavok</span>
+                    </button>
                   </div>
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
