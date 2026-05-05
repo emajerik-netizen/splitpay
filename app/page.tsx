@@ -66,6 +66,7 @@ function hexToRgba(hex: string, alpha: number) {
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
+const INVITE_PENDING_KEY = 'splitpay-invite-pending';
 
 type Invite = {
   id: string;
@@ -274,6 +275,13 @@ export default function SplitPayWebApp() {
   });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [balanceTab, setBalanceTab] = useState<'all' | 'settlements'>('settlements');
+  const [invitePendingCode, setInvitePendingCode] = useState<string | null>(null);
+  const [inviteTrip, setInviteTrip] = useState<{ tripId: string; tripName: string; slots: string[] } | null>(null);
+  const [inviteChosenSlot, setInviteChosenSlot] = useState('');
+  const [inviteCustomName, setInviteCustomName] = useState('');
+  const [inviteUseCustom, setInviteUseCustom] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
   const [visits24hCount, setVisits24hCount] = useState(0);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
@@ -306,6 +314,7 @@ export default function SplitPayWebApp() {
   const skipFirstSaveRef = useRef(true);
   const expenseCountRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
+  const inviteProcessedRef = useRef(false);
 
   useEffect(() => {
     if (!showStartup) return;
@@ -754,6 +763,74 @@ export default function SplitPayWebApp() {
     setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'));
   }
 
+  function clearInvite() {
+    setInvitePendingCode(null);
+    setInviteTrip(null);
+    setInviteChosenSlot('');
+    setInviteCustomName('');
+    setInviteUseCustom(false);
+    setInviteError('');
+    setInviteLoading(false);
+    inviteProcessedRef.current = false;
+    window.localStorage.removeItem(INVITE_PENDING_KEY);
+  }
+
+  async function handleCompleteJoin() {
+    if (!invitePendingCode || !inviteTrip || !supabase) return;
+
+    const memberName = (inviteUseCustom || inviteTrip.slots.length === 0)
+      ? inviteCustomName.trim()
+      : inviteChosenSlot;
+
+    if (!memberName) return;
+
+    // If already in local trips, just navigate
+    const localTrip = trips.find((t) => t.inviteCode === invitePendingCode);
+    if (localTrip) {
+      openTrip(localTrip.id, 'overview');
+      clearInvite();
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteError('');
+
+    const { data } = (await supabase.rpc('join_trip_by_invite_code', {
+      p_invite_code: invitePendingCode,
+      p_member_name: memberName,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    })) as unknown as { data: Record<string, any> };
+
+    setInviteLoading(false);
+
+    if (data?.error === 'name_taken') {
+      setInviteError(`Meno "${memberName}" je obsadené. Vyber iné meno.`);
+      return;
+    }
+
+    if (!data?.success) {
+      setInviteError('Nastala chyba. Skúste znova.');
+      return;
+    }
+
+    // If owner, just navigate
+    if (data.alreadyOwner) {
+      openTrip(data.tripId, 'overview');
+      clearInvite();
+      return;
+    }
+
+    // Add trip to local state
+    if (data.trip) {
+      const normalized = normalizeTrip(data.trip as Trip);
+      setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
+    }
+
+    clearInvite();
+    openTrip(data.tripId, 'overview');
+    setInfoMessage(`Vitaj ${memberName}! Bol si pridaný do výletu ${inviteTrip.tripName}.`);
+  }
+
   const pathSegments = pathname.split('/').filter(Boolean);
   const routeTripKey =
     pathSegments[0] === 'trip' && pathSegments[1]
@@ -813,10 +890,57 @@ export default function SplitPayWebApp() {
     if (appliedJoinCodeRef.current === codeFromUrl) return;
 
     appliedJoinCodeRef.current = codeFromUrl;
-    setJoinCode(codeFromUrl);
-    setShowJoinTripModal(true);
-    setInfoMessage(`Kód ${codeFromUrl} bol načítaný z QR. Zadaj meno a pripoj sa.`);
+    window.localStorage.setItem(INVITE_PENDING_KEY, JSON.stringify({ code: codeFromUrl }));
+    setInvitePendingCode(codeFromUrl);
+    inviteProcessedRef.current = false;
   }, [pathname]);
+
+  // After auth + DB load, process pending invite
+  useEffect(() => {
+    if (!authResolved || !dbLoadTick || !appSession || !supabase) return;
+    if (inviteProcessedRef.current) return;
+    if (inviteTrip) return;
+
+    const code = invitePendingCode || (() => {
+      try {
+        const s = window.localStorage.getItem(INVITE_PENDING_KEY);
+        return s ? (JSON.parse(s) as { code?: string }).code || null : null;
+      } catch { return null; }
+    })();
+
+    if (!code) return;
+    inviteProcessedRef.current = true;
+
+    const supabaseClient = supabase;
+
+    queueMicrotask(() => {
+      setInviteLoading(true);
+      setInvitePendingCode(code);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabaseClient.rpc('lookup_trip_by_invite_code', { p_invite_code: code }) as unknown as Promise<{ data: any }>)
+      .then(({ data }) => {
+        setInviteLoading(false);
+        if (data?.found) {
+          setInviteTrip({
+            tripId: data.tripId,
+            tripName: data.tripName,
+            slots: (data.pendingSlots as string[]) || [],
+          });
+          setInviteCustomName(appSession.name || '');
+        } else {
+          window.localStorage.removeItem(INVITE_PENDING_KEY);
+          setInvitePendingCode(null);
+        }
+      })
+      .catch(() => {
+        setInviteLoading(false);
+        window.localStorage.removeItem(INVITE_PENDING_KEY);
+        setInvitePendingCode(null);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authResolved, dbLoadTick, appSession?.userId, invitePendingCode]);
 
   useEffect(() => {
     if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showTripSettingsModal) return;
@@ -1546,6 +1670,16 @@ export default function SplitPayWebApp() {
             <h1>Split Pay</h1>
             <p>Jednoduche rozdelenie vydavkov medzi priatelov</p>
           </section>
+
+          {invitePendingCode ? (
+            <div className="invite-auth-banner">
+              <span className="invite-auth-banner-icon">🎉</span>
+              <div>
+                <strong>Boli ste pozvaní na výlet!</strong>
+                <p>Po prihlásení alebo registrácii si vyberiete meno a vstúpite do výletu.</p>
+              </div>
+            </div>
+          ) : null}
 
           <section className="auth-card">
             <h2>{authMode === 'login' ? 'Prihlasenie' : 'Vytvorenie uctu'}</h2>
@@ -2670,6 +2804,84 @@ export default function SplitPayWebApp() {
         ) : null}
         </main>
       )}
+
+      {/* Invite slot picker modal - shows after auth when pending invite exists */}
+      {inviteTrip && isAuthenticated ? (
+        <div className="modal-overlay" role="presentation" onClick={clearInvite}>
+          <section
+            className="section-card modal-card invite-join-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Vstup do výletu"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">Pozvánka</p>
+                <h2>Vstup do výletu</h2>
+              </div>
+              <button type="button" className="ghost" onClick={clearInvite}>Zavrieť</button>
+            </div>
+
+            <p className="muted invite-join-desc">
+              Ste pozvaný na výlet <strong>{inviteTrip.tripName}</strong>.
+              Vyberte si meno, pod ktorým budete figurovať vo výlete.
+            </p>
+
+            {inviteTrip.slots.length > 0 ? (
+              <>
+                <p className="invite-slots-label">Voľné sloty:</p>
+                <div className="slot-picker">
+                  {inviteTrip.slots.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      className={`slot-btn${inviteChosenSlot === slot && !inviteUseCustom ? ' active' : ''}`}
+                      onClick={() => { setInviteChosenSlot(slot); setInviteUseCustom(false); }}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`slot-btn slot-btn-custom${inviteUseCustom ? ' active' : ''}`}
+                    onClick={() => { setInviteUseCustom(true); setInviteChosenSlot(''); }}
+                  >
+                    + Vlastné meno
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {(inviteUseCustom || inviteTrip.slots.length === 0) ? (
+              <label className="field-block invite-name-field">
+                <span>Vaše meno vo výlete</span>
+                <input
+                  value={inviteCustomName}
+                  onChange={(event) => setInviteCustomName(event.target.value)}
+                  placeholder="Napr. Jano"
+                  autoFocus
+                />
+              </label>
+            ) : null}
+
+            {inviteError ? <p className="invite-error">{inviteError}</p> : null}
+
+            <button
+              type="button"
+              className="primary-cta"
+              onClick={handleCompleteJoin}
+              disabled={inviteLoading || (
+                !inviteUseCustom && inviteTrip.slots.length > 0
+                  ? !inviteChosenSlot
+                  : !inviteCustomName.trim()
+              )}
+            >
+              {inviteLoading ? 'Pridávam...' : 'Vstúpiť do výletu'}
+            </button>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

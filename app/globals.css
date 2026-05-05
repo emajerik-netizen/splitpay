@@ -698,6 +698,110 @@ body {
   font-weight: 700;
 }
 
+/* Invite auth banner */
+.invite-auth-banner {
+  width: min(39rem, 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: linear-gradient(135deg, #e8f3ff 0%, #f0f7ff 100%);
+  border: 1px solid #b8d4f8;
+  border-radius: 1.25rem;
+  padding: 1rem 1.2rem;
+}
+
+.invite-auth-banner-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.invite-auth-banner strong {
+  display: block;
+  color: #0a2357;
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.invite-auth-banner p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Invite slot picker modal */
+.invite-join-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.invite-join-desc {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.invite-slots-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #132e62;
+}
+
+.slot-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.slot-btn {
+  min-height: 2.6rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: #f0f4fb;
+  color: #2c3e6b;
+  border: 1.5px solid #d0daf0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.slot-btn:hover {
+  background: #ddeaff;
+  border-color: #a0bcf0;
+}
+
+.slot-btn.active {
+  background: var(--accent, #2c79f6);
+  color: #fff;
+  border-color: var(--accent, #2c79f6);
+}
+
+.slot-btn-custom {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.slot-btn-custom.active {
+  background: #f0f4fb;
+  color: #2c3e6b;
+  border-style: solid;
+  border-color: #a0bcf0;
+}
+
+.invite-name-field {
+  margin-top: 0.25rem;
+}
+
+.invite-error {
+  color: #c0392b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 input,
 select,
 button {
