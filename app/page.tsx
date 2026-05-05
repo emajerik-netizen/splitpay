@@ -1163,34 +1163,35 @@ export default function SplitPayWebApp() {
   }
 
   function copyInviteCodeToClipboard() {
-    if (!currentTrip) return;
-    const text = `Pridam ta do vyletu "${currentTrip.name}". Kod: ${currentTrip.inviteCode}`;
-    navigator.clipboard.writeText(text).then(() => {
-      setInfoMessage('Kod skopírovaný do schránky!');
+    if (!currentTrip || !inviteJoinUrl) return;
+    navigator.clipboard.writeText(inviteJoinUrl).then(() => {
+      setInfoMessage('Pozvánka skopírovaná do schránky!');
     });
   }
 
   function shareViaEmail() {
     if (!currentTrip) return;
+    const inviteUrl = `${window.location.origin}/trip/${currentTrip.inviteCode}`;
     const subject = encodeURIComponent(`Pozvánka na výlet: ${currentTrip.name}`);
     const body = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor aplikáciu Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba!`
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz nižšie na prihlásenie a pridaj sa:\n${inviteUrl}\n\nTeším sa na teba!`
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
   }
 
   function shareViaWhatsApp() {
     if (!currentTrip) return;
+    const inviteUrl = `${window.location.origin}/trip/${currentTrip.inviteCode}`;
     const text = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba!`
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz na prihlásenie a pridaj sa:\n${inviteUrl}\n\nTeším sa na teba!`
     );
     window.open(`https://wa.me/?text=${text}`);
   }
 
   function shareViaSMS() {
-    if (!currentTrip) return;
+    if (!currentTrip || !inviteJoinUrl) return;
     const text = encodeURIComponent(
-      `Pozvanka na vylet ${currentTrip.name}. Kod: ${currentTrip.inviteCode}. Otvor Split Pay a vloz kod.`
+      `Výlet ${currentTrip.name}: ${inviteJoinUrl}`
     );
     window.open(`sms:?body=${text}`);
   }
@@ -1470,6 +1471,7 @@ export default function SplitPayWebApp() {
     } as CSSProperties;
   }, [currentTrip]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const inviteJoinUrl = useMemo(() => {
     if (!currentTrip) return '';
 
