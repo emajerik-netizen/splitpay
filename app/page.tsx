@@ -289,6 +289,8 @@ const T = {
     registrationSuccess: 'Registracia prebehla. Skontroluj email pre potvrdenie uctu.',
     registrationSuccessInstant: 'Registracia prebehla a si prihlaseny.',
     registrationPendingLocalAccess: 'Konto bolo vytvorene. Potvrdzovaci email bol odoslany znova a do appky si vpusteny docasne. Po potvrdeni emailu sa prihlas bez obmedzeni.',
+    verificationEmailResent: 'Email este nie je potvrdeny. Poslali sme novy verifikacny email.',
+    verificationEmailResendFailed: 'Email este nie je potvrdeny a nepodarilo sa poslat novy verifikacny email.',
     loggedOut: 'Odhlasene.',
     enterEmailFirst: 'Najprv zadaj email.',
     resetEmailSent: 'Poslali sme email na obnovu hesla.',
@@ -553,6 +555,8 @@ const T = {
     registrationSuccess: 'Registration completed. Check your email to confirm the account.',
     registrationSuccessInstant: 'Registration completed and you are signed in.',
     registrationPendingLocalAccess: 'Account was created. Verification email was resent and temporary app access is enabled. After email confirmation, sign in for full access.',
+    verificationEmailResent: 'Email is not confirmed yet. We sent a new verification email.',
+    verificationEmailResendFailed: 'Email is not confirmed and resending verification email failed.',
     loggedOut: 'Signed out.',
     enterEmailFirst: 'Enter email first.',
     resetEmailSent: 'We sent a password reset email.',
@@ -1291,6 +1295,20 @@ export default function SplitPayWebApp() {
         });
 
         if (error) {
+          if (error.message.toLowerCase().includes('email not confirmed')) {
+            const resendResult = await supabase.auth.resend({
+              type: 'signup',
+              email: email.trim().toLowerCase(),
+              options: {
+                emailRedirectTo: window.location.origin,
+              },
+            });
+            setAuthMessage(
+              resendResult.error ? t('verificationEmailResendFailed') : t('verificationEmailResent')
+            );
+            return;
+          }
+
           setAuthMessage(friendlyAuthError(error.message));
           return;
         }
