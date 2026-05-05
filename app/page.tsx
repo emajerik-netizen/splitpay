@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
@@ -25,6 +25,20 @@ function formatDateTime(value: string) {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(date);
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.trim().replace('#', '');
+  const safeAlpha = Math.max(0, Math.min(alpha, 1));
+
+  if (normalized.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return `rgba(44, 121, 246, ${safeAlpha})`;
+  }
+
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
 }
 
 const STORAGE_KEY = 'splitpay-web-v1';
@@ -1224,6 +1238,16 @@ export default function SplitPayWebApp() {
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
   const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
+  const tripThemeStyle = useMemo(() => {
+    if (!currentTrip) return undefined;
+
+    return {
+      '--trip-accent': currentTrip.color,
+      '--trip-accent-soft': `${currentTrip.color}1c`,
+      '--trip-accent-border': `${currentTrip.color}66`,
+      '--trip-accent-shadow': hexToRgba(currentTrip.color, 0.24),
+    } as CSSProperties;
+  }, [currentTrip]);
 
   function money(value: number) {
     const currency = currentTrip?.currency || 'EUR';
@@ -1631,9 +1655,16 @@ export default function SplitPayWebApp() {
                         key={trip.id}
                         type="button"
                         className="trip-card-large"
+                        style={
+                          {
+                            '--trip-card-accent': trip.color,
+                            '--trip-card-accent-soft': `${trip.color}22`,
+                            '--trip-card-shadow': hexToRgba(trip.color, 0.2),
+                          } as CSSProperties
+                        }
                         onClick={() => openTrip(trip.id)}
                       >
-                        <div className="trip-card-cover" style={{ backgroundColor: `${trip.color}22` }} />
+                        <div className="trip-card-cover" />
                         <div className="trip-card-body">
                           <div className="trip-card-top">
                             <div>
@@ -1659,7 +1690,7 @@ export default function SplitPayWebApp() {
               </section>
             </>
           ) : (
-            <>
+            <div className="trip-theme" style={tripThemeStyle}>
               <section className="hero hero-panel">
                 <div>
                   <button type="button" className="back-link" onClick={goToTripsHome}>
@@ -2126,7 +2157,7 @@ export default function SplitPayWebApp() {
                   </div>
                 </section>
               ) : null}
-            </>
+            </div>
           )
         ) : null}
         </main>

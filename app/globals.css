@@ -209,10 +209,12 @@ body {
 .hero-panel {
   display: grid;
   gap: 1rem;
-  background: rgba(255, 255, 255, 0.86);
+  background:
+    radial-gradient(circle at 100% 0, rgba(44, 121, 246, 0.08) 0%, transparent 32%),
+    rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.75);
   border-radius: 2rem;
-  box-shadow: 0 26px 46px rgba(98, 133, 199, 0.13);
+  box-shadow: 0 28px 52px rgba(98, 133, 199, 0.14);
   padding: 1.7rem;
 }
 
@@ -478,9 +480,9 @@ button:disabled {
   overflow: hidden;
   padding: 0;
   border-radius: 1.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid color-mix(in srgb, var(--trip-card-accent, #2c79f6) 35%, #ffffff);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 22px 40px rgba(98, 133, 199, 0.12);
+  box-shadow: 0 22px 40px var(--trip-card-shadow, rgba(98, 133, 199, 0.12));
   color: var(--text);
   text-align: left;
 }
@@ -488,7 +490,7 @@ button:disabled {
 .trip-card-cover {
   min-height: 11rem;
   background:
-    linear-gradient(180deg, rgba(31, 103, 223, 0.08), rgba(31, 103, 223, 0.18)),
+    linear-gradient(180deg, color-mix(in srgb, var(--trip-card-accent, #2c79f6) 12%, transparent), color-mix(in srgb, var(--trip-card-accent, #2c79f6) 35%, transparent)),
     linear-gradient(135deg, #b1d0ff, #dfeafe 58%, #f7fbff);
 }
 
@@ -531,8 +533,8 @@ button:disabled {
 
 .trip-card-meta span {
   border-radius: 999px;
-  background: #f3f7ff;
-  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--trip-card-accent-soft, #f3f7ff) 60%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--trip-card-accent, #2c79f6) 20%, var(--stroke));
   padding: 0.35rem 0.7rem;
   font-size: 0.82rem;
   overflow-wrap: anywhere;
@@ -703,22 +705,49 @@ button:disabled {
 }
 
 .invite-code-box strong {
-
-  .share-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  .share-buttons button {
-    flex: 1 1 auto;
-    min-width: 5rem;
-    font-size: 0.85rem;
-    padding: 0.6rem 0.8rem;
-  }
   font-size: 1.2rem;
   overflow-wrap: anywhere;
+}
+
+.share-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.share-buttons button {
+  flex: 1 1 auto;
+  min-width: 5rem;
+  font-size: 0.85rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.trip-theme .hero-panel {
+  border-color: var(--trip-accent-border);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--trip-accent) 22%, transparent) 0%, transparent 34%),
+    color-mix(in srgb, var(--trip-accent-soft) 35%, #ffffff);
+  box-shadow: 0 30px 54px var(--trip-accent-shadow);
+}
+
+.trip-theme .screen-pill.active {
+  background: var(--trip-accent);
+  border-color: var(--trip-accent);
+}
+
+.trip-theme .section-card {
+  border-color: color-mix(in srgb, var(--trip-accent) 22%, #ffffff);
+}
+
+.trip-theme .stat-card,
+.trip-theme .mini-panel {
+  border-color: color-mix(in srgb, var(--trip-accent) 24%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft) 26%, #ffffff);
+}
+
+.trip-theme .positive {
+  color: var(--trip-accent);
 }
 
 .pill button {
