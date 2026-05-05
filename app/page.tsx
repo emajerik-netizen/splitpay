@@ -273,6 +273,7 @@ export default function SplitPayWebApp() {
     return Notification.permission === 'granted';
   });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [balanceTab, setBalanceTab] = useState<'all' | 'settlements'>('settlements');
   const [visitsCount, setVisitsCount] = useState(0);
   const [visits24hCount, setVisits24hCount] = useState(0);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
@@ -2535,56 +2536,102 @@ export default function SplitPayWebApp() {
                   </div>
                   <div className="balance-shell">
                     <div className="balance-segmented" role="tablist" aria-label="Prepínač bilancie">
-                      <button type="button" role="tab" className="balance-tab active" aria-selected="true">Všetky</button>
-                      <button type="button" role="tab" className="balance-tab" aria-selected="false">Vyrovnania</button>
+                      <button
+                        type="button"
+                        role="tab"
+                        className={balanceTab === 'all' ? 'balance-tab active' : 'balance-tab'}
+                        aria-selected={balanceTab === 'all'}
+                        onClick={() => setBalanceTab('all')}
+                      >
+                        Všetky
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        className={balanceTab === 'settlements' ? 'balance-tab active' : 'balance-tab'}
+                        aria-selected={balanceTab === 'settlements'}
+                        onClick={() => setBalanceTab('settlements')}
+                      >
+                        Vyrovnania
+                      </button>
                     </div>
 
-                    <div className="balance-main-card">
-                      <h3>Kto komu koľko dlží</h3>
-                      <p className="muted balance-subtitle">Najmenej prevodov na vyrovnanie</p>
+                    {balanceTab === 'all' ? (
+                      <div className="balance-main-card">
+                        <h3>Kto komu koľko dlží</h3>
+                        <p className="muted balance-subtitle">Aktuálne stavy bilancie</p>
 
-                      {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
+                        {Object.entries(balances).length === 0 ? (
+                          <p className="muted">Žiadni členkovia.</p>
+                        ) : null}
 
-                      <div className="stack-list balance-transfer-list">
-                        {settlements.map((transfer, index) => {
-                          const fromName = formatMemberName(transfer.from);
-                          const toName = formatMemberName(transfer.to);
+                        <div className="stack-list balance-transfer-list">
+                          {Object.entries(balances).map(([name, value]) => {
+                            if (Math.abs(value) < 0.01) return null;
+                            const displayName = formatMemberName(name);
+                            return (
+                              <div className="balance-transfer-row" key={name}>
+                                <span className="balance-person">{displayName}</span>
+                                <span className="balance-arrow" aria-hidden="true">{value >= 0 ? '←' : '→'}</span>
+                                <span className="balance-target">
+                                  <span className="balance-avatar">€</span>
+                                  {value >= 0 ? 'dostane' : 'zaplatí'}
+                                </span>
+                                <strong className={`balance-amount ${value >= 0 ? 'positive' : 'negative'}`}>
+                                  {eur(Math.abs(value))}
+                                </strong>
+                              </div>
+                            );
+                          })}
+                        </div>
 
-                          return (
-                            <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
-                              <span className="balance-person">{fromName}</span>
-                              <span className="balance-arrow" aria-hidden="true">→</span>
-                              <span className="balance-target">
-                                <span className="balance-avatar">{toName.slice(0, 1).toUpperCase()}</span>
-                                {toName}
-                              </span>
-                              <strong className="balance-amount">{money(transfer.amount)}</strong>
-                            </div>
-                          );
-                        })}
+                        <div className="balance-total-card">
+                          <p>
+                            {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
+                          </p>
+                          <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
+                            {eur(Math.abs(selfBalance))}
+                          </strong>
+                        </div>
                       </div>
+                    ) : null}
 
-                      <div className="balance-total-card">
-                        <p>
-                          {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
-                        </p>
-                        <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
-                          {eur(Math.abs(selfBalance))}
-                        </strong>
-                      </div>
-                    </div>
+                    {balanceTab === 'settlements' ? (
+                      <div className="balance-main-card">
+                        <h3>Kto komu koľko dlží</h3>
+                        <p className="muted balance-subtitle">Najmenej prevodov na vyrovnanie</p>
 
-                    <div className="mini-panel balance-current-panel">
-                      <h3>Aktuálna bilancia</h3>
-                      <div className="stack-list">
-                        {Object.entries(balances).map(([name, value]) => (
-                          <div className="row" key={name}>
-                            <span>{formatMemberName(name)}</span>
-                            <strong className={value >= 0 ? 'positive' : 'negative'}>{eur(value)}</strong>
-                          </div>
-                        ))}
+                        {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
+
+                        <div className="stack-list balance-transfer-list">
+                          {settlements.map((transfer, index) => {
+                            const fromName = formatMemberName(transfer.from);
+                            const toName = formatMemberName(transfer.to);
+
+                            return (
+                              <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
+                                <span className="balance-person">{fromName}</span>
+                                <span className="balance-arrow" aria-hidden="true">→</span>
+                                <span className="balance-target">
+                                  <span className="balance-avatar">{toName.slice(0, 1).toUpperCase()}</span>
+                                  {toName}
+                                </span>
+                                <strong className="balance-amount">{money(transfer.amount)}</strong>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="balance-total-card">
+                          <p>
+                            {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
+                          </p>
+                          <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
+                            {eur(Math.abs(selfBalance))}
+                          </strong>
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
 
                     <div className="balance-tip muted">
                       Pošli kamarátom svoje číslo účtu alebo vyrovnajte v hotovosti.
