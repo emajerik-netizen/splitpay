@@ -657,31 +657,35 @@ button:disabled {
 
 .trip-card-large {
   display: grid;
-  grid-template-columns: 10.5rem minmax(0, 1fr);
-  align-items: stretch;
+  grid-template-columns: 1fr;
+  align-items: start;
   min-height: auto;
   overflow: hidden;
   padding: 0;
-  border-radius: 1.6rem;
+  border-radius: 1.2rem;
   border: 1px solid color-mix(in srgb, var(--trip-card-accent, #2c79f6) 35%, #ffffff);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 22px 40px var(--trip-card-shadow, rgba(98, 133, 199, 0.12));
+  box-shadow: 0 12px 24px var(--trip-card-shadow, rgba(98, 133, 199, 0.1));
   color: var(--text);
   text-align: left;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.trip-card-large:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px var(--trip-card-shadow, rgba(98, 133, 199, 0.15));
 }
 
 .trip-card-cover {
-  min-height: 11rem;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--trip-card-accent, #2c79f6) 12%, transparent), color-mix(in srgb, var(--trip-card-accent, #2c79f6) 35%, transparent)),
-    linear-gradient(135deg, #b1d0ff, #dfeafe 58%, #f7fbff);
+  display: none;
 }
 
 .trip-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  padding: 0.95rem 1rem;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
   text-align: left;
   min-width: 0;
 }
@@ -1092,7 +1096,7 @@ button:disabled {
   }
 
   .trip-card-cover {
-    min-height: 8rem;
+    display: none;
   }
 
   .screen-pill {
@@ -1375,11 +1379,11 @@ button:disabled {
 
   .trip-card-large {
     grid-template-columns: 1fr;
-    min-height: 14rem;
+    min-height: auto;
   }
 
   .trip-card-cover {
-    min-height: 7rem;
+    display: none;
   }
 
   .trip-card-body {
