@@ -786,6 +786,16 @@ function friendlyAuthError(message: string) {
   return message;
 }
 
+function isSignupMailDeliveryError(message: string) {
+  const msg = message.toLowerCase();
+  return (
+    msg.includes('error sending confirmation email') ||
+    msg.includes('error sending email') ||
+    msg.includes('smtp') ||
+    msg.includes('mailer')
+  );
+}
+
 function readCachedSession() {
   if (typeof window === 'undefined') return null;
 
@@ -1382,12 +1392,12 @@ export default function SplitPayWebApp() {
           },
         });
 
-        if (error) {
+        if (error && !isSignupMailDeliveryError(error.message)) {
           setAuthMessage(friendlyAuthError(error.message));
           return;
         }
 
-        if (data.session) {
+        if (!error && data.session) {
           setPendingVerification(null);
           setShowRegistrationNotice(false);
           setAuthMessage(t('registrationSuccessInstant'));
