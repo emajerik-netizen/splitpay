@@ -16,7 +16,11 @@ export const metadata: Metadata = {
   title: "SplitPay Web",
   description: "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/icon.png",
   },
 };
