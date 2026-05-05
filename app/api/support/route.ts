@@ -12,22 +12,41 @@ type SupportPayload = {
 };
 
 function getTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const secure = process.env.SMTP_SECURE === 'true';
+  const read = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = process.env[key]?.trim();
+      if (value) return value;
+    }
+    return '';
+  };
 
-  if (!host || !user || !pass || Number.isNaN(port)) {
-    return null;
+  const host = read('SMTP_HOST', 'SMTP_HOSTNAME', 'SMTP_SERVER');
+  const user = read('SMTP_USER', 'SMTP_USERNAME');
+  const pass = read('SMTP_PASS', 'SMTP_PASSWORD');
+  const portRaw = read('SMTP_PORT', 'SMTP_SERVER_PORT') || '587';
+  const secureRaw = read('SMTP_SECURE');
+  const port = Number(portRaw);
+  const secure = secureRaw ? secureRaw === 'true' : port === 465;
+
+  const missing: string[] = [];
+  if (!host) missing.push('SMTP_HOST');
+  if (!user) missing.push('SMTP_USER');
+  if (!pass) missing.push('SMTP_PASS');
+  if (Number.isNaN(port)) missing.push('SMTP_PORT');
+
+  if (missing.length > 0) {
+    return { transport: null, missing };
   }
 
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
+  return {
+    transport: nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+    }),
+    missing,
+  };
 }
 
 export async function POST(request: Request) {
@@ -46,9 +65,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'invalid_lengths' }, { status: 400 });
     }
 
-    const transport = getTransport();
+    const { transport, missing } = getTransport();
     if (!transport) {
-      return NextResponse.json({ error: 'smtp_not_configured' }, { status: 500 });
+      return NextResponse.json({ error: 'smtp_not_configured', missing }, { status: 500 });
     }
 
     const from = process.env.SMTP_FROM || 'support@splitpay.sk';

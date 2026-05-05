@@ -904,6 +904,26 @@ export default function SplitPayWebApp() {
   }, [showStartup]);
 
   useEffect(() => {
+    if (!infoMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setInfoMessage('');
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [infoMessage]);
+
+  useEffect(() => {
+    if (!authMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setAuthMessage('');
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [authMessage]);
+
+  useEffect(() => {
     if (!profileOpen) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
@@ -1373,11 +1393,14 @@ export default function SplitPayWebApp() {
         }),
       });
 
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as { error?: string; missing?: string[] } | null;
 
       if (!response.ok) {
         if (payload?.error === 'smtp_not_configured') {
-          setInfoMessage(t('supportSmtpMissing'));
+          const missing = Array.isArray(payload?.missing) && payload.missing.length > 0
+            ? ` (${payload.missing.join(', ')})`
+            : '';
+          setInfoMessage(`${t('supportSmtpMissing')}${missing}`);
           return;
         }
 
@@ -1398,12 +1421,12 @@ export default function SplitPayWebApp() {
       setSupportSubject('');
       setSupportBody('');
       setSupportEmail('');
-      setShowSupportModal(false);
       setInfoMessage(t('supportSent'));
     } catch {
       setInfoMessage(t('supportSendFailed'));
     } finally {
       setSupportSending(false);
+      setShowSupportModal(false);
     }
   }
 
