@@ -1202,6 +1202,7 @@ export default function SplitPayWebApp() {
 
     let foundTripId = '';
     let duplicateMember = false;
+    let hasMatchingInvite = false;
 
     setTrips((prev) =>
       prev.map((trip) => {
@@ -1209,6 +1210,25 @@ export default function SplitPayWebApp() {
         foundTripId = trip.id;
 
         if (trip.members.includes(cleanedName)) {
+          // Check if there's a pending invite for this name
+          const matchingInvite = trip.pendingInvites.find(
+            (invite) => invite.name.toLowerCase() === cleanedName.toLowerCase()
+          );
+          
+          if (matchingInvite) {
+            // They're claiming an existing fictional member slot
+            hasMatchingInvite = true;
+            return {
+              ...trip,
+              pendingInvites: trip.pendingInvites.map((invite) =>
+                invite.name.toLowerCase() === cleanedName.toLowerCase()
+                  ? { ...invite, status: 'Prijate' }
+                  : invite
+              ),
+            };
+          }
+          
+          // Name exists but no matching invite
           duplicateMember = true;
           return trip;
         }
@@ -1231,7 +1251,7 @@ export default function SplitPayWebApp() {
     }
 
     if (duplicateMember) {
-      setInfoMessage(`${cleanedName} už je v tejto skupine.`);
+      setInfoMessage(`${cleanedName} už je v tejto skupine. Skús iné meno.`);
       return;
     }
 
@@ -1239,7 +1259,11 @@ export default function SplitPayWebApp() {
     setJoinName('');
     setJoinCode('');
     setShowJoinTripModal(false);
-    setInfoMessage(`${cleanedName} sa pridal(a) do výletu.`);
+    setInfoMessage(
+      hasMatchingInvite
+        ? `${cleanedName} prijal(a) pozvánku do výletu.`
+        : `${cleanedName} sa pridal(a) do výletu.`
+    );
   }
 
   function toggleParticipant(name: string) {
@@ -1975,7 +1999,7 @@ export default function SplitPayWebApp() {
                         />
                       </label>
                       <button type="submit" className="primary-cta">Pripojiť sa</button>
-                      <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky.</p>
+                      <p className="muted field-hint">Ak si otvoril QR link, kód sa vyplní automaticky. Môžeš sa pripojiť ako nový člen alebo ako existujúci člen, ak si bol pozvaný.</p>
                     </form>
                   </section>
                 </div>
