@@ -80,15 +80,15 @@ type Lang = 'sk' | 'en';
 const T = {
   sk: {
     resumingSession: 'Obnovujeme session',
-    checkingSavedLogin: 'Kontrolujeme ulozene prihlasenie.',
+    checkingSavedLogin: 'Kontrolujeme uložené prihlásenie.',
     appName: 'Split Pay',
-    appTagline: 'Jednoduche rozdelenie vydavkov medzi priatelov',
+    appTagline: 'Jednoduché rozdelenie výdavkov medzi priateľov',
     inviteBannerTitle: 'Boli ste pozvaní na výlet!',
     inviteBannerDesc: 'Po prihlásení alebo registrácii si vyberiete meno a vstúpite do výletu.',
-    signIn: 'Prihlasenie',
-    createAccount: 'Vytvorenie uctu',
-    signInSubtitle: 'Vitaj spat! Prihlas sa do svojho uctu.',
-    registerSubtitle: 'Zaregistruj sa a zacni pouzivat Split Pay aj na webe.',
+    signIn: 'Prihlásenie',
+    createAccount: 'Vytvorenie účtu',
+    signInSubtitle: 'Vitaj späť! Prihláš sa do svojho účtu.',
+    registerSubtitle: 'Zaregistruj sa a začni používať Split Pay aj na webe.',
     name: 'Meno',
     namePlaceholder: 'Zadaj svoje meno',
     email: 'Email',
@@ -96,21 +96,21 @@ const T = {
     password: 'Heslo',
     passwordPlaceholder: 'Zadaj svoje heslo',
     forgotPassword: 'Zabudli ste heslo?',
-    resetPasswordTitle: 'Nastavenie noveho hesla',
-    resetPasswordSubtitle: 'Zadaj nove heslo pre svoj ucet.',
-    confirmPassword: 'Potvrd heslo',
-    confirmPasswordPlaceholder: 'Zopakuj nove heslo',
-    saveNewPasswordBtn: 'Ulozit nove heslo',
-    passwordResetSuccess: 'Heslo bolo uspesne zmenene. Prihlas sa novym heslom.',
-    passwordMismatch: 'Hesla sa nezhoduju.',
-    passwordTooShort: 'Heslo musi mat aspon 6 znakov.',
-    resetLinkExpired: 'Link na obnovu hesla je neplatny alebo expiroval. Posli si novy.',
-    signInBtn: 'Prihlasit sa',
-    createAccountBtn: 'Vytvorit ucet',
+    resetPasswordTitle: 'Nastavenie nového hesla',
+    resetPasswordSubtitle: 'Zadaj nové heslo pre svoj účet.',
+    confirmPassword: 'Potvrď heslo',
+    confirmPasswordPlaceholder: 'Zopakuj nové heslo',
+    saveNewPasswordBtn: 'Uložiť nové heslo',
+    passwordResetSuccess: 'Heslo bolo úspešne zmenené. Prihláš sa novým heslom.',
+    passwordMismatch: 'Heslá sa nezhodujú.',
+    passwordTooShort: 'Heslo musí mať aspoň 6 znakov.',
+    resetLinkExpired: 'Link na obnovu hesla je neplatný alebo expiroval. Pošli si nový.',
+    signInBtn: 'Prihlásiť sa',
+    createAccountBtn: 'Vytvoriť účet',
     or: 'alebo',
-    continueWithGoogle: 'Pokracovat s Google',
-    noAccount: 'Nemate ucet?',
-    alreadyHaveAccount: 'Uz mate ucet?',
+    continueWithGoogle: 'Pokračovať s Google',
+    noAccount: 'Nemáte účet?',
+    alreadyHaveAccount: 'Už máte účet?',
     myProfile: 'Môj profil',
     myTrips: 'Moje výlety',
     adminSection: 'Admin sekcia',
@@ -294,16 +294,16 @@ const T = {
     supabaseNotConfigured: 'Supabase nie je nastavene. Doplnenie .env je povinne.',
     supabaseNotConfiguredShort: 'Supabase nie je nastavene.',
     enterEmailPassword: 'Zadaj email aj heslo.',
-    loginSuccess: 'Prihlasenie uspesne.',
-    registrationSuccess: 'Registracia prebehla. Skontroluj email pre potvrdenie uctu.',
-    registrationSuccessInstant: 'Registracia prebehla a si prihlaseny.',
-    registrationPendingLocalAccess: 'Konto bolo vytvorene. Potvrdzovaci email bol odoslany znova a do appky si vpusteny docasne. Po potvrdeni emailu sa prihlas bez obmedzeni.',
-    registrationCreatedNotice: 'Uzivatel je vytvoreny. Potvrdzovaci email pride do par minut.',
-    registrationCreatedAction: 'Po kliknuti na OK ta pustime do appky.',
-    emailVerificationCompleted: 'Email bol overeny. Prihlasenie je dokoncene.',
-    verificationEmailResent: 'Email este nie je potvrdeny. Poslali sme novy verifikacny email.',
-    verificationEmailResendFailed: 'Email este nie je potvrdeny a nepodarilo sa poslat novy verifikacny email.',
-    loggedOut: 'Odhlasene.',
+    loginSuccess: 'Prihlásenie úspešne.',
+    registrationSuccess: 'Registrácia prebehla. Skontroluj email pre potvrdenie účtu.',
+    registrationSuccessInstant: 'Registrácia prebehla a si prihlásený.',
+    registrationPendingLocalAccess: 'Konto bolo vytvorené. Potvrzovací email bol odoslaný znova a do appky si vpustený dočasne. Po potvrdení emailu sa prihláš bez obmedzení.',
+    registrationCreatedNotice: 'Užívateľ je vytvorený. Potvrzovací email príde do pár minút.',
+    registrationCreatedAction: 'Po kliknutí na OK ťa pustíme do appky.',
+    emailVerificationCompleted: 'Email bol overený. Prihlásenie je dokončené.',
+    verificationEmailResent: 'Email ešte nie je potvrdený. Poslali sme nový verifikačný email.',
+    verificationEmailResendFailed: 'Email ešte nie je potvrdený a nepodarilo sa poslať nový verifikačný email.',
+    loggedOut: 'Odhlásené.',
     enterEmailFirst: 'Najprv zadaj email.',
     resetEmailSent: 'Poslali sme email na obnovu hesla.',
     inviteNameTaken: 'Meno je obsadené. Vyber iné meno.',
@@ -320,7 +320,7 @@ const T = {
     purgePresenceDone: 'Staré záznamy prítomnosti boli vyčistené.',
     noVisitsForExport: 'Nie sú dáta na export návštev.',
     tripCreated: 'Výlet bol vytvorený.',
-    onlyMemberTripDeleted: 'Si jediný člen výletu. Vylet bol vymazaný.',
+    onlyMemberTripDeleted: 'Si jediný člen výletu. Výlet bol vymazaný.',
     ownershipTransferredAndRemoved: 'Vlastníctvo výletu prebrala osoba',
     removedFromTrip: 'Si odstránený(á) z výletu.',
     memberRemoved: 'bol(a) odstránený(á) z výletu.',
@@ -2820,6 +2820,30 @@ export default function SplitPayWebApp() {
             <button type="button" className="link-button strong" onClick={() => setShowSupportModal(true)}>
               {t('contactSupport')}
             </button>
+          </section>
+
+          <section className="auth-switch-card lang-switcher-auth">
+            <div className="lang-picker">
+              <span className="lang-picker-label">{t('language')}</span>
+              <div className="lang-picker-flags">
+                <button
+                  type="button"
+                  className={`lang-flag-btn${lang === 'sk' ? ' active' : ''}`}
+                  onClick={() => setLang('sk')}
+                  title={t('slovak')}
+                >
+                  🇸🇰
+                </button>
+                <button
+                  type="button"
+                  className={`lang-flag-btn${lang === 'en' ? ' active' : ''}`}
+                  onClick={() => setLang('en')}
+                  title={t('english')}
+                >
+                  🇬🇧
+                </button>
+              </div>
+            </div>
           </section>
         </main>
       ) : (
