@@ -19,6 +19,14 @@ function makeInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function makeUniqueInviteCode(existingTrips: Trip[]) {
+  let code = makeInviteCode();
+  while (existingTrips.some((trip) => trip.inviteCode === code)) {
+    code = makeInviteCode();
+  }
+  return code;
+}
+
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '-';
@@ -123,13 +131,13 @@ function detailScreenFromPath(value?: string): TripDetailScreen {
   return 'overview';
 }
 
-function tripPath(tripId: string, detailScreen: TripDetailScreen = 'overview') {
-  const safeTripId = encodeURIComponent(tripId);
-  if (detailScreen === 'overview') return `/trip/${safeTripId}`;
-  return `/trip/${safeTripId}/${detailScreen}`;
+function tripPath(tripKey: string, detailScreen: TripDetailScreen = 'overview') {
+  const safeTripKey = encodeURIComponent(tripKey);
+  if (detailScreen === 'overview') return `/trip/${safeTripKey}`;
+  return `/trip/${safeTripKey}/${detailScreen}`;
 }
 
-function createTrip(name: string, date: string, owner: string = 'Ty'): Trip {
+function createTrip(name: string, date: string, inviteCode: string, owner: string = 'Ty'): Trip {
   return {
     id: makeId(),
     name,
@@ -138,7 +146,7 @@ function createTrip(name: string, date: string, owner: string = 'Ty'): Trip {
     currency: 'EUR',
     color: '#2c79f6',
     archived: false,
-    inviteCode: makeInviteCode(),
+    inviteCode,
     members: ['Ty'],
     expenses: [],
     pendingInvites: [],
@@ -151,6 +159,7 @@ function normalizeTrip(trip: Trip): Trip {
     owner: trip.owner || 'Ty',
     currency: trip.currency || 'EUR',
     color: trip.color || '#2c79f6',
+    inviteCode: (trip.inviteCode || makeInviteCode()).toUpperCase(),
     archived: Boolean(trip.archived),
   };
 }
@@ -732,16 +741,24 @@ export default function SplitPayWebApp() {
   }
 
   const pathSegments = pathname.split('/').filter(Boolean);
-  const routeTripId =
+  const routeTripKey =
     pathSegments[0] === 'trip' && pathSegments[1]
       ? decodeURIComponent(pathSegments[1])
       : '';
+  const routeTrip = useMemo(
+    () =>
+      trips.find(
+        (trip) =>
+          trip.id === routeTripKey || trip.inviteCode.toUpperCase() === routeTripKey.toUpperCase()
+      ) || null,
+    [routeTripKey, trips]
+  );
   const activeAppScreen: AppScreen =
-    pathname === '/admin' ? 'admin' : routeTripId ? 'trip-detail' : appScreen;
-  const activeDetailScreen = routeTripId
+    pathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : appScreen;
+  const activeDetailScreen = routeTripKey
     ? detailScreenFromPath(pathSegments[2])
     : detailScreen;
-  const activeTripId = routeTripId || selectedTripId;
+  const activeTripId = routeTrip?.id || selectedTripId;
 
   const currentTrip = useMemo(() => {
     if (activeTripId) {
@@ -755,13 +772,23 @@ export default function SplitPayWebApp() {
       supabase && authResolved && appSession?.userId && !dbLoadedRef.current
     );
 
-    if (!routeTripId) return;
+    if (!routeTripKey) return;
     if (!localStateHydrated) return;
     if (!authResolved) return;
     if (shouldWaitForDbLoad) return;
-    if (trips.some((trip) => trip.id === routeTripId)) return;
+    if (routeTrip) return;
     router.replace('/');
-  }, [appSession?.userId, authResolved, dbLoadTick, localStateHydrated, routeTripId, router, supabase, trips]);
+  }, [
+    appSession?.userId,
+    authResolved,
+    dbLoadTick,
+    localStateHydrated,
+    routeTrip,
+    routeTripKey,
+    router,
+    supabase,
+    trips,
+  ]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -827,9 +854,19 @@ export default function SplitPayWebApp() {
     setTrips((prev) => prev.map((trip) => (trip.id === currentTrip.id ? updater(trip) : trip)));
   }
 
-  function openTrip(tripId: string, nextScreen: TripDetailScreen = 'overview') {
+  function openTrip(
+    tripId: string,
+    nextScreen: TripDetailScreen = 'overview',
+    tripKeyOverride?: string
+  ) {
+    const selectedTrip = trips.find((trip) => trip.id === tripId);
+    const tripKey = tripKeyOverride || selectedTrip?.inviteCode;
+    if (!tripKey) return;
+
+    setAppScreen('trip-detail');
+    setDetailScreen(nextScreen);
     setSelectedTripId(tripId);
-    router.push(tripPath(tripId, nextScreen));
+    router.push(tripPath(tripKey, nextScreen));
   }
 
   function goToTripsHome() {
@@ -928,9 +965,15 @@ export default function SplitPayWebApp() {
     const cleanedName = newTripName.trim();
     if (!cleanedName) return;
 
-    const trip = createTrip(cleanedName, newTripDate.trim() || 'Bez dátumu', appSession?.name || 'Ty');
+    const inviteCode = makeUniqueInviteCode(trips);
+    const trip = createTrip(
+      cleanedName,
+      newTripDate.trim() || 'Bez dátumu',
+      inviteCode,
+      appSession?.name || 'Ty'
+    );
     setTrips((prev) => [trip, ...prev]);
-    openTrip(trip.id, 'overview');
+    openTrip(trip.id, 'overview', trip.inviteCode);
     setNewTripName('');
     setNewTripDate('');
     setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
@@ -1042,13 +1085,6 @@ export default function SplitPayWebApp() {
     setInviteName('');
     setInviteContact('');
     setInfoMessage(`Pozvánka pre ${cleanedName} je pripravená. Kód: ${currentTrip.inviteCode}`);
-  }
-
-  function regenerateInviteCode() {
-    if (!currentTrip) return;
-    const nextCode = makeInviteCode();
-    updateCurrentTrip((trip) => ({ ...trip, inviteCode: nextCode }));
-    setInfoMessage(`Novy kod pre ${currentTrip.name}: ${nextCode}`);
   }
 
   function copyInviteCodeToClipboard() {
@@ -2033,7 +2069,6 @@ export default function SplitPayWebApp() {
                           >
                             {showInviteQr ? 'Skryť QR' : 'Zdieľať cez QR'}
                           </button>
-                          <button type="button" className="ghost" onClick={regenerateInviteCode}>Vygenerovať nový kód</button>
                         </div>
                         {showInviteQr ? (
                           <div className="qr-share-box">
