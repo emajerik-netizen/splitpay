@@ -287,6 +287,8 @@ const T = {
     enterEmailPassword: 'Zadaj email aj heslo.',
     loginSuccess: 'Prihlasenie uspesne.',
     registrationSuccess: 'Registracia prebehla. Skontroluj email pre potvrdenie uctu.',
+    registrationSuccessInstant: 'Registracia prebehla a si prihlaseny.',
+    registrationPendingLocalAccess: 'Konto bolo vytvorene. Potvrdzovaci email bol odoslany znova a do appky si vpusteny docasne. Po potvrdeni emailu sa prihlas bez obmedzeni.',
     loggedOut: 'Odhlasene.',
     enterEmailFirst: 'Najprv zadaj email.',
     resetEmailSent: 'Poslali sme email na obnovu hesla.',
@@ -549,6 +551,8 @@ const T = {
     enterEmailPassword: 'Enter email and password.',
     loginSuccess: 'Sign in successful.',
     registrationSuccess: 'Registration completed. Check your email to confirm the account.',
+    registrationSuccessInstant: 'Registration completed and you are signed in.',
+    registrationPendingLocalAccess: 'Account was created. Verification email was resent and temporary app access is enabled. After email confirmation, sign in for full access.',
     loggedOut: 'Signed out.',
     enterEmailFirst: 'Enter email first.',
     resetEmailSent: 'We sent a password reset email.',
@@ -1293,12 +1297,15 @@ export default function SplitPayWebApp() {
 
         setAuthMessage(t('loginSuccess'));
       } else {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedName = fullName.trim() || 'Pouzivatel';
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
           options: {
+            emailRedirectTo: window.location.origin,
             data: {
-              full_name: fullName.trim() || 'Pouzivatel',
+              full_name: normalizedName,
             },
           },
         });
@@ -1308,7 +1315,40 @@ export default function SplitPayWebApp() {
           return;
         }
 
-        setAuthMessage(t('registrationSuccess'));
+        if (data.session) {
+          setAuthMessage(t('registrationSuccessInstant'));
+          return;
+        }
+
+        const { error: loginAfterSignupError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+
+        if (!loginAfterSignupError) {
+          setAuthMessage(t('registrationSuccessInstant'));
+          return;
+        }
+
+        if (loginAfterSignupError.message.toLowerCase().includes('email not confirmed')) {
+          await supabase.auth.resend({
+            type: 'signup',
+            email: normalizedEmail,
+            options: {
+              emailRedirectTo: window.location.origin,
+            },
+          });
+
+          // Temporary local session keeps the user in app until email is confirmed.
+          setAppSession({
+            ...makeUserSession(`pending:${normalizedEmail}`, normalizedEmail, normalizedName),
+            guest: true,
+          });
+          setAuthMessage(t('registrationPendingLocalAccess'));
+          return;
+        }
+
+        setAuthMessage(friendlyAuthError(loginAfterSignupError.message));
       }
     } finally {
       setAuthLoading(false);
