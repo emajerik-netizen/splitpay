@@ -1350,7 +1350,6 @@ export default function SplitPayWebApp() {
 
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
-  const isTripRoutePending = activeAppScreen === 'trip-detail' && !currentTrip;
   const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
   const tripThemeStyle = useMemo(() => {
     if (!currentTrip) return undefined;
@@ -1694,12 +1693,7 @@ export default function SplitPayWebApp() {
           ) : null}
 
           {activeAppScreen !== 'admin' ? (
-            isTripRoutePending ? (
-            <section className="section-card route-loading-card">
-              <p className="eyebrow">Načítavam výlet</p>
-              <h2>Pripravujem údaje...</h2>
-            </section>
-          ) : !showTripDetail ? (
+            activeAppScreen === 'trip-detail' && !showTripDetail ? null : !showTripDetail ? (
             <>
               <section className="hero hero-panel">
                 <div>
