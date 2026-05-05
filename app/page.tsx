@@ -882,6 +882,13 @@ export default function SplitPayWebApp() {
     if (normalizedName === 'ty') return true;
     return Boolean(normalizedCurrentUser) && normalizedName === normalizedCurrentUser;
   };
+  const isSameMember = (left: string, right: string) => {
+    const leftNormalized = left.trim().toLowerCase();
+    const rightNormalized = right.trim().toLowerCase();
+    if (!leftNormalized || !rightNormalized) return false;
+    if (leftNormalized === rightNormalized) return true;
+    return isSelfName(left) && isSelfName(right);
+  };
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
   const currentTripOwnerIsSelf = currentTrip ? isSelfName(currentTrip.owner) : false;
   const selfBalance = appSession?.name
@@ -1049,8 +1056,8 @@ export default function SplitPayWebApp() {
     const isOwner = isSelfName(currentTrip.owner);
     if (!isOwner) return;
 
-    const isOwnerRemoving = memberName === currentTrip.owner;
-    const otherMembers = currentTrip.members.filter((name) => name !== memberName);
+    const isOwnerRemoving = isSameMember(memberName, currentTrip.owner);
+    const otherMembers = currentTrip.members.filter((name) => !isSameMember(name, memberName));
 
     if (isOwnerRemoving && otherMembers.length === 0) {
       // If owner removes themselves and they're alone, delete trip
@@ -1068,11 +1075,11 @@ export default function SplitPayWebApp() {
         members: otherMembers,
         expenses: trip.expenses.map((expense) => ({
           ...expense,
-          payer: expense.payer === memberName ? newOwner : expense.payer,
-          participants: expense.participants.filter((name) => name !== memberName),
+          payer: isSameMember(expense.payer, memberName) ? newOwner : expense.payer,
+          participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
         })),
       }));
-      setInfoMessage(`Vlastníctvo výletu prebrala osoba ${newOwner}. Si odstránený(á) z výletu.`);
+      setInfoMessage(`Vlastníctvo výletu prebrala osoba ${formatMemberName(newOwner)}. Si odstránený(á) z výletu.`);
       return;
     }
 
@@ -1082,11 +1089,11 @@ export default function SplitPayWebApp() {
       members: otherMembers,
       expenses: trip.expenses.map((expense) => ({
         ...expense,
-        payer: expense.payer === memberName ? trip.members[0] || 'Ty' : expense.payer,
-        participants: expense.participants.filter((name) => name !== memberName),
+        payer: isSameMember(expense.payer, memberName) ? trip.members[0] || 'Ty' : expense.payer,
+        participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
       })),
     }));
-    setInfoMessage(`${memberName} bol(a) odstránený(á) z výletu.`);
+    setInfoMessage(`${formatMemberName(memberName)} bol(a) odstránený(á) z výletu.`);
   }
 
   function deleteTrip(tripId: string) {
@@ -2172,7 +2179,7 @@ export default function SplitPayWebApp() {
                   {currentTripOwnerIsSelf && members.length > 1 ? (
                     <div className="mini-panel" style={{ background: '#e7f8ff', borderColor: '#2c79f6', color: '#1f3562' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {formatMemberName(members.find((m) => m !== currentTrip.owner) || 'ďalší člen')}.
+                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {formatMemberName(members.find((m) => !isSelfName(m)) || 'ďalší člen')}.
                       </p>
                     </div>
                   ) : null}
