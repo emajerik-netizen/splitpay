@@ -81,6 +81,7 @@ const T = {
   sk: {
     resumingSession: 'Obnovujeme session',
     checkingSavedLogin: 'Kontrolujeme ulozene prihlasenie.',
+    appName: 'Split Pay',
     appTagline: 'Jednoduche rozdelenie vydavkov medzi priatelov',
     inviteBannerTitle: 'Boli ste pozvaní na výlet!',
     inviteBannerDesc: 'Po prihlásení alebo registrácii si vyberiete meno a vstúpite do výletu.',
@@ -169,6 +170,9 @@ const T = {
     invitesTitle: 'Pozvánky a prístupy',
     code: 'Kód',
     copy: 'Kopírovať',
+    shareEmail: 'Email',
+    shareWhatsApp: 'WhatsApp',
+    shareSms: 'SMS',
     hideQr: 'Skryť QR',
     showQr: 'QR kód',
     contactPlaceholder: 'Kontakt (voliteľné)',
@@ -224,6 +228,99 @@ const T = {
     tripColor: 'Farba výletu',
     archiveTrip: 'Archivovať výlet',
     deleteTrip: 'Vymazať výlet',
+    adminTitle: 'Administrácia',
+    adminCenterTitle: 'Riadiace centrum aplikácie',
+    adminCenterDesc: 'Rozšírený prehľad používania a správa oprávnení.',
+    totalVisits: 'Počet návštev celkom',
+    visits24h: 'Návštevy za 24h',
+    activeUsers5m: 'Aktívni používatelia (5 min)',
+    usersInSystem: 'Používatelia v systéme',
+    storedTripStates: 'Uložené stavy výletov',
+    panelLoad: 'Načítanie panelu',
+    loading: 'Načítavam',
+    done: 'Hotovo',
+    adminAnnouncementForAll: 'Admin oznam pre všetkých',
+    adminAnnouncementPlaceholder: 'Sem napíš oznam pre používateľov',
+    showAnnouncementInApp: 'Zobraziť oznam v aplikácii',
+    saveAnnouncement: 'Uložiť oznam',
+    topUsersVisits: 'Top používatelia podľa návštev (500 posledných)',
+    noDataYet: 'Zatiaľ žiadne dáta.',
+    activeUsersRoles: 'Aktívni používatelia a roly',
+    noUsersYet: 'Zatiaľ žiadni používatelia.',
+    lastSeen: 'Naposledy:',
+    roleAdmin: 'Admin',
+    roleUser: 'User',
+    demoteToUser: 'Znížiť na user',
+    promoteToAdmin: 'Povýšiť na admin',
+    recentVisitsTitle: 'Posledné návštevy',
+    noVisitsYet: 'Zatiaľ žiadne návštevy.',
+    activeTrips: 'Aktívne výlety',
+    noActiveTrips: 'Zatiaľ žiadne aktívne výlety.',
+    archivedTrips: 'Archivované výlety',
+    noArchivedTrips: 'Zatiaľ žiadne archivované výlety.',
+    openBtn: 'Otvoriť',
+    slovak: 'Slovenčina',
+    english: 'English',
+    exportVisitsCsv: 'Export návštev do CSV',
+    purgePresence: 'Vyčistiť prítomnosť staršiu ako 7 dní',
+    backToTripsAdmin: 'Späť do výletov',
+    removeSelfWarningLead: '⚠️ Ak sa odstránite:',
+    removeSelfWarningSolo: 'Si jediný člen, výlet bude vymazaný.',
+    removeSelfInfoLead: 'ℹ️ Ak sa odstránite:',
+    removeSelfInfoTransfer: 'Vlastníctvo preberá',
+    anotherMember: 'ďalší člen',
+    accountDeleteRequiresServer: 'Vymazanie účtu vyžaduje serverovú funkciu (service role).',
+    supabaseNotConfigured: 'Supabase nie je nastavene. Doplnenie .env je povinne.',
+    supabaseNotConfiguredShort: 'Supabase nie je nastavene.',
+    enterEmailPassword: 'Zadaj email aj heslo.',
+    loginSuccess: 'Prihlasenie uspesne.',
+    registrationSuccess: 'Registracia prebehla. Skontroluj email pre potvrdenie uctu.',
+    loggedOut: 'Odhlasene.',
+    enterEmailFirst: 'Najprv zadaj email.',
+    resetEmailSent: 'Poslali sme email na obnovu hesla.',
+    inviteNameTaken: 'Meno je obsadené. Vyber iné meno.',
+    genericTryAgain: 'Nastala chyba. Skúste znova.',
+    welcomeAdded: 'Vitaj! Bol si pridaný do výletu',
+    ownerNewMemberTitleSuffix: 'nový člen',
+    ownerNewMemberBody: 'sa pridal(a) do výletu.',
+    adminAnnouncementSaveFailed: 'Uloženie admin oznamu zlyhalo.',
+    adminAnnouncementSaved: 'Admin oznam bol uložený.',
+    addAdminRoleFailed: 'Nepodarilo sa pridať admin rolu.',
+    removeAdminRoleFailed: 'Nepodarilo sa odobrať admin rolu.',
+    userRoleUpdated: 'Rola používateľa bola upravená.',
+    purgePresenceFailed: 'Čistenie prítomnosti zlyhalo.',
+    purgePresenceDone: 'Staré záznamy prítomnosti boli vyčistené.',
+    noVisitsForExport: 'Nie sú dáta na export návštev.',
+    tripCreated: 'Výlet bol vytvorený.',
+    onlyMemberTripDeleted: 'Si jediný člen výletu. Vylet bol vymazaný.',
+    ownershipTransferredAndRemoved: 'Vlastníctvo výletu prebrala osoba',
+    removedFromTrip: 'Si odstránený(á) z výletu.',
+    memberRemoved: 'bol(a) odstránený(á) z výletu.',
+    tripDeleted: 'Výlet bol vymazaný.',
+    identityNow: 'Tvoja identita v tomto výlete je teraz',
+    invitePreparedFor: 'Pozvánka pre',
+    inviteCodeLabel: 'Kód:',
+    inviteCopied: 'Pozvánka skopírovaná do schránky!',
+    inviteSubject: 'Pozvánka na výlet:',
+    inviteEmailText: 'Ahoj!\n\nChcem ťa pozvať na môj výlet',
+    clickLinkBelow: 'Klikni na odkaz nižšie:',
+    lookingForward: 'Teším sa na teba!',
+    clickLink: 'Klikni na odkaz:',
+    tripLabel: 'Výlet',
+    invalidCode: 'Kód neexistuje. Skontroluj ho a skús znova.',
+    nameAlreadyInGroup: 'už je v tejto skupine. Skús iné meno.',
+    inviteAcceptedJoin: 'prijal(a) pozvánku do výletu.',
+    joinedTripInfo: 'sa pridal(a) do výletu.',
+    transactionUpdatedInfo: 'Transakcia bola upravená.',
+    transactionUpdatedTitle: 'Transakcia upravená',
+    newTransactionTitle: 'Nová transakcia',
+    browserNoNotifications: 'Tento prehliadač nepodporuje notifikácie.',
+    notificationsHttpsOnly: 'Notifikácie fungujú iba na HTTPS doméne.',
+    notificationsBlocked: 'Notifikácie sú blokované v prehliadači. Povoľ ich v nastaveniach stránky.',
+    notificationsDenied: 'Notifikácie neboli povolené.',
+    notificationSendError: 'Chyba pri posielaní notifikácie:',
+    newTransactionInTrip: 'Nová transakcia v',
+    addedExpense: 'pridal(a) výdavok',
     noDate: 'Bez dátumu',
     member1: '1 člen',
     membersPlural: 'členov',
@@ -232,6 +329,7 @@ const T = {
   en: {
     resumingSession: 'Resuming session',
     checkingSavedLogin: 'Checking saved login.',
+    appName: 'Split Pay',
     appTagline: 'Simple expense splitting among friends',
     inviteBannerTitle: "You've been invited to a trip!",
     inviteBannerDesc: 'After signing in or registering, you will choose a name and join the trip.',
@@ -320,6 +418,9 @@ const T = {
     invitesTitle: 'Invites & Access',
     code: 'Code',
     copy: 'Copy',
+    shareEmail: 'Email',
+    shareWhatsApp: 'WhatsApp',
+    shareSms: 'SMS',
     hideQr: 'Hide QR',
     showQr: 'QR Code',
     contactPlaceholder: 'Contact (optional)',
@@ -375,6 +476,99 @@ const T = {
     tripColor: 'Trip Color',
     archiveTrip: 'Archive trip',
     deleteTrip: 'Delete trip',
+    adminTitle: 'Administration',
+    adminCenterTitle: 'Application Control Center',
+    adminCenterDesc: 'Extended usage overview and permission management.',
+    totalVisits: 'Total visits',
+    visits24h: 'Visits in 24h',
+    activeUsers5m: 'Active users (5 min)',
+    usersInSystem: 'Users in system',
+    storedTripStates: 'Stored trip states',
+    panelLoad: 'Panel load',
+    loading: 'Loading',
+    done: 'Done',
+    adminAnnouncementForAll: 'Admin announcement for everyone',
+    adminAnnouncementPlaceholder: 'Write an announcement for users here',
+    showAnnouncementInApp: 'Show announcement in app',
+    saveAnnouncement: 'Save announcement',
+    topUsersVisits: 'Top users by visits (last 500)',
+    noDataYet: 'No data yet.',
+    activeUsersRoles: 'Active users and roles',
+    noUsersYet: 'No users yet.',
+    lastSeen: 'Last seen:',
+    roleAdmin: 'Admin',
+    roleUser: 'User',
+    demoteToUser: 'Demote to user',
+    promoteToAdmin: 'Promote to admin',
+    recentVisitsTitle: 'Recent visits',
+    noVisitsYet: 'No visits yet.',
+    activeTrips: 'Active trips',
+    noActiveTrips: 'No active trips yet.',
+    archivedTrips: 'Archived trips',
+    noArchivedTrips: 'No archived trips yet.',
+    openBtn: 'Open',
+    slovak: 'Slovak',
+    english: 'English',
+    exportVisitsCsv: 'Export visits to CSV',
+    purgePresence: 'Clean presence older than 7 days',
+    backToTripsAdmin: 'Back to trips',
+    removeSelfWarningLead: '⚠️ If you remove yourself:',
+    removeSelfWarningSolo: 'You are the only member, the trip will be deleted.',
+    removeSelfInfoLead: 'ℹ️ If you remove yourself:',
+    removeSelfInfoTransfer: 'Ownership will transfer to',
+    anotherMember: 'another member',
+    accountDeleteRequiresServer: 'Deleting account requires a server function (service role).',
+    supabaseNotConfigured: 'Supabase is not configured. .env setup is required.',
+    supabaseNotConfiguredShort: 'Supabase is not configured.',
+    enterEmailPassword: 'Enter email and password.',
+    loginSuccess: 'Sign in successful.',
+    registrationSuccess: 'Registration completed. Check your email to confirm the account.',
+    loggedOut: 'Signed out.',
+    enterEmailFirst: 'Enter email first.',
+    resetEmailSent: 'We sent a password reset email.',
+    inviteNameTaken: 'Name is already taken. Choose a different name.',
+    genericTryAgain: 'An error occurred. Please try again.',
+    welcomeAdded: 'Welcome! You were added to trip',
+    ownerNewMemberTitleSuffix: 'new member',
+    ownerNewMemberBody: 'joined the trip.',
+    adminAnnouncementSaveFailed: 'Saving admin announcement failed.',
+    adminAnnouncementSaved: 'Admin announcement was saved.',
+    addAdminRoleFailed: 'Failed to add admin role.',
+    removeAdminRoleFailed: 'Failed to remove admin role.',
+    userRoleUpdated: 'User role has been updated.',
+    purgePresenceFailed: 'Presence cleanup failed.',
+    purgePresenceDone: 'Old presence records were cleaned.',
+    noVisitsForExport: 'No visit data to export.',
+    tripCreated: 'Trip was created.',
+    onlyMemberTripDeleted: 'You are the only trip member. The trip was deleted.',
+    ownershipTransferredAndRemoved: 'Trip ownership was transferred to',
+    removedFromTrip: 'You were removed from the trip.',
+    memberRemoved: 'was removed from the trip.',
+    tripDeleted: 'Trip was deleted.',
+    identityNow: 'Your identity in this trip is now',
+    invitePreparedFor: 'Invite for',
+    inviteCodeLabel: 'Code:',
+    inviteCopied: 'Invite copied to clipboard!',
+    inviteSubject: 'Trip invitation:',
+    inviteEmailText: 'Hi!\n\nI want to invite you to my trip',
+    clickLinkBelow: 'Click the link below:',
+    lookingForward: 'Looking forward to it!',
+    clickLink: 'Click the link:',
+    tripLabel: 'Trip',
+    invalidCode: 'Code does not exist. Check it and try again.',
+    nameAlreadyInGroup: 'is already in this group. Try another name.',
+    inviteAcceptedJoin: 'accepted the invitation to the trip.',
+    joinedTripInfo: 'joined the trip.',
+    transactionUpdatedInfo: 'Transaction was updated.',
+    transactionUpdatedTitle: 'Transaction updated',
+    newTransactionTitle: 'New transaction',
+    browserNoNotifications: 'This browser does not support notifications.',
+    notificationsHttpsOnly: 'Notifications work only on HTTPS.',
+    notificationsBlocked: 'Notifications are blocked in the browser. Enable them in site settings.',
+    notificationsDenied: 'Notifications were not allowed.',
+    notificationSendError: 'Error sending notification:',
+    newTransactionInTrip: 'New transaction in',
+    addedExpense: 'added expense',
     noDate: 'No date',
     member1: '1 member',
     membersPlural: 'members',
@@ -974,12 +1168,12 @@ export default function SplitPayWebApp() {
   async function handleEmailAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase) {
-      setAuthMessage('Supabase nie je nastavene. Doplnenie .env je povinne.');
+      setAuthMessage(t('supabaseNotConfigured'));
       return;
     }
 
     if (!email.trim() || !password.trim()) {
-      setAuthMessage('Zadaj email aj heslo.');
+      setAuthMessage(t('enterEmailPassword'));
       return;
     }
 
@@ -998,7 +1192,7 @@ export default function SplitPayWebApp() {
           return;
         }
 
-        setAuthMessage('Prihlasenie uspesne.');
+        setAuthMessage(t('loginSuccess'));
       } else {
         const { error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
@@ -1015,7 +1209,7 @@ export default function SplitPayWebApp() {
           return;
         }
 
-        setAuthMessage('Registracia prebehla. Skontroluj email pre potvrdenie uctu.');
+        setAuthMessage(t('registrationSuccess'));
       }
     } finally {
       setAuthLoading(false);
@@ -1024,7 +1218,7 @@ export default function SplitPayWebApp() {
 
   async function handleGoogleLogin() {
     if (!supabase) {
-      setAuthMessage('Supabase nie je nastavene. Doplnenie .env je povinne.');
+      setAuthMessage(t('supabaseNotConfigured'));
       return;
     }
 
@@ -1056,17 +1250,17 @@ export default function SplitPayWebApp() {
       await supabase.auth.signOut();
     }
 
-    setAuthMessage('Odhlasene.');
+    setAuthMessage(t('loggedOut'));
   }
 
   async function handleResetPassword() {
     if (!supabase) {
-      setAuthMessage('Supabase nie je nastavene.');
+      setAuthMessage(t('supabaseNotConfiguredShort'));
       return;
     }
 
     if (!email.trim()) {
-      setAuthMessage('Najprv zadaj email.');
+      setAuthMessage(t('enterEmailFirst'));
       return;
     }
 
@@ -1079,7 +1273,7 @@ export default function SplitPayWebApp() {
       return;
     }
 
-    setAuthMessage('Poslali sme email na obnovu hesla.');
+    setAuthMessage(t('resetEmailSent'));
   }
 
   function toggleAuthMode() {
@@ -1128,12 +1322,12 @@ export default function SplitPayWebApp() {
     setInviteLoading(false);
 
     if (data?.error === 'name_taken') {
-      setInviteError(`Meno "${memberName}" je obsadené. Vyber iné meno.`);
+      setInviteError(`${memberName}: ${t('inviteNameTaken')}`);
       return;
     }
 
     if (!data?.success) {
-      setInviteError('Nastala chyba. Skúste znova.');
+      setInviteError(t('genericTryAgain'));
       return;
     }
 
@@ -1152,11 +1346,11 @@ export default function SplitPayWebApp() {
 
     clearInvite();
     openTrip(data.tripId, 'overview');
-    setInfoMessage(`Vitaj ${memberName}! Bol si pridaný do výletu ${inviteTrip.tripName}.`);
+    setInfoMessage(`${t('welcomeAdded')} ${inviteTrip.tripName}.`);
 
     // Notify owner if notifications enabled
-    sendNotification(`${inviteTrip.tripName} – nový člen`, {
-      body: `${memberName} sa pridal(a) do výletu.`,
+    sendNotification(`${inviteTrip.tripName} - ${t('ownerNewMemberTitleSuffix')}`, {
+      body: `${memberName} ${t('ownerNewMemberBody')}`,
       icon: '/icon.png',
     });
   }
@@ -1391,12 +1585,12 @@ export default function SplitPayWebApp() {
     });
 
     if (error) {
-      setInfoMessage('Uloženie admin oznamu zlyhalo.');
+      setInfoMessage(t('adminAnnouncementSaveFailed'));
       return;
     }
 
     setGlobalAnnouncement(announcementEnabled ? announcementText : '');
-    setInfoMessage('Admin oznam bol uložený.');
+    setInfoMessage(t('adminAnnouncementSaved'));
   }
 
   async function toggleUserRole(targetUserId: string, nextRole: AdminRole) {
@@ -1410,13 +1604,13 @@ export default function SplitPayWebApp() {
       });
 
       if (error) {
-        setInfoMessage('Nepodarilo sa pridať admin rolu.');
+        setInfoMessage(t('addAdminRoleFailed'));
         return;
       }
     } else {
       const { error } = await supabase.from('user_roles').delete().eq('user_id', targetUserId);
       if (error) {
-        setInfoMessage('Nepodarilo sa odobrať admin rolu.');
+        setInfoMessage(t('removeAdminRoleFailed'));
         return;
       }
     }
@@ -1424,7 +1618,7 @@ export default function SplitPayWebApp() {
     setAdminPresence((prev) =>
       prev.map((row) => (row.user_id === targetUserId ? { ...row, role: nextRole } : row))
     );
-    setInfoMessage('Rola používateľa bola upravená.');
+    setInfoMessage(t('userRoleUpdated'));
   }
 
   async function purgeStalePresence() {
@@ -1433,16 +1627,16 @@ export default function SplitPayWebApp() {
     const { error } = await supabase.from('user_presence').delete().lt('last_seen', threshold);
 
     if (error) {
-      setInfoMessage('Čistenie prítomnosti zlyhalo.');
+      setInfoMessage(t('purgePresenceFailed'));
       return;
     }
 
-    setInfoMessage('Staré záznamy prítomnosti boli vyčistené.');
+    setInfoMessage(t('purgePresenceDone'));
   }
 
   function exportVisitsCsv() {
     if (!recentVisits.length) {
-      setInfoMessage('Nie sú dáta na export návštev.');
+      setInfoMessage(t('noVisitsForExport'));
       return;
     }
 
@@ -1480,7 +1674,7 @@ export default function SplitPayWebApp() {
     setNewTripName('');
     setNewTripDate('');
     setShowCreateTripModal(false);
-    setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
+    setInfoMessage(`${trip.name}: ${t('tripCreated')}`);
   }
 
   function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'currency' | 'color' | 'archived'>>) {
@@ -1524,7 +1718,7 @@ export default function SplitPayWebApp() {
     if (isOwnerRemoving && otherMembers.length === 0) {
       // If owner removes themselves and they're alone, delete trip
       deleteTrip(currentTrip.id);
-      setInfoMessage('Si jediný člen výletu. Vylet bol vymazaný.');
+      setInfoMessage(t('onlyMemberTripDeleted'));
       return;
     }
 
@@ -1541,7 +1735,7 @@ export default function SplitPayWebApp() {
           participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
         })),
       }));
-      setInfoMessage(`Vlastníctvo výletu prebrala osoba ${formatMemberName(newOwner)}. Si odstránený(á) z výletu.`);
+      setInfoMessage(`${t('ownershipTransferredAndRemoved')} ${formatMemberName(newOwner)}. ${t('removedFromTrip')}`);
       return;
     }
 
@@ -1555,7 +1749,7 @@ export default function SplitPayWebApp() {
         participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
       })),
     }));
-    setInfoMessage(`${formatMemberName(memberName)} bol(a) odstránený(á) z výletu.`);
+    setInfoMessage(`${formatMemberName(memberName)} ${t('memberRemoved')}`);
   }
 
   function deleteTrip(tripId: string) {
@@ -1566,7 +1760,7 @@ export default function SplitPayWebApp() {
 
     setTrips((prev) => prev.filter((trip) => trip.id !== tripId));
     goToTripsHome();
-    setInfoMessage(`Výlet ${tripToDelete.name} bol vymazaný.`);
+    setInfoMessage(`${tripToDelete.name}: ${t('tripDeleted')}`);
   }
 
   function handleGuestClaimIdentity(invitedName: string) {
@@ -1592,7 +1786,7 @@ export default function SplitPayWebApp() {
       window.localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(updatedSession));
     }
 
-    setInfoMessage(`Tvoja identita v tomto výlete je teraz ${invitedName}.`);
+    setInfoMessage(`${t('identityNow')} ${invitedName}.`);
   }
 
   function handleAddInvite(event: FormEvent<HTMLFormElement>) {
@@ -1616,21 +1810,21 @@ export default function SplitPayWebApp() {
     }));
     setInviteName('');
     setInviteContact('');
-    setInfoMessage(`Pozvánka pre ${cleanedName} je pripravená. Kód: ${currentTrip.inviteCode}`);
+    setInfoMessage(`${t('invitePreparedFor')} ${cleanedName}. ${t('inviteCodeLabel')} ${currentTrip.inviteCode}`);
   }
 
   function copyInviteCodeToClipboard() {
     if (!currentTrip || !inviteJoinUrl) return;
     navigator.clipboard.writeText(inviteJoinUrl).then(() => {
-      setInfoMessage('Pozvánka skopírovaná do schránky!');
+      setInfoMessage(t('inviteCopied'));
     });
   }
 
   function shareViaEmail() {
     if (!currentTrip || !inviteJoinUrl) return;
-    const subject = encodeURIComponent(`Pozvánka na výlet: ${currentTrip.name}`);
+    const subject = encodeURIComponent(`${t('inviteSubject')} ${currentTrip.name}`);
     const body = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz nižšie:\n${inviteJoinUrl}\n\nTeším sa na teba!`
+      `${t('inviteEmailText')} "${currentTrip.name}".\n\n${t('clickLinkBelow')}\n${inviteJoinUrl}\n\n${t('lookingForward')}`
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
   }
@@ -1638,7 +1832,7 @@ export default function SplitPayWebApp() {
   function shareViaWhatsApp() {
     if (!currentTrip || !inviteJoinUrl) return;
     const text = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz:\n${inviteJoinUrl}`
+      `${t('inviteEmailText')} "${currentTrip.name}".\n\n${t('clickLink')}\n${inviteJoinUrl}`
     );
     window.open(`https://wa.me/?text=${text}`);
   }
@@ -1646,7 +1840,7 @@ export default function SplitPayWebApp() {
   function shareViaSMS() {
     if (!currentTrip || !inviteJoinUrl) return;
     const text = encodeURIComponent(
-      `Výlet ${currentTrip.name}: ${inviteJoinUrl}`
+      `${t('tripLabel')} ${currentTrip.name}: ${inviteJoinUrl}`
     );
     window.open(`sms:?body=${text}`);
   }
@@ -1703,12 +1897,12 @@ export default function SplitPayWebApp() {
     );
 
     if (!foundTripId) {
-      setInfoMessage('Kód neexistuje. Skontroluj ho a skús znova.');
+      setInfoMessage(t('invalidCode'));
       return;
     }
 
     if (duplicateMember) {
-      setInfoMessage(`${cleanedName} už je v tejto skupine. Skús iné meno.`);
+      setInfoMessage(`${cleanedName} ${t('nameAlreadyInGroup')}`);
       return;
     }
 
@@ -1718,8 +1912,8 @@ export default function SplitPayWebApp() {
     setShowJoinTripModal(false);
     setInfoMessage(
       hasMatchingInvite
-        ? `${cleanedName} prijal(a) pozvánku do výletu.`
-        : `${cleanedName} sa pridal(a) do výletu.`
+        ? `${cleanedName} ${t('inviteAcceptedJoin')}`
+        : `${cleanedName} ${t('joinedTripInfo')}`
     );
   }
 
@@ -1793,13 +1987,13 @@ export default function SplitPayWebApp() {
         expenses: trip.expenses.map((item) => (item.id === editingExpenseId ? { ...expense, id: editingExpenseId } : item)),
       }));
       setEditingExpenseId(null);
-      setInfoMessage('Transakcia bola upravená.');
-      sendNotification(`${currentTrip?.name || 'Výlet'} - Transakcia upravená`, {
+      setInfoMessage(t('transactionUpdatedInfo'));
+      sendNotification(`${currentTrip?.name || t('tripLabel')} - ${t('transactionUpdatedTitle')}`, {
         body: `${expense.title} (${eur(expense.amount)})`,
       });
     } else {
       updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
-      sendNotification(`${currentTrip?.name || 'Výlet'} - Nová transakcia`, {
+      sendNotification(`${currentTrip?.name || t('tripLabel')} - ${t('newTransactionTitle')}`, {
         body: `${expense.title} (${eur(expense.amount)})`,
       });
     }
@@ -1811,7 +2005,7 @@ export default function SplitPayWebApp() {
       expenseType: 'expense',
       transferTo: '',
       splitType: 'equal',
-      participants: safePayer ? [safePayer] : [],
+      participants: members,
       participantAmounts: members.reduce<Record<string, number>>((acc, name) => {
         acc[name] = 0;
         return acc;
@@ -1873,29 +2067,29 @@ export default function SplitPayWebApp() {
 
   async function toggleNotifications() {
     if (typeof Notification === 'undefined') {
-      setInfoMessage('Tento prehliadač nepodporuje notifikácie.');
+      setInfoMessage(t('browserNoNotifications'));
       return;
     }
 
     if (!window.isSecureContext) {
-      setInfoMessage('Notifikácie fungujú iba na HTTPS doméne.');
+      setInfoMessage(t('notificationsHttpsOnly'));
       return;
     }
 
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
-      setInfoMessage('Notifikácie sú vypnuté.');
+      setInfoMessage(t('notificationsOff'));
       return;
     }
 
     if (Notification.permission === 'granted') {
       setNotificationsEnabled(true);
-      setInfoMessage('Notifikácie sú zapnuté.');
+      setInfoMessage(t('notificationsOn'));
       return;
     }
 
     if (Notification.permission === 'denied') {
-      setInfoMessage('Notifikácie sú blokované v prehliadači. Povoľ ich v nastaveniach stránky.');
+      setInfoMessage(t('notificationsBlocked'));
       return;
     }
 
@@ -1903,8 +2097,8 @@ export default function SplitPayWebApp() {
     setNotificationsEnabled(permission === 'granted');
     setInfoMessage(
       permission === 'granted'
-        ? 'Notifikácie sú zapnuté.'
-        : 'Notifikácie neboli povolené.'
+        ? t('notificationsOn')
+        : t('notificationsDenied')
     );
   }
 
@@ -1914,7 +2108,7 @@ export default function SplitPayWebApp() {
     try {
       new Notification(title, options);
     } catch (error) {
-      console.error('Chyba pri posielaní notifikácie:', error);
+      console.error(t('notificationSendError'), error);
     }
   }
 
@@ -1922,19 +2116,20 @@ export default function SplitPayWebApp() {
     if (!notificationsEnabled || !appSession) return;
 
     const selfName = appSession.name;
+    const langPack = T[lang];
     trips.forEach((trip) => {
       const previous = expenseCountRef.current[trip.id] ?? trip.expenses.length;
       if (trip.expenses.length > previous) {
         const newest = trip.expenses[0];
         if (newest && newest.payer !== selfName && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification(`Nová transakcia v ${trip.name}`, {
-            body: `${newest.payer} pridal(a) výdavok ${newest.title} (${eur(newest.amount)})`,
+          new Notification(`${langPack.newTransactionInTrip} ${trip.name}`, {
+            body: `${newest.payer} ${langPack.addedExpense} ${newest.title} (${eur(newest.amount)})`,
           });
         }
       }
       expenseCountRef.current[trip.id] = trip.expenses.length;
     });
-  }, [appSession, notificationsEnabled, trips]);
+  }, [appSession, lang, notificationsEnabled, trips]);
 
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
@@ -2001,7 +2196,7 @@ export default function SplitPayWebApp() {
             <div className="auth-logo-wrap">
               <Image src="/icon.png" alt="Split Pay" width={150} height={150} className="auth-logo" priority />
             </div>
-            <h1>Split Pay</h1>
+            <h1>{t('appName')}</h1>
               <p>{t('appTagline')}</p>
           </section>
 
@@ -2105,7 +2300,7 @@ export default function SplitPayWebApp() {
                 <button
                   type="button"
                   className="ghost danger-btn"
-                  onClick={() => setInfoMessage('Vymazanie účtu vyžaduje serverovú funkciu (service role).')}
+                  onClick={() => setInfoMessage(t('accountDeleteRequiresServer'))}
                 >
                     {t('deleteAccount')}
                 </button>
@@ -2117,7 +2312,7 @@ export default function SplitPayWebApp() {
                         type="button"
                         className={`lang-flag-btn${lang === 'sk' ? ' active' : ''}`}
                         onClick={() => setLang('sk')}
-                        title="Slovenčina"
+                        title={t('slovak')}
                       >
                         🇸🇰
                       </button>
@@ -2125,7 +2320,7 @@ export default function SplitPayWebApp() {
                         type="button"
                         className={`lang-flag-btn${lang === 'en' ? ' active' : ''}`}
                         onClick={() => setLang('en')}
-                        title="English"
+                        title={t('english')}
                       >
                         🇬🇧
                       </button>
@@ -2140,46 +2335,46 @@ export default function SplitPayWebApp() {
           {activeAppScreen === 'admin' ? (
             <section className="section-card full-window admin-panel">
               <div className="section-head compact-head">
-                <p className="eyebrow">Administrácia</p>
-                <h2>Riadiace centrum aplikácie</h2>
-                <p className="muted">Rozšírený prehľad používania a správa oprávnení.</p>
+                <p className="eyebrow">{t('adminTitle')}</p>
+                <h2>{t('adminCenterTitle')}</h2>
+                <p className="muted">{t('adminCenterDesc')}</p>
               </div>
 
               <div className="stat-grid">
                 <div className="stat-card">
-                  <span>Počet návštev celkom</span>
+                  <span>{t('totalVisits')}</span>
                   <strong>{visitsCount}</strong>
                 </div>
                 <div className="stat-card">
-                  <span>Návštevy za 24h</span>
+                  <span>{t('visits24h')}</span>
                   <strong>{visits24hCount}</strong>
                 </div>
                 <div className="stat-card">
-                  <span>Aktívni používatelia (5 min)</span>
+                  <span>{t('activeUsers5m')}</span>
                   <strong>{activeUsersCount}</strong>
                 </div>
                 <div className="stat-card">
-                  <span>Používatelia v systéme</span>
+                  <span>{t('usersInSystem')}</span>
                   <strong>{totalUsersSeen}</strong>
                 </div>
                 <div className="stat-card">
-                  <span>Uložené stavy výletov</span>
+                  <span>{t('storedTripStates')}</span>
                   <strong>{totalTripsStored}</strong>
                 </div>
                 <div className="stat-card">
-                  <span>Načítanie panelu</span>
-                  <strong>{adminLoading ? 'Načítavam' : 'Hotovo'}</strong>
+                  <span>{t('panelLoad')}</span>
+                  <strong>{adminLoading ? t('loading') : t('done')}</strong>
                 </div>
               </div>
 
               <div className="screen-grid compact-grid admin-grid">
                 <div className="mini-panel">
-                  <h3>Admin oznam pre všetkých</h3>
+                  <h3>{t('adminAnnouncementForAll')}</h3>
                   <textarea
                     className="admin-textarea"
                     value={announcementText}
                     onChange={(event) => setAnnouncementText(event.target.value)}
-                    placeholder="Sem napíš oznam pre používateľov"
+                    placeholder={t('adminAnnouncementPlaceholder')}
                   />
                   <label className="archived-toggle">
                     <input
@@ -2187,15 +2382,15 @@ export default function SplitPayWebApp() {
                       checked={announcementEnabled}
                       onChange={(event) => setAnnouncementEnabled(event.target.checked)}
                     />
-                    Zobraziť oznam v aplikácii
+                    {t('showAnnouncementInApp')}
                   </label>
-                  <button type="button" onClick={saveAdminAnnouncement}>Uložiť oznam</button>
+                  <button type="button" onClick={saveAdminAnnouncement}>{t('saveAnnouncement')}</button>
                 </div>
 
                 <div className="mini-panel">
-                  <h3>Top používatelia podľa návštev (500 posledných)</h3>
+                  <h3>{t('topUsersVisits')}</h3>
                   <div className="stack-list">
-                    {topUsers.length === 0 ? <p className="muted">Zatiaľ žiadne dáta.</p> : null}
+                    {topUsers.length === 0 ? <p className="muted">{t('noDataYet')}</p> : null}
                     {topUsers.map((user) => (
                       <div className="row" key={user.email}>
                         <span>{user.email}</span>
@@ -2208,25 +2403,25 @@ export default function SplitPayWebApp() {
 
               <div className="screen-grid compact-grid admin-grid">
                 <div className="mini-panel">
-                  <h3>Aktívni používatelia a roly</h3>
+                  <h3>{t('activeUsersRoles')}</h3>
                   <div className="stack-list">
-                    {adminPresence.length === 0 ? <p className="muted">Zatiaľ žiadni používatelia.</p> : null}
+                    {adminPresence.length === 0 ? <p className="muted">{t('noUsersYet')}</p> : null}
                     {adminPresence.map((user) => (
                       <div className="row" key={user.user_id}>
                         <div>
                           <strong>{user.user_name}</strong>
                           <p>{user.user_email}</p>
-                          <p>Naposledy: {formatDateTime(user.last_seen)}</p>
+                          <p>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>
                         </div>
                         <div className="expense-actions">
-                          <span className="pill">{user.role === 'admin' ? 'Admin' : 'User'}</span>
+                          <span className="pill">{user.role === 'admin' ? t('roleAdmin') : t('roleUser')}</span>
                           {user.user_id !== appSession?.userId ? (
                             <button
                               type="button"
                               className="ghost"
                               onClick={() => toggleUserRole(user.user_id, user.role === 'admin' ? 'user' : 'admin')}
                             >
-                              {user.role === 'admin' ? 'Znížiť na user' : 'Povýšiť na admin'}
+                              {user.role === 'admin' ? t('demoteToUser') : t('promoteToAdmin')}
                             </button>
                           ) : null}
                         </div>
@@ -2236,9 +2431,9 @@ export default function SplitPayWebApp() {
                 </div>
 
                 <div className="mini-panel">
-                  <h3>Posledné návštevy</h3>
+                  <h3>{t('recentVisitsTitle')}</h3>
                   <div className="stack-list">
-                    {recentVisits.length === 0 ? <p className="muted">Zatiaľ žiadne návštevy.</p> : null}
+                    {recentVisits.length === 0 ? <p className="muted">{t('noVisitsYet')}</p> : null}
                     {recentVisits.map((visit) => (
                       <div className="row" key={visit.id}>
                         <span>{visit.user_email}</span>
@@ -2251,10 +2446,10 @@ export default function SplitPayWebApp() {
 
               <div className="screen-grid compact-grid admin-grid">
                 <div className="mini-panel">
-                  <h3>Aktívne výlety</h3>
+                  <h3>{t('activeTrips')}</h3>
                   <div className="stack-list">
                     {trips.filter((t) => !t.archived).length === 0 ? (
-                      <p className="muted">Zatiaľ žiadne aktívne výlety.</p>
+                      <p className="muted">{t('noActiveTrips')}</p>
                     ) : null}
                     {trips
                       .filter((t) => !t.archived)
@@ -2269,7 +2464,7 @@ export default function SplitPayWebApp() {
                             className="ghost"
                             onClick={() => openTrip(trip.id, 'overview')}
                           >
-                            Otvoriť
+                            {t('openBtn')}
                           </button>
                         </div>
                       ))}
@@ -2277,10 +2472,10 @@ export default function SplitPayWebApp() {
                 </div>
 
                 <div className="mini-panel">
-                  <h3>Archivované výlety</h3>
+                  <h3>{t('archivedTrips')}</h3>
                   <div className="stack-list">
                     {trips.filter((t) => t.archived).length === 0 ? (
-                      <p className="muted">Zatiaľ žiadne archivované výlety.</p>
+                      <p className="muted">{t('noArchivedTrips')}</p>
                     ) : null}
                     {trips
                       .filter((t) => t.archived)
@@ -2295,7 +2490,7 @@ export default function SplitPayWebApp() {
                             className="ghost"
                             onClick={() => openTrip(trip.id, 'overview')}
                           >
-                            Otvoriť
+                            {t('openBtn')}
                           </button>
                         </div>
                       ))}
@@ -2304,11 +2499,11 @@ export default function SplitPayWebApp() {
               </div>
 
               <div className="admin-actions">
-                <button type="button" className="ghost" onClick={exportVisitsCsv}>Export návštev do CSV</button>
+                <button type="button" className="ghost" onClick={exportVisitsCsv}>{t('exportVisitsCsv')}</button>
                 <button type="button" className="ghost danger-btn" onClick={purgeStalePresence}>
-                  Vyčistiť prítomnosť staršiu ako 7 dní
+                  {t('purgePresence')}
                 </button>
-                <button type="button" className="ghost" onClick={goToTripsHome}>Späť do výletov</button>
+                <button type="button" className="ghost" onClick={goToTripsHome}>{t('backToTripsAdmin')}</button>
               </div>
             </section>
           ) : null}
@@ -2321,7 +2516,7 @@ export default function SplitPayWebApp() {
                   <div className="hero-brand">
                     <Image src="/icon.png" alt="Split Pay" width={56} height={56} className="hero-app-icon" />
                     <div>
-                      <p className="eyebrow">Split Pay</p>
+                      <p className="eyebrow">{t('appName')}</p>
                         <h1>{t('heroTitle')}</h1>
                     </div>
                   </div>
@@ -2648,7 +2843,7 @@ export default function SplitPayWebApp() {
                     <button
                       type="button"
                       className="expense-open-modal-btn"
-                      onClick={() => setShowExpenseModal(true)}
+                      onClick={openExpenseModalForCreate}
                         title={t('addExpense')}
                     >
                       <Plus size={16} />
@@ -2722,14 +2917,14 @@ export default function SplitPayWebApp() {
                   {currentTripOwnerIsSelf && members.length === 1 ? (
                     <div className="mini-panel" style={{ background: '#fff8e7', borderColor: '#f59f00', color: '#9b5d00' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                        <strong>⚠️ Ak sa odstránite:</strong> Si jediný člen, výlet bude vymazaný.
+                        <strong>{t('removeSelfWarningLead')}</strong> {t('removeSelfWarningSolo')}
                       </p>
                     </div>
                   ) : null}
                   {currentTripOwnerIsSelf && members.length > 1 ? (
                     <div className="mini-panel" style={{ background: '#e7f8ff', borderColor: '#2c79f6', color: '#1f3562' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {formatMemberName(members.find((m) => !isSelfName(m)) || 'ďalší člen')}.
+                        <strong>{t('removeSelfInfoLead')}</strong> {t('removeSelfInfoTransfer')} {formatMemberName(members.find((m) => !isSelfName(m)) || t('anotherMember'))}.
                       </p>
                     </div>
                   ) : null}
@@ -2799,15 +2994,15 @@ export default function SplitPayWebApp() {
                           </button>
                           <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
                             <Mail size={14} aria-hidden="true" />
-                            <span>Email</span>
+                            <span>{t('shareEmail')}</span>
                           </button>
                           <button type="button" className="ghost share-action-btn" onClick={shareViaWhatsApp}>
                             <Share2 size={14} aria-hidden="true" />
-                            <span>WhatsApp</span>
+                            <span>{t('shareWhatsApp')}</span>
                           </button>
                           <button type="button" className="ghost share-action-btn" onClick={shareViaSMS}>
                             <MessageSquare size={14} aria-hidden="true" />
-                            <span>SMS</span>
+                            <span>{t('shareSms')}</span>
                           </button>
                           <button
                             type="button"
