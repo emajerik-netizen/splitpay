@@ -2338,6 +2338,28 @@ button:disabled {
   position: relative;
 }
 
+.support-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid var(--stroke);
+  border-radius: 0.9rem;
+  background: #f8fbff;
+}
+
+.support-form textarea {
+  width: 100%;
+  border: 1px solid var(--stroke);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  resize: vertical;
+  min-height: 6.5rem;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+}
+
 .lang-picker {
   margin-top: 0.5rem;
   padding-top: 0.6rem;

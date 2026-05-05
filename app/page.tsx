@@ -110,6 +110,15 @@ const T = {
     deleteAccount: 'Vymazať účet',
     signOut: 'Odhlásiť sa',
     language: 'Jazyk',
+    contactSupport: 'Kontaktovať podporu',
+    supportSubject: 'Predmet',
+    supportMessage: 'Správa',
+    supportMessagePlaceholder: 'Napíš, s čím potrebuješ pomôcť...',
+    supportSend: 'Odoslať na podporu',
+    supportSending: 'Odosielam...',
+    supportSent: 'Správa bola odoslaná na podporu.',
+    supportSendFailed: 'Správu sa nepodarilo odoslať. Skús to znova.',
+    supportEmailLabel: 'Tvoj email',
     heroTitle: 'Výlety, rozpočet a vyrovnanie bez chaosu',
     heroDesc: 'Vytvor výlet, pozvi ľudí cez kód a maj výdavky pod kontrolou od prvého nákupu až po posledné vyrovnanie.',
     quickInvites: 'Rýchle pozvánky',
@@ -358,6 +367,15 @@ const T = {
     deleteAccount: 'Delete Account',
     signOut: 'Sign Out',
     language: 'Language',
+    contactSupport: 'Contact Support',
+    supportSubject: 'Subject',
+    supportMessage: 'Message',
+    supportMessagePlaceholder: 'Describe what you need help with...',
+    supportSend: 'Send to support',
+    supportSending: 'Sending...',
+    supportSent: 'Message was sent to support.',
+    supportSendFailed: 'Message could not be sent. Please try again.',
+    supportEmailLabel: 'Your email',
     heroTitle: 'Trips, budget and settlements without chaos',
     heroDesc: 'Create a trip, invite people via code and keep expenses under control from the first purchase to the last settlement.',
     quickInvites: 'Quick Invites',
@@ -576,6 +594,31 @@ const T = {
   },
 } as const;
 
+function formatTripDate(value: string, lang: Lang) {
+  const trimmed = value.trim();
+  if (!trimmed) return T[lang].noDate;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const date = new Date(`${trimmed}T00:00:00`);
+    if (Number.isFinite(date.getTime())) {
+      const locale = lang === 'en' ? 'en-GB' : 'sk-SK';
+      return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  }
+
+  return trimmed;
+}
+
+function tripDateToInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const parsed = new Date(trimmed);
+  if (!Number.isFinite(parsed.getTime())) return '';
+  return parsed.toISOString().slice(0, 10);
+}
+
 type Invite = {
   id: string;
   name: string;
@@ -678,6 +721,7 @@ function createTrip(name: string, date: string, inviteCode: string, owner: strin
 function normalizeTrip(trip: Trip): Trip {
   return {
     ...trip,
+    date: trip.date || '',
     owner: trip.owner || 'Ty',
     currency: trip.currency || 'EUR',
     color: trip.color || '#2c79f6',
@@ -776,6 +820,10 @@ export default function SplitPayWebApp() {
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showSupportForm, setShowSupportForm] = useState(false);
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportBody, setSupportBody] = useState('');
+  const [supportSending, setSupportSending] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     if (typeof Notification === 'undefined') return false;
@@ -1276,6 +1324,44 @@ export default function SplitPayWebApp() {
     setAuthMessage(t('resetEmailSent'));
   }
 
+  async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!appSession?.email) return;
+
+    const subject = supportSubject.trim();
+    const message = supportBody.trim();
+    if (!subject || !message) return;
+
+    setSupportSending(true);
+    try {
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: appSession.email,
+          name: appSession.name,
+          subject,
+          message,
+          lang,
+        }),
+      });
+
+      if (!response.ok) {
+        setInfoMessage(t('supportSendFailed'));
+        return;
+      }
+
+      setSupportSubject('');
+      setSupportBody('');
+      setShowSupportForm(false);
+      setInfoMessage(t('supportSent'));
+    } catch {
+      setInfoMessage(t('supportSendFailed'));
+    } finally {
+      setSupportSending(false);
+    }
+  }
+
   function toggleAuthMode() {
     setAuthMessage('');
     setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'));
@@ -1660,12 +1746,9 @@ export default function SplitPayWebApp() {
     if (!cleanedName) return;
 
     const inviteCode = makeUniqueInviteCode(trips);
-    const dateLocale = lang === 'en' ? 'en-GB' : 'sk-SK';
     const trip = createTrip(
       cleanedName,
-      newTripDate.trim()
-        ? new Date(newTripDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' })
-        : t('noDate'),
+      newTripDate.trim(),
       inviteCode,
       appSession?.name || 'Ty'
     );
@@ -1677,7 +1760,7 @@ export default function SplitPayWebApp() {
     setInfoMessage(`${trip.name}: ${t('tripCreated')}`);
   }
 
-  function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'currency' | 'color' | 'archived'>>) {
+  function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'date' | 'currency' | 'color' | 'archived'>>) {
     if (!currentTrip) return;
     updateCurrentTrip((trip) => ({ ...trip, ...partial }));
   }
@@ -2304,6 +2387,38 @@ export default function SplitPayWebApp() {
                 >
                     {t('deleteAccount')}
                 </button>
+                <button type="button" className="ghost" onClick={() => setShowSupportForm((prev) => !prev)}>
+                  {t('contactSupport')}
+                </button>
+                {showSupportForm ? (
+                  <form className="support-form" onSubmit={handleSupportSubmit}>
+                    <label className="field-block">
+                      <span>{t('supportEmailLabel')}</span>
+                      <input type="email" value={appSession?.email || ''} readOnly />
+                    </label>
+                    <label className="field-block">
+                      <span>{t('supportSubject')}</span>
+                      <input
+                        value={supportSubject}
+                        onChange={(event) => setSupportSubject(event.target.value)}
+                        placeholder={t('supportSubject')}
+                        maxLength={140}
+                      />
+                    </label>
+                    <label className="field-block">
+                      <span>{t('supportMessage')}</span>
+                      <textarea
+                        value={supportBody}
+                        onChange={(event) => setSupportBody(event.target.value)}
+                        placeholder={t('supportMessagePlaceholder')}
+                        rows={5}
+                      />
+                    </label>
+                    <button type="submit" disabled={supportSending || !supportSubject.trim() || !supportBody.trim()}>
+                      {supportSending ? t('supportSending') : t('supportSend')}
+                    </button>
+                  </form>
+                ) : null}
                   <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
                   <div className="lang-picker">
                     <span className="lang-picker-label">{t('language')}</span>
@@ -2576,7 +2691,7 @@ export default function SplitPayWebApp() {
                           <div className="trip-card-top">
                             <div>
                               <strong>{trip.name}</strong>
-                              <p>{trip.date}</p>
+                              <p>{formatTripDate(trip.date, lang)}</p>
                             </div>
                             <span className={userBalance >= 0 ? 'positive trip-balance' : 'negative trip-balance'}>
                               {money(userBalance)}
@@ -2701,7 +2816,7 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
                   <p>
-                      {currentTrip.date} · {memberCountLabel(members.length, lang)} · {eur(totalSpent)} {t('totalMeta').toLowerCase()}
+                      {formatTripDate(currentTrip.date, lang)} · {memberCountLabel(members.length, lang)} · {eur(totalSpent)} {t('totalMeta').toLowerCase()}
                   </p>
                 </div>
                 <div className="hero-actions hero-actions-end">
@@ -2734,6 +2849,14 @@ export default function SplitPayWebApp() {
                           value={currentTrip.name}
                           onChange={(event) => updateTripSettings({ name: event.target.value })}
                           placeholder={t('tripName')}
+                        />
+                      </label>
+                      <label className="field-block">
+                        <span>{t('date')}</span>
+                        <input
+                          type="date"
+                          value={tripDateToInput(currentTrip.date)}
+                          onChange={(event) => updateTripSettings({ date: event.target.value })}
                         />
                       </label>
                       <label className="field-block">
