@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicon.ico",
     apple: [
-      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/apple-touch-icon.png", sizes: "512x512", type: "image/png" },
     ],
   },
   appleWebApp: {
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     description: "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
     images: [
       {
-        url: "/icon.png",
+        url: "/apple-touch-icon.png",
         width: 512,
         height: 512,
         alt: "SplitPay",
