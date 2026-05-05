@@ -1393,7 +1393,12 @@ export default function SplitPayWebApp() {
         }),
       });
 
-      const payload = (await response.json().catch(() => null)) as { error?: string; missing?: string[] } | null;
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        missing?: string[];
+        code?: string | null;
+        responseCode?: number | null;
+      } | null;
 
       if (!response.ok) {
         if (payload?.error === 'smtp_not_configured') {
@@ -1411,6 +1416,12 @@ export default function SplitPayWebApp() {
 
         if (payload?.error === 'smtp_unreachable') {
           setInfoMessage(t('supportSmtpUnreachable'));
+          return;
+        }
+
+        if (payload?.error === 'send_failed' && (payload?.code || payload?.responseCode)) {
+          const errorSuffix = [payload.code, payload.responseCode].filter(Boolean).join('/');
+          setInfoMessage(`${t('supportSendFailed')} (${errorSuffix})`);
           return;
         }
 

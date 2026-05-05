@@ -11,6 +11,10 @@ type SupportPayload = {
   lang?: 'sk' | 'en';
 };
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function getTransport() {
   const read = (...keys: string[]) => {
     for (const key of keys) {
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
     const payload = (await request.json()) as SupportPayload;
     const email = (payload.email || '').trim().toLowerCase();
     const name = (payload.name || '').trim() || 'Unknown';
-    const subject = (payload.subject || '').trim();
+    const subject = (payload.subject || '').trim().replace(/[\r\n]+/g, ' ');
     const message = (payload.message || '').trim();
 
     if (!email || !subject || !message) {
@@ -75,10 +79,11 @@ export async function POST(request: Request) {
     const locale = payload.lang === 'en' ? 'en' : 'sk';
     const appLabel = locale === 'en' ? 'SplitPay Support Request' : 'SplitPay žiadosť na podporu';
 
-    await transport.sendMail({
+    const replyTo = isValidEmail(email) ? email : undefined;
+    const mailOptions = {
       from,
       to,
-      replyTo: email,
+      ...(replyTo ? { replyTo } : {}),
       subject: `[SplitPay] ${subject}`,
       text: `${appLabel}\n\nFrom: ${name} <${email}>\nSubject: ${subject}\n\n${message}`,
       html: `
@@ -88,7 +93,24 @@ export async function POST(request: Request) {
         <hr />
         <pre style="white-space: pre-wrap; font-family: inherit;">${message}</pre>
       `,
-    });
+    };
+
+    try {
+      await transport.sendMail(mailOptions);
+    } catch (error) {
+      const err = error as { code?: string; responseCode?: number };
+
+      // Some SMTP providers reject invalid reply-to envelope values.
+      // Retry once without replyTo so support request is not lost.
+      if (replyTo && (err?.code === 'EENVELOPE' || err?.responseCode === 501 || err?.responseCode === 553)) {
+        await transport.sendMail({
+          ...mailOptions,
+          replyTo: undefined,
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -107,6 +129,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'smtp_unreachable' }, { status: 500 });
     }
 
-    return NextResponse.json({ error: 'send_failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'send_failed', code: err?.code || null, responseCode: err?.responseCode || null },
+      { status: 500 }
+    );
   }
 }
