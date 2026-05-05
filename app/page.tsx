@@ -1349,7 +1349,7 @@ export default function SplitPayWebApp() {
       expenseType: 'expense',
       payer: safePayer,
       transferTo: '',
-      participants: safePayer ? [safePayer] : [],
+      participants: members,
       splitType: 'equal',
       participantWeights: members.reduce<Record<string, number>>((acc, name) => {
         acc[name] = 1;
@@ -2492,7 +2492,7 @@ export default function SplitPayWebApp() {
                                 <button
                                   type="button"
                                   className={draft.splitType === 'equal' ? 'active' : ''}
-                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal' }))}
+                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal', participants: members }))}
                                 >
                                   Rovnomerne
                                 </button>
