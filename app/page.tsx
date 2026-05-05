@@ -381,10 +381,6 @@ export default function SplitPayWebApp() {
         user_id: userId,
         state_json: payload,
       });
-
-      if (!error) {
-        setDbSyncMessage('Zmeny uložené do databázy.');
-      }
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
@@ -928,6 +924,39 @@ export default function SplitPayWebApp() {
     const nextCode = makeInviteCode();
     updateCurrentTrip((trip) => ({ ...trip, inviteCode: nextCode }));
     setInfoMessage(`Novy kod pre ${currentTrip.name}: ${nextCode}`);
+  }
+
+  function copyInviteCodeToClipboard() {
+    if (!currentTrip) return;
+    const text = `Pridam ta do vyletu "${currentTrip.name}". Kod: ${currentTrip.inviteCode}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setInfoMessage('Kod skopírovaný do schránky!');
+    });
+  }
+
+  function shareViaEmail() {
+    if (!currentTrip) return;
+    const subject = encodeURIComponent(`Pozvánka na výlet: ${currentTrip.name}`);
+    const body = encodeURIComponent(
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor aplikáciu Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba!`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  }
+
+  function shareViaWhatsApp() {
+    if (!currentTrip) return;
+    const text = encodeURIComponent(
+      `Ahoj! 👋\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\n📱 Kód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba! 🎉`
+    );
+    window.open(`https://wa.me/?text=${text}`);
+  }
+
+  function shareViaSMS() {
+    if (!currentTrip) return;
+    const text = encodeURIComponent(
+      `Pozvanka na vylet ${currentTrip.name}. Kod: ${currentTrip.inviteCode}. Otvor Split Pay a vloz kod.`
+    );
+    window.open(`sms:?body=${text}`);
   }
 
   function handleJoinByCode(event: FormEvent<HTMLFormElement>) {
@@ -1775,10 +1804,14 @@ export default function SplitPayWebApp() {
                       <div className="invite-code-box">
                         <span>Aktívny kód</span>
                         <strong>{currentTrip.inviteCode}</strong>
-                        <button type="button" className="ghost" onClick={regenerateInviteCode}>
-                          Vygenerovať nový kód
-                        </button>
-                      </div>
+                         <div className="share-buttons">
+                           <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>📋 Kopíruj</button>
+                           <button type="button" className="ghost" onClick={shareViaEmail}>✉️ Email</button>
+                           <button type="button" className="ghost" onClick={shareViaWhatsApp}>💬 WhatsApp</button>
+                           <button type="button" className="ghost" onClick={shareViaSMS}>📱 SMS</button>
+                           <button type="button" className="ghost" onClick={regenerateInviteCode}>🔄 Nový</button>
+                         </div>
+                       </div>
                       <form className="stack" onSubmit={handleAddInvite}>
                         <input
                           value={inviteName}
