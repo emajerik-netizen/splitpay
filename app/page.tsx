@@ -17,6 +17,15 @@ function makeInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('sk-SK', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 
@@ -60,6 +69,27 @@ type AppSession = {
   email: string;
   name: string;
   guest: boolean;
+};
+
+type AdminRole = 'admin' | 'user';
+
+type AdminPresenceRow = {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  last_seen: string;
+  role?: AdminRole;
+};
+
+type AdminVisitRow = {
+  id: number;
+  user_email: string;
+  visited_at: string;
+};
+
+type TopUser = {
+  email: string;
+  visits: number;
 };
 
 type AppScreen = 'trips' | 'trip-detail' | 'admin';
@@ -175,11 +205,25 @@ export default function SplitPayWebApp() {
   const [infoMessage, setInfoMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    if (typeof Notification === 'undefined') return false;
+    return Notification.permission === 'granted';
+  });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [dbSyncMessage, setDbSyncMessage] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
+  const [visits24hCount, setVisits24hCount] = useState(0);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
+  const [totalUsersSeen, setTotalUsersSeen] = useState(0);
+  const [totalTripsStored, setTotalTripsStored] = useState(0);
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminPresence, setAdminPresence] = useState<AdminPresenceRow[]>([]);
+  const [recentVisits, setRecentVisits] = useState<AdminVisitRow[]>([]);
+  const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+  const [announcementText, setAnnouncementText] = useState('');
+  const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+  const [globalAnnouncement, setGlobalAnnouncement] = useState('');
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
@@ -389,32 +433,118 @@ export default function SplitPayWebApp() {
     };
   }, [appSession?.email, appSession?.name, appSession?.userId, supabase]);
 
-  const isAdmin = Boolean(
+  const isEnvAdmin = Boolean(
     appSession?.email && process.env.NEXT_PUBLIC_ADMIN_EMAIL && appSession.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
   );
+  const isAdmin = isEnvAdmin || adminRole === 'admin';
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId) return;
+    const supabaseClient = supabase;
+    const userId = appSession.userId;
+
+    async function loadAdminRole() {
+      const { data } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      setAdminRole((data?.role as AdminRole | undefined) || null);
+    }
+
+    loadAdminRole();
+  }, [appSession?.userId, supabase]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const supabaseClient = supabase;
+
+    async function loadAnnouncement() {
+      const { data } = await supabaseClient
+        .from('admin_announcements')
+        .select('message, enabled')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (!data) return;
+
+      setGlobalAnnouncement(data.enabled ? data.message : '');
+      if (isAdmin) {
+        setAnnouncementText(data.message || '');
+        setAnnouncementEnabled(Boolean(data.enabled));
+      }
+    }
+
+    loadAnnouncement();
+  }, [isAdmin, supabase]);
 
   useEffect(() => {
     if (!supabase || !isAdmin) return;
     const supabaseClient = supabase;
-
     let cancelled = false;
 
     async function refreshAdminStats() {
-      const [visitsRes, presenceRes] = await Promise.all([
+      setAdminLoading(true);
+
+      const nowIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const [
+        visitsRes,
+        visits24Res,
+        presenceRes,
+        rolesRes,
+        tripsRes,
+        recentRes,
+        recentForTopRes,
+      ] = await Promise.all([
         supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }),
-        supabaseClient.from('user_presence').select('last_seen'),
+        supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', nowIso),
+        supabaseClient.from('user_presence').select('user_id, user_email, user_name, last_seen').order('last_seen', { ascending: false }).limit(100),
+        supabaseClient.from('user_roles').select('user_id, role'),
+        supabaseClient.from('trip_states').select('user_id', { count: 'exact', head: true }),
+        supabaseClient.from('app_visits').select('id, user_email, visited_at').order('visited_at', { ascending: false }).limit(30),
+        supabaseClient.from('app_visits').select('user_email, visited_at').order('visited_at', { ascending: false }).limit(500),
       ]);
 
       if (cancelled) return;
 
       setVisitsCount(visitsRes.count || 0);
+      setVisits24hCount(visits24Res.count || 0);
+      setTotalTripsStored(tripsRes.count || 0);
+
+      const rawPresenceRows = (presenceRes.data || []) as AdminPresenceRow[];
+      const roleMap = new Map((rolesRes.data || []).map((role) => [role.user_id, role.role as AdminRole]));
+      const presenceRows = rawPresenceRows.map((row) => ({
+        ...row,
+        role: roleMap.get(row.user_id) || 'user',
+      }));
+
+      setAdminPresence(presenceRows);
+      setTotalUsersSeen(new Set(presenceRows.map((row) => row.user_id)).size);
 
       const now = Date.now();
-      const active = (presenceRes.data || []).filter((row) => {
+      const active = presenceRows.filter((row) => {
         const timestamp = new Date(row.last_seen).getTime();
         return Number.isFinite(timestamp) && now - timestamp < 5 * 60 * 1000;
       }).length;
       setActiveUsersCount(active);
+
+      setRecentVisits((recentRes.data || []) as AdminVisitRow[]);
+
+      const visits = recentForTopRes.data || [];
+      const totals = visits.reduce<Record<string, number>>((acc, row) => {
+        const emailKey = row.user_email || 'neznamy';
+        acc[emailKey] = (acc[emailKey] || 0) + 1;
+        return acc;
+      }, {});
+
+      const top = Object.entries(totals)
+        .map(([email, count]) => ({ email, visits: count }))
+        .sort((a, b) => b.visits - a.visits)
+        .slice(0, 8);
+      setTopUsers(top);
+
+      setAdminLoading(false);
     }
 
     refreshAdminStats();
@@ -592,6 +722,86 @@ export default function SplitPayWebApp() {
 
   function goToAdmin() {
     setAppScreen('admin');
+  }
+
+  async function saveAdminAnnouncement() {
+    if (!supabase || !isAdmin) return;
+
+    const { error } = await supabase.from('admin_announcements').upsert({
+      id: 1,
+      message: announcementText,
+      enabled: announcementEnabled,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      setInfoMessage('Uloženie admin oznamu zlyhalo.');
+      return;
+    }
+
+    setGlobalAnnouncement(announcementEnabled ? announcementText : '');
+    setInfoMessage('Admin oznam bol uložený.');
+  }
+
+  async function toggleUserRole(targetUserId: string, nextRole: AdminRole) {
+    if (!supabase || !isAdmin) return;
+
+    if (nextRole === 'admin') {
+      const { error } = await supabase.from('user_roles').upsert({
+        user_id: targetUserId,
+        role: 'admin',
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        setInfoMessage('Nepodarilo sa pridať admin rolu.');
+        return;
+      }
+    } else {
+      const { error } = await supabase.from('user_roles').delete().eq('user_id', targetUserId);
+      if (error) {
+        setInfoMessage('Nepodarilo sa odobrať admin rolu.');
+        return;
+      }
+    }
+
+    setAdminPresence((prev) =>
+      prev.map((row) => (row.user_id === targetUserId ? { ...row, role: nextRole } : row))
+    );
+    setInfoMessage('Rola používateľa bola upravená.');
+  }
+
+  async function purgeStalePresence() {
+    if (!supabase || !isAdmin) return;
+    const threshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase.from('user_presence').delete().lt('last_seen', threshold);
+
+    if (error) {
+      setInfoMessage('Čistenie prítomnosti zlyhalo.');
+      return;
+    }
+
+    setInfoMessage('Staré záznamy prítomnosti boli vyčistené.');
+  }
+
+  function exportVisitsCsv() {
+    if (!recentVisits.length) {
+      setInfoMessage('Nie sú dáta na export návštev.');
+      return;
+    }
+
+    const lines = ['id,email,visited_at'];
+    recentVisits.forEach((visit) => {
+      lines.push(`${visit.id},${visit.user_email},${visit.visited_at}`);
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'admin-visits.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleCreateTrip(event: FormEvent<HTMLFormElement>) {
@@ -859,16 +1069,35 @@ export default function SplitPayWebApp() {
       return;
     }
 
+    if (!window.isSecureContext) {
+      setInfoMessage('Notifikácie fungujú iba na HTTPS doméne.');
+      return;
+    }
+
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      setInfoMessage('Notifikácie sú vypnuté.');
+      return;
+    }
+
     if (Notification.permission === 'granted') {
-      setNotificationsEnabled((prev) => !prev);
+      setNotificationsEnabled(true);
+      setInfoMessage('Notifikácie sú zapnuté.');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      setInfoMessage('Notifikácie sú blokované v prehliadači. Povoľ ich v nastaveniach stránky.');
       return;
     }
 
     const permission = await Notification.requestPermission();
     setNotificationsEnabled(permission === 'granted');
-    if (permission !== 'granted') {
-      setInfoMessage('Notifikácie neboli povolené.');
-    }
+    setInfoMessage(
+      permission === 'granted'
+        ? 'Notifikácie sú zapnuté.'
+        : 'Notifikácie neboli povolené.'
+    );
   }
 
   useEffect(() => {
@@ -1034,25 +1263,128 @@ export default function SplitPayWebApp() {
             ) : null}
           </div>
 
+          {globalAnnouncement ? <p className="info-banner admin-announcement">{globalAnnouncement}</p> : null}
           {dbSyncMessage ? <p className="info-banner">{dbSyncMessage}</p> : null}
 
           {appScreen === 'admin' ? (
-            <section className="section-card full-window">
+            <section className="section-card full-window admin-panel">
               <div className="section-head compact-head">
                 <p className="eyebrow">Administrácia</p>
-                <h2>Prehľad aplikácie</h2>
+                <h2>Riadiace centrum aplikácie</h2>
+                <p className="muted">Rozšírený prehľad používania a správa oprávnení.</p>
               </div>
+
               <div className="stat-grid">
                 <div className="stat-card">
-                  <span>Počet návštev</span>
+                  <span>Počet návštev celkom</span>
                   <strong>{visitsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Návštevy za 24h</span>
+                  <strong>{visits24hCount}</strong>
                 </div>
                 <div className="stat-card">
                   <span>Aktívni používatelia (5 min)</span>
                   <strong>{activeUsersCount}</strong>
                 </div>
+                <div className="stat-card">
+                  <span>Používatelia v systéme</span>
+                  <strong>{totalUsersSeen}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Uložené stavy výletov</span>
+                  <strong>{totalTripsStored}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Načítanie panelu</span>
+                  <strong>{adminLoading ? 'Načítavam' : 'Hotovo'}</strong>
+                </div>
               </div>
-              <button type="button" className="ghost" onClick={goToTripsHome}>Späť do výletov</button>
+
+              <div className="screen-grid compact-grid admin-grid">
+                <div className="mini-panel">
+                  <h3>Admin oznam pre všetkých</h3>
+                  <textarea
+                    className="admin-textarea"
+                    value={announcementText}
+                    onChange={(event) => setAnnouncementText(event.target.value)}
+                    placeholder="Sem napíš oznam pre používateľov"
+                  />
+                  <label className="archived-toggle">
+                    <input
+                      type="checkbox"
+                      checked={announcementEnabled}
+                      onChange={(event) => setAnnouncementEnabled(event.target.checked)}
+                    />
+                    Zobraziť oznam v aplikácii
+                  </label>
+                  <button type="button" onClick={saveAdminAnnouncement}>Uložiť oznam</button>
+                </div>
+
+                <div className="mini-panel">
+                  <h3>Top používatelia podľa návštev (500 posledných)</h3>
+                  <div className="stack-list">
+                    {topUsers.length === 0 ? <p className="muted">Zatiaľ žiadne dáta.</p> : null}
+                    {topUsers.map((user) => (
+                      <div className="row" key={user.email}>
+                        <span>{user.email}</span>
+                        <strong>{user.visits}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="screen-grid compact-grid admin-grid">
+                <div className="mini-panel">
+                  <h3>Aktívni používatelia a roly</h3>
+                  <div className="stack-list">
+                    {adminPresence.length === 0 ? <p className="muted">Zatiaľ žiadni používatelia.</p> : null}
+                    {adminPresence.map((user) => (
+                      <div className="row" key={user.user_id}>
+                        <div>
+                          <strong>{user.user_name}</strong>
+                          <p>{user.user_email}</p>
+                          <p>Naposledy: {formatDateTime(user.last_seen)}</p>
+                        </div>
+                        <div className="expense-actions">
+                          <span className="pill">{user.role === 'admin' ? 'Admin' : 'User'}</span>
+                          {user.user_id !== appSession?.userId ? (
+                            <button
+                              type="button"
+                              className="ghost"
+                              onClick={() => toggleUserRole(user.user_id, user.role === 'admin' ? 'user' : 'admin')}
+                            >
+                              {user.role === 'admin' ? 'Znížiť na user' : 'Povýšiť na admin'}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mini-panel">
+                  <h3>Posledné návštevy</h3>
+                  <div className="stack-list">
+                    {recentVisits.length === 0 ? <p className="muted">Zatiaľ žiadne návštevy.</p> : null}
+                    {recentVisits.map((visit) => (
+                      <div className="row" key={visit.id}>
+                        <span>{visit.user_email}</span>
+                        <strong>{formatDateTime(visit.visited_at)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-actions">
+                <button type="button" className="ghost" onClick={exportVisitsCsv}>Export návštev do CSV</button>
+                <button type="button" className="ghost danger-btn" onClick={purgeStalePresence}>
+                  Vyčistiť prítomnosť staršiu ako 7 dní
+                </button>
+                <button type="button" className="ghost" onClick={goToTripsHome}>Späť do výletov</button>
+              </div>
             </section>
           ) : null}
 

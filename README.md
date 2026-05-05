@@ -46,6 +46,16 @@ cp .env.example .env.local
 4. V Supabase SQL Editore spusti obsah suboru `supabase/schema.sql`.
 Bez tohto kroku nebude fungovat DB ukladanie vyletov ani admin metriky.
 
+5. Nastav prveho admina (jednorazovo) v Supabase SQL Editore:
+
+```sql
+insert into public.user_roles (user_id, role)
+values ('<UUID_Z_AUTH_USERS>', 'admin')
+on conflict (user_id) do update set role = 'admin';
+```
+
+`UUID_Z_AUTH_USERS` najdes v tabulke Authentication -> Users -> ID.
+
 ## Spustenie
 
 ```bash
