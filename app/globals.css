@@ -1090,6 +1090,53 @@ button:disabled {
     width: 100%;
     max-height: 88vh;
   }
+
+  .trip-theme .section-card {
+    padding: 1rem;
+  }
+
+  .trip-theme button {
+    min-height: 2.6rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.85rem;
+    font-size: 0.92rem;
+  }
+
+  .trip-theme .screen-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+
+  .trip-theme .screen-pill {
+    width: auto;
+    min-height: 2.35rem;
+    padding: 0.45rem 0.58rem;
+    border-radius: 0.8rem;
+    font-size: 0.84rem;
+    line-height: 1.15;
+  }
+
+  .trip-theme .share-buttons {
+    gap: 0.4rem;
+  }
+
+  .trip-theme .share-buttons button,
+  .trip-theme .expense-actions button {
+    flex: 0 0 auto;
+    min-height: 2.2rem;
+    min-width: auto;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.8rem;
+  }
+
+  .trip-theme .pill button {
+    min-height: auto;
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+  }
 }
 
 .danger-btn {
