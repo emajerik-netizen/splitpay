@@ -874,6 +874,20 @@ export default function SplitPayWebApp() {
       ? safeTransferTo.trim().length > 0 && safeTransferTo !== safePayer
       : safeParticipants.length > 0 && validIndividualSplit);
 
+  const normalizedCurrentUser = (appSession?.name || '').trim().toLowerCase();
+  const displayCurrentUserName = (appSession?.name || '').trim() || 'Používateľ';
+  const isSelfName = (name: string) => {
+    const normalizedName = name.trim().toLowerCase();
+    if (!normalizedName) return false;
+    if (normalizedName === 'ty') return true;
+    return Boolean(normalizedCurrentUser) && normalizedName === normalizedCurrentUser;
+  };
+  const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
+  const currentTripOwnerIsSelf = currentTrip ? isSelfName(currentTrip.owner) : false;
+  const selfBalance = appSession?.name
+    ? (balances[appSession.name] ?? balances.Ty ?? 0)
+    : (balances.Ty ?? 0);
+
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
     setTrips((prev) => prev.map((trip) => (trip.id === currentTrip.id ? updater(trip) : trip)));
@@ -1032,7 +1046,7 @@ export default function SplitPayWebApp() {
 
   function removeMember(memberName: string) {
     if (!currentTrip) return;
-    const isOwner = currentTrip.owner === (appSession?.name || 'Ty');
+    const isOwner = isSelfName(currentTrip.owner);
     if (!isOwner) return;
 
     const isOwnerRemoving = memberName === currentTrip.owner;
@@ -1078,7 +1092,7 @@ export default function SplitPayWebApp() {
   function deleteTrip(tripId: string) {
     const tripToDelete = trips.find((t) => t.id === tripId);
     if (!tripToDelete) return;
-    const isOwner = tripToDelete.owner === (appSession?.name || 'Ty');
+    const isOwner = isSelfName(tripToDelete.owner);
     if (!isOwner) return;
 
     setTrips((prev) => prev.filter((trip) => trip.id !== tripId));
@@ -1822,7 +1836,9 @@ export default function SplitPayWebApp() {
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
                     );
-                    const userBalance = tripBalances[appSession?.name || 'Ty'] ?? 0;
+                    const userBalance = appSession?.name
+                      ? (tripBalances[appSession.name] ?? tripBalances.Ty ?? 0)
+                      : (tripBalances.Ty ?? 0);
 
                     return (
                       <button
@@ -2054,7 +2070,7 @@ export default function SplitPayWebApp() {
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
-                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                  {currentTripOwnerIsSelf ? (
                     <div className="mini-panel owner-actions">
                       <h3>Nastavenia</h3>
                       <label className="field-block">
@@ -2136,7 +2152,7 @@ export default function SplitPayWebApp() {
                     <p className="eyebrow">Tím</p>
                     <h2>Členovia výletu</h2>
                   </div>
-                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                  {currentTripOwnerIsSelf ? (
                     <form className="inline-form compact-form" onSubmit={handleAddMember}>
                       <input
                         value={newMember}
@@ -2146,33 +2162,33 @@ export default function SplitPayWebApp() {
                       <button type="submit">Pridať</button>
                     </form>
                   ) : null}
-                  {currentTrip.owner === (appSession?.name || 'Ty') && members.length === 1 ? (
+                  {currentTripOwnerIsSelf && members.length === 1 ? (
                     <div className="mini-panel" style={{ background: '#fff8e7', borderColor: '#f59f00', color: '#9b5d00' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem' }}>
                         <strong>⚠️ Ak sa odstránite:</strong> Si jediný člen, výlet bude vymazaný.
                       </p>
                     </div>
                   ) : null}
-                  {currentTrip.owner === (appSession?.name || 'Ty') && members.length > 1 ? (
+                  {currentTripOwnerIsSelf && members.length > 1 ? (
                     <div className="mini-panel" style={{ background: '#e7f8ff', borderColor: '#2c79f6', color: '#1f3562' }}>
                       <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {members.find((m) => m !== currentTrip.owner) || 'ďalší člen'}.
+                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {formatMemberName(members.find((m) => m !== currentTrip.owner) || 'ďalší člen')}.
                       </p>
                     </div>
                   ) : null}
                   <div className="member-list">
                     {members.map((name) => (
                       <div key={name} className="member-row">
-                        <div className="member-avatar">{name.slice(0, 1)}</div>
+                        <div className="member-avatar">{formatMemberName(name).slice(0, 1)}</div>
                         <div>
-                          <strong>{name}</strong>
-                          {(name === appSession?.name || currentTrip.owner === name) && (
+                          <strong>{formatMemberName(name)}</strong>
+                          {(isSelfName(name) || currentTrip.owner === name) && (
                             <p>
-                              {currentTrip.owner === name ? 'Vlastník' : 'Ty'}
+                              {currentTrip.owner === name ? 'Vlastník' : displayCurrentUserName}
                             </p>
                           )}
                         </div>
-                        {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                        {currentTripOwnerIsSelf ? (
                           <button
                             type="button"
                             className="ghost danger-btn"
@@ -2214,7 +2230,7 @@ export default function SplitPayWebApp() {
                     <p className="eyebrow">Pozvanie</p>
                     <h2>Pozvánky a prístupy</h2>
                   </div>
-                  {currentTrip.owner === (appSession?.name || 'Ty') ? (
+                  {currentTripOwnerIsSelf ? (
                     <>
                       <div className="invite-code-box">
                         <span>Kód</span>
@@ -2484,25 +2500,30 @@ export default function SplitPayWebApp() {
                       {settlements.length === 0 ? <p className="muted">Všetko je vyrovnané.</p> : null}
 
                       <div className="stack-list balance-transfer-list">
-                        {settlements.map((transfer, index) => (
-                          <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
-                            <span className="balance-person">{transfer.from === (appSession?.name || 'Ty') ? 'Ty' : transfer.from}</span>
-                            <span className="balance-arrow" aria-hidden="true">→</span>
-                            <span className="balance-target">
-                              <span className="balance-avatar">{(transfer.to === (appSession?.name || 'Ty') ? 'T' : transfer.to.slice(0, 1)).toUpperCase()}</span>
-                              {transfer.to === (appSession?.name || 'Ty') ? 'Ty' : transfer.to}
-                            </span>
-                            <strong className="balance-amount">{money(transfer.amount)}</strong>
-                          </div>
-                        ))}
+                        {settlements.map((transfer, index) => {
+                          const fromName = formatMemberName(transfer.from);
+                          const toName = formatMemberName(transfer.to);
+
+                          return (
+                            <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
+                              <span className="balance-person">{fromName}</span>
+                              <span className="balance-arrow" aria-hidden="true">→</span>
+                              <span className="balance-target">
+                                <span className="balance-avatar">{toName.slice(0, 1).toUpperCase()}</span>
+                                {toName}
+                              </span>
+                              <strong className="balance-amount">{money(transfer.amount)}</strong>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       <div className="balance-total-card">
                         <p>
-                          {(balances[appSession?.name || 'Ty'] ?? 0) >= 0 ? 'Ty dostaneš spolu' : 'Ty zaplatíš spolu'}
+                          {selfBalance >= 0 ? `${displayCurrentUserName} dostane spolu` : `${displayCurrentUserName} zaplatí spolu`}
                         </p>
-                        <strong className={(balances[appSession?.name || 'Ty'] ?? 0) >= 0 ? 'positive' : 'negative'}>
-                          {eur(Math.abs(balances[appSession?.name || 'Ty'] ?? 0))}
+                        <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
+                          {eur(Math.abs(selfBalance))}
                         </strong>
                       </div>
                     </div>
@@ -2512,7 +2533,7 @@ export default function SplitPayWebApp() {
                       <div className="stack-list">
                         {Object.entries(balances).map(([name, value]) => (
                           <div className="row" key={name}>
-                            <span>{name}</span>
+                            <span>{formatMemberName(name)}</span>
                             <strong className={value >= 0 ? 'positive' : 'negative'}>{eur(value)}</strong>
                           </div>
                         ))}
