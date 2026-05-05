@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SplitPay Web",
   description: "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
+  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -22,6 +23,14 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicon.ico",
     apple: "/icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SplitPay",
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 
