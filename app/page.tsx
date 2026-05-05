@@ -1022,9 +1022,37 @@ export default function SplitPayWebApp() {
     const isOwner = currentTrip.owner === (appSession?.name || 'Ty');
     if (!isOwner) return;
 
+    const isOwnerRemoving = memberName === currentTrip.owner;
+    const otherMembers = currentTrip.members.filter((name) => name !== memberName);
+
+    if (isOwnerRemoving && otherMembers.length === 0) {
+      // If owner removes themselves and they're alone, delete trip
+      deleteTrip(currentTrip.id);
+      setInfoMessage('Si jediný člen výletu. Vylet bol vymazaný.');
+      return;
+    }
+
+    if (isOwnerRemoving && otherMembers.length > 0) {
+      // If owner removes themselves, transfer ownership to first remaining member
+      const newOwner = otherMembers[0];
+      updateCurrentTrip((trip) => ({
+        ...trip,
+        owner: newOwner,
+        members: otherMembers,
+        expenses: trip.expenses.map((expense) => ({
+          ...expense,
+          payer: expense.payer === memberName ? newOwner : expense.payer,
+          participants: expense.participants.filter((name) => name !== memberName),
+        })),
+      }));
+      setInfoMessage(`Vlastníctvo výletu prebrala osoba ${newOwner}. Si odstránený(á) z výletu.`);
+      return;
+    }
+
+    // Regular member removal
     updateCurrentTrip((trip) => ({
       ...trip,
-      members: trip.members.filter((name) => name !== memberName),
+      members: otherMembers,
       expenses: trip.expenses.map((expense) => ({
         ...expense,
         payer: expense.payer === memberName ? trip.members[0] || 'Ty' : expense.payer,
@@ -2065,6 +2093,20 @@ export default function SplitPayWebApp() {
                       <button type="submit">Pridať</button>
                     </form>
                   ) : null}
+                  {currentTrip.owner === (appSession?.name || 'Ty') && members.length === 1 ? (
+                    <div className="mini-panel" style={{ background: '#fff8e7', borderColor: '#f59f00', color: '#9b5d00' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem' }}>
+                        <strong>⚠️ Ak sa odstránite:</strong> Si jediný člen, výlet bude vymazaný.
+                      </p>
+                    </div>
+                  ) : null}
+                  {currentTrip.owner === (appSession?.name || 'Ty') && members.length > 1 ? (
+                    <div className="mini-panel" style={{ background: '#e7f8ff', borderColor: '#2c79f6', color: '#1f3562' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem' }}>
+                        <strong>ℹ️ Ak sa odstránite:</strong> Vlastníctvo preberá {members.find((m) => m !== currentTrip.owner) || 'ďalší člen'}.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="member-list">
                     {members.map((name) => (
                       <div key={name} className="member-row">
@@ -2077,7 +2119,7 @@ export default function SplitPayWebApp() {
                             </p>
                           )}
                         </div>
-                        {currentTrip.owner === (appSession?.name || 'Ty') && name !== currentTrip.owner ? (
+                        {currentTrip.owner === (appSession?.name || 'Ty') ? (
                           <button
                             type="button"
                             className="ghost danger-btn"
