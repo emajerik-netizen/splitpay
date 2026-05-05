@@ -24,6 +24,12 @@ function eur(value: number) {
   return `${value.toFixed(2)} EUR`;
 }
 
+function memberCountLabel(count: number) {
+  if (count === 1) return '1 člen';
+  if (count >= 2 && count <= 4) return `${count} členovia`;
+  return `${count} členov`;
+}
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -829,6 +835,12 @@ export default function SplitPayWebApp() {
     clearInvite();
     openTrip(data.tripId, 'overview');
     setInfoMessage(`Vitaj ${memberName}! Bol si pridaný do výletu ${inviteTrip.tripName}.`);
+
+    // Notify owner if notifications enabled
+    sendNotification(`${inviteTrip.tripName} – nový člen`, {
+      body: `${memberName} sa pridal(a) do výletu.`,
+      icon: '/icon.png',
+    });
   }
 
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -1138,7 +1150,7 @@ export default function SplitPayWebApp() {
     const inviteCode = makeUniqueInviteCode(trips);
     const trip = createTrip(
       cleanedName,
-      newTripDate.trim() || 'Bez dátumu',
+      newTripDate.trim() ? new Date(newTripDate).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Bez dátumu',
       inviteCode,
       appSession?.name || 'Ty'
     );
@@ -1907,7 +1919,7 @@ export default function SplitPayWebApp() {
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{trip.members.length} členov</p>
+                            <p className="muted">{memberCountLabel(trip.members.length)}</p>
                           </div>
                           <button
                             type="button"
@@ -1933,7 +1945,7 @@ export default function SplitPayWebApp() {
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{trip.members.length} členov</p>
+                            <p className="muted">{memberCountLabel(trip.members.length)}</p>
                           </div>
                           <button
                             type="button"
@@ -2036,7 +2048,7 @@ export default function SplitPayWebApp() {
                             </span>
                           </div>
                           <div className="trip-card-meta">
-                            <span>{trip.members.length} členov</span>
+                            <span>{memberCountLabel(trip.members.length)}</span>
                             <span>{trip.expenses.length} výdavkov</span>
                             <span>Spolu {money(tripTotal)}</span>
                             <span>{trip.currency}</span>
@@ -2093,9 +2105,9 @@ export default function SplitPayWebApp() {
                       <label className="field-block">
                         <span>Dátum</span>
                         <input
+                          type="date"
                           value={newTripDate}
                           onChange={(event) => setNewTripDate(event.target.value)}
-                          placeholder="Voliteľné"
                         />
                       </label>
                       <button type="submit" className="primary-cta">Vytvoriť výlet</button>
@@ -2154,7 +2166,7 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
                   <p>
-                    {currentTrip.date} · {members.length} členov · {eur(totalSpent)} spolu
+                    {currentTrip.date} · {memberCountLabel(members.length)} · {eur(totalSpent)} spolu
                   </p>
                 </div>
                 <div className="hero-actions hero-actions-end">
