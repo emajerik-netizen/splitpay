@@ -2348,6 +2348,10 @@ button:disabled {
   background: #f8fbff;
 }
 
+.support-modal-card {
+  width: min(34rem, 100%);
+}
+
 .support-form textarea {
   width: 100%;
   border: 1px solid var(--stroke);

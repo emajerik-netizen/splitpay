@@ -118,6 +118,9 @@ const T = {
     supportSending: 'Odosielam...',
     supportSent: 'Správa bola odoslaná na podporu.',
     supportSendFailed: 'Správu sa nepodarilo odoslať. Skús to znova.',
+    supportSmtpMissing: 'Podpora nie je správne nakonfigurovaná (SMTP). Kontaktuj administrátora.',
+    supportSmtpAuthFailed: 'Emailová schránka podpory odmietla prihlásenie. Skontroluj SMTP údaje.',
+    supportSmtpUnreachable: 'SMTP server je dočasne nedostupný. Skús to znova neskôr.',
     supportEmailLabel: 'Tvoj email',
     heroTitle: 'Výlety, rozpočet a vyrovnanie bez chaosu',
     heroDesc: 'Vytvor výlet, pozvi ľudí cez kód a maj výdavky pod kontrolou od prvého nákupu až po posledné vyrovnanie.',
@@ -375,6 +378,9 @@ const T = {
     supportSending: 'Sending...',
     supportSent: 'Message was sent to support.',
     supportSendFailed: 'Message could not be sent. Please try again.',
+    supportSmtpMissing: 'Support is not configured correctly (SMTP). Contact the administrator.',
+    supportSmtpAuthFailed: 'Support mailbox login failed. Check SMTP credentials.',
+    supportSmtpUnreachable: 'SMTP server is temporarily unreachable. Please try again later.',
     supportEmailLabel: 'Your email',
     heroTitle: 'Trips, budget and settlements without chaos',
     heroDesc: 'Create a trip, invite people via code and keep expenses under control from the first purchase to the last settlement.',
@@ -820,9 +826,10 @@ export default function SplitPayWebApp() {
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
-  const [showSupportForm, setShowSupportForm] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
   const [supportSending, setSupportSending] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
@@ -875,6 +882,7 @@ export default function SplitPayWebApp() {
   const expenseCountRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
+  const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
 
@@ -894,6 +902,24 @@ export default function SplitPayWebApp() {
       window.sessionStorage.setItem(STARTUP_SEEN_KEY, '1');
     }
   }, [showStartup]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (profileMenuWrapRef.current?.contains(target)) return;
+      setProfileOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [profileOpen]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -1326,7 +1352,8 @@ export default function SplitPayWebApp() {
 
   async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!appSession?.email) return;
+    const senderEmail = (appSession?.email || supportEmail).trim().toLowerCase();
+    if (!senderEmail) return;
 
     const subject = supportSubject.trim();
     const message = supportBody.trim();
@@ -1338,22 +1365,40 @@ export default function SplitPayWebApp() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: appSession.email,
-          name: appSession.name,
+          email: senderEmail,
+          name: appSession?.name || fullName.trim() || 'Guest',
           subject,
           message,
           lang,
         }),
       });
 
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+
       if (!response.ok) {
+        if (payload?.error === 'smtp_not_configured') {
+          setInfoMessage(t('supportSmtpMissing'));
+          return;
+        }
+
+        if (payload?.error === 'smtp_auth_failed') {
+          setInfoMessage(t('supportSmtpAuthFailed'));
+          return;
+        }
+
+        if (payload?.error === 'smtp_unreachable') {
+          setInfoMessage(t('supportSmtpUnreachable'));
+          return;
+        }
+
         setInfoMessage(t('supportSendFailed'));
         return;
       }
 
       setSupportSubject('');
       setSupportBody('');
-      setShowSupportForm(false);
+      setSupportEmail('');
+      setShowSupportModal(false);
       setInfoMessage(t('supportSent'));
     } catch {
       setInfoMessage(t('supportSendFailed'));
@@ -2363,10 +2408,15 @@ export default function SplitPayWebApp() {
                 {authMode === 'login' ? t('createAccountBtn') : t('signInBtn')}
             </button>
           </section>
+          <section className="auth-switch-card">
+            <button type="button" className="link-button strong" onClick={() => setShowSupportModal(true)}>
+              {t('contactSupport')}
+            </button>
+          </section>
         </main>
       ) : (
         <main className="page-wrap app-shell">
-          <div className="profile-fab-wrap">
+          <div className="profile-fab-wrap" ref={profileMenuWrapRef}>
             <button type="button" className="profile-fab" onClick={() => setProfileOpen((prev) => !prev)}>
               {(appSession?.name || 'U').slice(0, 1).toUpperCase()}
             </button>
@@ -2387,38 +2437,16 @@ export default function SplitPayWebApp() {
                 >
                     {t('deleteAccount')}
                 </button>
-                <button type="button" className="ghost" onClick={() => setShowSupportForm((prev) => !prev)}>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => {
+                    setShowSupportModal(true);
+                    setProfileOpen(false);
+                  }}
+                >
                   {t('contactSupport')}
                 </button>
-                {showSupportForm ? (
-                  <form className="support-form" onSubmit={handleSupportSubmit}>
-                    <label className="field-block">
-                      <span>{t('supportEmailLabel')}</span>
-                      <input type="email" value={appSession?.email || ''} readOnly />
-                    </label>
-                    <label className="field-block">
-                      <span>{t('supportSubject')}</span>
-                      <input
-                        value={supportSubject}
-                        onChange={(event) => setSupportSubject(event.target.value)}
-                        placeholder={t('supportSubject')}
-                        maxLength={140}
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>{t('supportMessage')}</span>
-                      <textarea
-                        value={supportBody}
-                        onChange={(event) => setSupportBody(event.target.value)}
-                        placeholder={t('supportMessagePlaceholder')}
-                        rows={5}
-                      />
-                    </label>
-                    <button type="submit" disabled={supportSending || !supportSubject.trim() || !supportBody.trim()}>
-                      {supportSending ? t('supportSending') : t('supportSend')}
-                    </button>
-                  </form>
-                ) : null}
                   <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
                   <div className="lang-picker">
                     <span className="lang-picker-label">{t('language')}</span>
@@ -3474,6 +3502,73 @@ export default function SplitPayWebApp() {
         ) : null}
         </main>
       )}
+
+      {/* Invite slot picker modal - shows after auth when pending invite exists */}
+      {showSupportModal ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setShowSupportModal(false)}>
+          <section
+            className="section-card modal-card support-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('contactSupport')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">{t('contactSupport')}</p>
+                <h2>{t('contactSupport')}</h2>
+              </div>
+              <button type="button" className="ghost" onClick={() => setShowSupportModal(false)}>{t('close')}</button>
+            </div>
+
+            <form className="support-form" onSubmit={handleSupportSubmit}>
+              {!isAuthenticated ? (
+                <label className="field-block">
+                  <span>{t('supportEmailLabel')}</span>
+                  <input
+                    type="email"
+                    value={supportEmail}
+                    onChange={(event) => setSupportEmail(event.target.value)}
+                    placeholder={t('emailPlaceholder')}
+                  />
+                </label>
+              ) : null}
+
+              <label className="field-block">
+                <span>{t('supportSubject')}</span>
+                <input
+                  value={supportSubject}
+                  onChange={(event) => setSupportSubject(event.target.value)}
+                  placeholder={t('supportSubject')}
+                  maxLength={140}
+                />
+              </label>
+
+              <label className="field-block">
+                <span>{t('supportMessage')}</span>
+                <textarea
+                  value={supportBody}
+                  onChange={(event) => setSupportBody(event.target.value)}
+                  placeholder={t('supportMessagePlaceholder')}
+                  rows={5}
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={
+                  supportSending ||
+                  !supportSubject.trim() ||
+                  !supportBody.trim() ||
+                  (!isAuthenticated && !supportEmail.trim())
+                }
+              >
+                {supportSending ? t('supportSending') : t('supportSend')}
+              </button>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       {/* Invite slot picker modal - shows after auth when pending invite exists */}
       {inviteTrip && isAuthenticated ? (

@@ -72,7 +72,22 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    const err = error as { code?: string; responseCode?: number; message?: string };
+    console.error('[support] send failed', {
+      code: err?.code,
+      responseCode: err?.responseCode,
+      message: err?.message,
+    });
+
+    if (err?.code === 'EAUTH' || err?.responseCode === 535) {
+      return NextResponse.json({ error: 'smtp_auth_failed' }, { status: 500 });
+    }
+
+    if (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNECTION' || err?.code === 'ESOCKET') {
+      return NextResponse.json({ error: 'smtp_unreachable' }, { status: 500 });
+    }
+
     return NextResponse.json({ error: 'send_failed' }, { status: 500 });
   }
 }
