@@ -2,8 +2,11 @@ export type Expense = {
   payer: string;
   amount: number;
   participants: string[];
-  splitType?: 'equal' | 'shares';
+  splitType?: 'equal' | 'shares' | 'individual';
+  expenseType?: 'expense' | 'transfer';
+  transferTo?: string;
   participantWeights?: Record<string, number>;
+  participantAmounts?: Record<string, number>;
 };
 
 export type BalanceMap = Record<string, number>;
@@ -19,9 +22,25 @@ export function computeBalances(
   });
 
   expenses.forEach((expense) => {
+    if (expense.expenseType === 'transfer') {
+      if (!expense.transferTo) return;
+      if (!(expense.payer in balance) || !(expense.transferTo in balance)) return;
+      if (!Number.isFinite(expense.amount) || expense.amount <= 0) return;
+
+      balance[expense.payer] -= expense.amount;
+      balance[expense.transferTo] += expense.amount;
+      return;
+    }
+
     if (!expense.participants.length) return;
 
-    if (expense.splitType === 'shares') {
+    if (expense.splitType === 'individual') {
+      expense.participants.forEach((person) => {
+        const share = Number(expense.participantAmounts?.[person] || 0);
+        if (!Number.isFinite(share) || share <= 0) return;
+        balance[person] -= share;
+      });
+    } else if (expense.splitType === 'shares') {
       const weights = expense.participants.map(
         (person) => Number(expense.participantWeights?.[person] || 1)
       );

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
@@ -58,10 +59,13 @@ type Trip = {
 type ExpenseDraft = {
   title: string;
   amount: string;
+  expenseType: 'expense' | 'transfer';
   payer: string;
+  transferTo: string;
   participants: string[];
-  splitType: 'equal' | 'shares';
+  splitType: 'equal' | 'individual' | 'shares';
   participantWeights: Record<string, number>;
+  participantAmounts: Record<string, number>;
 };
 
 type AppSession = {
@@ -95,19 +99,19 @@ type TopUser = {
 type AppScreen = 'trips' | 'trip-detail' | 'admin';
 type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances';
 
-const DEFAULT_TRIP: Trip = {
-  id: 'default-trip',
-  name: 'Môj prvý výlet',
-  date: 'Doplň dátum',
-  owner: 'Ty',
-  currency: 'EUR',
-  color: '#2c79f6',
-  archived: false,
-  inviteCode: 'DEMO01',
-  members: ['Ty'],
-  expenses: [],
-  pendingInvites: [],
-};
+function detailScreenFromPath(value?: string): TripDetailScreen {
+  if (value === 'members') return 'members';
+  if (value === 'invites') return 'invites';
+  if (value === 'expenses') return 'expenses';
+  if (value === 'balances') return 'balances';
+  return 'overview';
+}
+
+function tripPath(tripId: string, detailScreen: TripDetailScreen = 'overview') {
+  const safeTripId = encodeURIComponent(tripId);
+  if (detailScreen === 'overview') return `/trip/${safeTripId}`;
+  return `/trip/${safeTripId}/${detailScreen}`;
+}
 
 function createTrip(name: string, date: string, owner: string = 'Ty'): Trip {
   return {
@@ -182,6 +186,8 @@ function makeUserSession(userId: string, email: string, fullName?: string | null
 }
 
 export default function SplitPayWebApp() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [showStartup, setShowStartup] = useState(true);
   const [trips, setTrips] = useState<Trip[]>(() => readInitialState().trips);
   const [selectedTripId, setSelectedTripId] = useState<string>(() => readInitialState().selectedTripId);
@@ -210,7 +216,6 @@ export default function SplitPayWebApp() {
     return Notification.permission === 'granted';
   });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [dbSyncMessage, setDbSyncMessage] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
   const [visits24hCount, setVisits24hCount] = useState(0);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
@@ -227,10 +232,13 @@ export default function SplitPayWebApp() {
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
+    expenseType: 'expense',
     payer: 'Ty',
+    transferTo: '',
     participants: ['Ty'],
     splitType: 'equal',
     participantWeights: { Ty: 1 },
+    participantAmounts: { Ty: 0 },
   });
 
   const supabase = getSupabaseBrowserClient();
@@ -344,7 +352,6 @@ export default function SplitPayWebApp() {
       if (cancelled) return;
 
       if (error) {
-        setDbSyncMessage('DB sync nie je ešte aktívny. Spúšťame lokálny režim.');
         dbLoadedRef.current = true;
         return;
       }
@@ -377,7 +384,7 @@ export default function SplitPayWebApp() {
 
     const payload = { trips, selectedTripId };
     const timeoutId = window.setTimeout(async () => {
-      const { error } = await supabaseClient.from('trip_states').upsert({
+      await supabaseClient.from('trip_states').upsert({
         user_id: userId,
         state_json: payload,
       });
@@ -631,6 +638,7 @@ export default function SplitPayWebApp() {
     setAppScreen('trips');
     setDetailScreen('overview');
     window.localStorage.removeItem(SESSION_CACHE_KEY);
+    router.push('/');
 
     if (supabase) {
       await supabase.auth.signOut();
@@ -667,15 +675,39 @@ export default function SplitPayWebApp() {
     setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'));
   }
 
+  const pathSegments = pathname.split('/').filter(Boolean);
+  const routeTripId =
+    pathSegments[0] === 'trip' && pathSegments[1]
+      ? decodeURIComponent(pathSegments[1])
+      : '';
+  const activeAppScreen: AppScreen =
+    pathname === '/admin' ? 'admin' : routeTripId ? 'trip-detail' : appScreen;
+  const activeDetailScreen = routeTripId
+    ? detailScreenFromPath(pathSegments[2])
+    : detailScreen;
+  const activeTripId = routeTripId || selectedTripId;
+
   const currentTrip = useMemo(
-    () => trips.find((trip) => trip.id === selectedTripId) || trips[0] || null,
-    [trips, selectedTripId]
+    () => trips.find((trip) => trip.id === activeTripId) || trips[0] || null,
+    [activeTripId, trips]
   );
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
+  const isTransferDraft = draft.expenseType === 'transfer';
   const safePayer = members.includes(draft.payer) ? draft.payer : members[0] || 'Ty';
+  const safeTransferTo =
+    members.find((name) => name === draft.transferTo && name !== safePayer) ||
+    members.find((name) => name !== safePayer) ||
+    '';
   const safeParticipantsRaw = draft.participants.filter((name) => members.includes(name));
   const safeParticipants = safeParticipantsRaw.length ? safeParticipantsRaw : safePayer ? [safePayer] : [];
+  const amountNumber = Number(draft.amount);
+  const individualTotal = safeParticipants.reduce((sum, name) => {
+    const value = Number(draft.participantAmounts[name] || 0);
+    return sum + (Number.isFinite(value) && value > 0 ? value : 0);
+  }, 0);
+  const validIndividualSplit =
+    draft.splitType !== 'individual' || Math.abs(individualTotal - amountNumber) < 0.01;
 
   const normalizedExpenses = useMemo(() => {
     if (!currentTrip) return [];
@@ -688,17 +720,23 @@ export default function SplitPayWebApp() {
   const balances = useMemo(() => computeBalances(members, normalizedExpenses), [members, normalizedExpenses]);
   const settlements = useMemo(() => settleDebts(balances), [balances]);
   const totalSpent = useMemo(
-    () => normalizedExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+    () =>
+      normalizedExpenses.reduce(
+        (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
+        0
+      ),
     [normalizedExpenses]
   );
   const recentExpenses = useMemo(() => normalizedExpenses.slice(0, 3), [normalizedExpenses]);
 
   const canAddExpense =
     !currentTrip?.archived &&
-    draft.title.trim().length > 0 &&
-    Number(draft.amount) > 0 &&
+    (isTransferDraft || draft.title.trim().length > 0) &&
+    amountNumber > 0 &&
     safePayer.trim().length > 0 &&
-    safeParticipants.length > 0;
+    (isTransferDraft
+      ? safeTransferTo.trim().length > 0 && safeTransferTo !== safePayer
+      : safeParticipants.length > 0 && validIndividualSplit);
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
@@ -709,15 +747,18 @@ export default function SplitPayWebApp() {
     setSelectedTripId(tripId);
     setDetailScreen(nextScreen);
     setAppScreen('trip-detail');
+    router.push(tripPath(tripId, nextScreen));
   }
 
   function goToTripsHome() {
     setAppScreen('trips');
     setDetailScreen('overview');
+    router.push('/');
   }
 
   function goToAdmin() {
     setAppScreen('admin');
+    router.push('/admin');
   }
 
   async function saveAdminAnnouncement() {
@@ -807,9 +848,7 @@ export default function SplitPayWebApp() {
 
     const trip = createTrip(cleanedName, newTripDate.trim() || 'Bez dátumu', appSession?.name || 'Ty');
     setTrips((prev) => [trip, ...prev]);
-    setSelectedTripId(trip.id);
-    setAppScreen('trip-detail');
-    setDetailScreen('overview');
+    openTrip(trip.id, 'overview');
     setNewTripName('');
     setNewTripDate('');
     setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
@@ -836,6 +875,10 @@ export default function SplitPayWebApp() {
       participantWeights: {
         ...prev.participantWeights,
         [cleaned]: 1,
+      },
+      participantAmounts: {
+        ...prev.participantAmounts,
+        [cleaned]: 0,
       },
     }));
     setNewMember('');
@@ -946,7 +989,7 @@ export default function SplitPayWebApp() {
   function shareViaWhatsApp() {
     if (!currentTrip) return;
     const text = encodeURIComponent(
-      `Ahoj! 👋\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\n📱 Kód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba! 🎉`
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKód výletu: ${currentTrip.inviteCode}\n\nAko sa zapojiť:\n1. Otvor Split Pay\n2. Klikni na "Pridaj sa do výletu"\n3. Vlož kód: ${currentTrip.inviteCode}\n\nTeším sa na teba!`
     );
     window.open(`https://wa.me/?text=${text}`);
   }
@@ -1000,9 +1043,7 @@ export default function SplitPayWebApp() {
       return;
     }
 
-    setSelectedTripId(foundTripId);
-    setAppScreen('trip-detail');
-    setDetailScreen('overview');
+    openTrip(foundTripId, 'overview');
     setJoinName('');
     setJoinCode('');
     setInfoMessage(`${cleanedName} sa pridal(a) do výletu.`);
@@ -1022,6 +1063,10 @@ export default function SplitPayWebApp() {
           ...prev.participantWeights,
           [name]: prev.participantWeights[name] || 1,
         },
+        participantAmounts: {
+          ...prev.participantAmounts,
+          [name]: prev.participantAmounts[name] || 0,
+        },
       };
     });
   }
@@ -1031,22 +1076,42 @@ export default function SplitPayWebApp() {
     if (!currentTrip || !canAddExpense) return;
 
     const amount = Number(draft.amount);
-    const normalizedWeights: Record<string, number> = {};
-
-    safeParticipants.forEach((name) => {
-      const raw = Number(draft.participantWeights[name] || 1);
-      normalizedWeights[name] = raw > 0 ? raw : 1;
-    });
-
-    const expense: TripExpense = {
-      id: makeId(),
-      title: draft.title.trim(),
-      amount,
-      payer: safePayer,
-      participants: safeParticipants,
-      splitType: draft.splitType,
-      participantWeights: normalizedWeights,
-    };
+    const expense: TripExpense =
+      draft.expenseType === 'transfer'
+        ? {
+            id: makeId(),
+            title: draft.title.trim() || `Transfer ${safePayer} -> ${safeTransferTo}`,
+            amount,
+            payer: safePayer,
+            participants: [safeTransferTo],
+            expenseType: 'transfer',
+            transferTo: safeTransferTo,
+            splitType: 'equal',
+          }
+        : {
+            id: makeId(),
+            title: draft.title.trim(),
+            amount,
+            payer: safePayer,
+            participants: safeParticipants,
+            splitType: draft.splitType,
+            participantWeights:
+              draft.splitType === 'shares'
+                ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
+                    const raw = Number(draft.participantWeights[name] || 1);
+                    acc[name] = raw > 0 ? raw : 1;
+                    return acc;
+                  }, {})
+                : undefined,
+            participantAmounts:
+              draft.splitType === 'individual'
+                ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
+                    const raw = Number(draft.participantAmounts[name] || 0);
+                    acc[name] = Number.isFinite(raw) && raw > 0 ? raw : 0;
+                    return acc;
+                  }, {})
+                : undefined,
+          };
 
     if (editingExpenseId) {
       updateCurrentTrip((trip) => ({
@@ -1063,8 +1128,14 @@ export default function SplitPayWebApp() {
       ...prev,
       title: '',
       amount: '',
+      expenseType: 'expense',
+      transferTo: '',
       splitType: 'equal',
       participants: safePayer ? [safePayer] : [],
+      participantAmounts: members.reduce<Record<string, number>>((acc, name) => {
+        acc[name] = 0;
+        return acc;
+      }, {}),
     }));
   }
 
@@ -1077,12 +1148,15 @@ export default function SplitPayWebApp() {
     setDraft({
       title: found.title,
       amount: String(found.amount),
+      expenseType: found.expenseType === 'transfer' ? 'transfer' : 'expense',
       payer: found.payer,
+      transferTo: found.transferTo || members.find((name) => name !== found.payer) || '',
       participants: found.participants,
       splitType: found.splitType || 'equal',
       participantWeights: found.participantWeights || {},
+      participantAmounts: found.participantAmounts || {},
     });
-    setDetailScreen('expenses');
+    openTrip(currentTrip.id, 'expenses');
   }
 
   function removeExpense(expenseId: string) {
@@ -1148,7 +1222,7 @@ export default function SplitPayWebApp() {
   }, [appSession, notificationsEnabled, trips]);
 
   const isAuthenticated = Boolean(appSession);
-  const showTripDetail = appScreen === 'trip-detail' && currentTrip;
+  const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
   const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
 
   function money(value: number) {
@@ -1293,9 +1367,8 @@ export default function SplitPayWebApp() {
           </div>
 
           {globalAnnouncement ? <p className="info-banner admin-announcement">{globalAnnouncement}</p> : null}
-          {dbSyncMessage ? <p className="info-banner">{dbSyncMessage}</p> : null}
 
-          {appScreen === 'admin' ? (
+          {activeAppScreen === 'admin' ? (
             <section className="section-card full-window admin-panel">
               <div className="section-head compact-head">
                 <p className="eyebrow">Administrácia</p>
@@ -1471,7 +1544,7 @@ export default function SplitPayWebApp() {
             </section>
           ) : null}
 
-          {appScreen !== 'admin' ? (
+          {activeAppScreen !== 'admin' ? (
             !showTripDetail ? (
             <>
               <section className="hero hero-panel">
@@ -1547,7 +1620,10 @@ export default function SplitPayWebApp() {
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
                     const tripBalances = computeBalances(trip.members, trip.expenses);
-                    const tripTotal = trip.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                    const tripTotal = trip.expenses.reduce(
+                      (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
+                      0
+                    );
                     const userBalance = tripBalances[appSession?.name || 'Ty'] ?? 0;
 
                     return (
@@ -1604,42 +1680,42 @@ export default function SplitPayWebApp() {
               <section className="screen-nav">
                 <button
                   type="button"
-                  className={detailScreen === 'overview' ? 'screen-pill active' : 'screen-pill'}
-                  onClick={() => setDetailScreen('overview')}
+                  className={activeDetailScreen === 'overview' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'overview')}
                 >
                   Prehľad
                 </button>
                 <button
                   type="button"
-                  className={detailScreen === 'members' ? 'screen-pill active' : 'screen-pill'}
-                  onClick={() => setDetailScreen('members')}
+                  className={activeDetailScreen === 'members' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'members')}
                 >
                   Členovia
                 </button>
                 <button
                   type="button"
-                  className={detailScreen === 'invites' ? 'screen-pill active' : 'screen-pill'}
-                  onClick={() => setDetailScreen('invites')}
+                  className={activeDetailScreen === 'invites' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'invites')}
                 >
                   Pozvánky
                 </button>
                 <button
                   type="button"
-                  className={detailScreen === 'expenses' ? 'screen-pill active' : 'screen-pill'}
-                  onClick={() => setDetailScreen('expenses')}
+                  className={activeDetailScreen === 'expenses' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'expenses')}
                 >
                   Výdavky
                 </button>
                 <button
                   type="button"
-                  className={detailScreen === 'balances' ? 'screen-pill active' : 'screen-pill'}
-                  onClick={() => setDetailScreen('balances')}
+                  className={activeDetailScreen === 'balances' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'balances')}
                 >
                   Bilancia
                 </button>
               </section>
 
-              {detailScreen === 'overview' ? (
+              {activeDetailScreen === 'overview' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Prehľad výletu</p>
@@ -1730,7 +1806,7 @@ export default function SplitPayWebApp() {
                 </section>
               ) : null}
 
-              {detailScreen === 'members' ? (
+              {activeDetailScreen === 'members' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Tím</p>
@@ -1793,7 +1869,7 @@ export default function SplitPayWebApp() {
                 </section>
               ) : null}
 
-              {detailScreen === 'invites' ? (
+              {activeDetailScreen === 'invites' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Pozvanie</p>
@@ -1804,14 +1880,14 @@ export default function SplitPayWebApp() {
                       <div className="invite-code-box">
                         <span>Aktívny kód</span>
                         <strong>{currentTrip.inviteCode}</strong>
-                         <div className="share-buttons">
-                           <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>📋 Kopíruj</button>
-                           <button type="button" className="ghost" onClick={shareViaEmail}>✉️ Email</button>
-                           <button type="button" className="ghost" onClick={shareViaWhatsApp}>💬 WhatsApp</button>
-                           <button type="button" className="ghost" onClick={shareViaSMS}>📱 SMS</button>
-                           <button type="button" className="ghost" onClick={regenerateInviteCode}>🔄 Nový</button>
-                         </div>
-                       </div>
+                        <div className="share-buttons">
+                          <button type="button" className="ghost" onClick={copyInviteCodeToClipboard}>Kopíruj kód</button>
+                          <button type="button" className="ghost" onClick={shareViaEmail}>Poslať emailom</button>
+                          <button type="button" className="ghost" onClick={shareViaWhatsApp}>Poslať cez WhatsApp</button>
+                          <button type="button" className="ghost" onClick={shareViaSMS}>Poslať SMS</button>
+                          <button type="button" className="ghost" onClick={regenerateInviteCode}>Vygenerovať nový kód</button>
+                        </div>
+                      </div>
                       <form className="stack" onSubmit={handleAddInvite}>
                         <input
                           value={inviteName}
@@ -1844,7 +1920,7 @@ export default function SplitPayWebApp() {
                 </section>
               ) : null}
 
-              {detailScreen === 'expenses' ? (
+              {activeDetailScreen === 'expenses' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Výdavky</p>
@@ -1854,10 +1930,26 @@ export default function SplitPayWebApp() {
                     <div className="mini-panel">
                       <h3>Nový výdavok</h3>
                       <form className="stack" onSubmit={handleAddExpense}>
+                        <select
+                          value={draft.expenseType}
+                          onChange={(event) =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              expenseType: event.target.value as ExpenseDraft['expenseType'],
+                            }))
+                          }
+                        >
+                          <option value="expense">Nový výdavok</option>
+                          <option value="transfer">Transfer (vyrovnanie)</option>
+                        </select>
                         <input
                           value={draft.title}
                           onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                          placeholder="Názov výdavku"
+                          placeholder={
+                            draft.expenseType === 'transfer'
+                              ? 'Názov transferu (voliteľné)'
+                              : 'Názov výdavku'
+                          }
                         />
                         <input
                           value={draft.amount}
@@ -1876,55 +1968,81 @@ export default function SplitPayWebApp() {
                           ))}
                         </select>
 
-                        <div className="participants">
-                          {members.map((name) => {
-                            const selected = safeParticipants.includes(name);
-                            return (
-                              <label key={name} className={selected ? 'participant active' : 'participant'}>
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  onChange={() => toggleParticipant(name)}
-                                />
-                                <span>{name}</span>
-                                {draft.splitType === 'shares' && selected ? (
-                                  <input
-                                    className="weight"
-                                    inputMode="numeric"
-                                    value={String(draft.participantWeights[name] || 1)}
-                                    onChange={(event) => {
-                                      const next = Number(event.target.value);
-                                      setDraft((prev) => ({
-                                        ...prev,
-                                        participantWeights: {
-                                          ...prev.participantWeights,
-                                          [name]: Number.isFinite(next) && next > 0 ? next : 1,
-                                        },
-                                      }));
-                                    }}
-                                  />
-                                ) : null}
-                              </label>
-                            );
-                          })}
-                        </div>
+                        {draft.expenseType === 'transfer' ? (
+                          <select
+                            value={safeTransferTo}
+                            onChange={(event) =>
+                              setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
+                            }
+                          >
+                            <option value="">Komu posielam</option>
+                            {members
+                              .filter((name) => name !== safePayer)
+                              .map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
+                                </option>
+                              ))}
+                          </select>
+                        ) : (
+                          <>
+                            <div className="participants">
+                              {members.map((name) => {
+                                const selected = safeParticipants.includes(name);
+                                return (
+                                  <label key={name} className={selected ? 'participant active' : 'participant'}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selected}
+                                      onChange={() => toggleParticipant(name)}
+                                    />
+                                    <span>{name}</span>
+                                    {draft.splitType === 'individual' && selected ? (
+                                      <input
+                                        className="weight"
+                                        inputMode="decimal"
+                                        value={String(draft.participantAmounts[name] || 0)}
+                                        onChange={(event) => {
+                                          const next = Number(event.target.value);
+                                          setDraft((prev) => ({
+                                            ...prev,
+                                            participantAmounts: {
+                                              ...prev.participantAmounts,
+                                              [name]: Number.isFinite(next) && next >= 0 ? next : 0,
+                                            },
+                                          }));
+                                        }}
+                                      />
+                                    ) : null}
+                                  </label>
+                                );
+                              })}
+                            </div>
 
-                        <div className="split-switch">
-                          <button
-                            type="button"
-                            className={draft.splitType === 'equal' ? 'active' : ''}
-                            onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal' }))}
-                          >
-                            Rovnomerne
-                          </button>
-                          <button
-                            type="button"
-                            className={draft.splitType === 'shares' ? 'active' : ''}
-                            onClick={() => setDraft((prev) => ({ ...prev, splitType: 'shares' }))}
-                          >
-                            Podľa podielov
-                          </button>
-                        </div>
+                            <div className="split-switch">
+                              <button
+                                type="button"
+                                className={draft.splitType === 'equal' ? 'active' : ''}
+                                onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal' }))}
+                              >
+                                Rovnomerne
+                              </button>
+                              <button
+                                type="button"
+                                className={draft.splitType === 'individual' ? 'active' : ''}
+                                onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
+                              >
+                                Individuálne
+                              </button>
+                            </div>
+
+                            {draft.splitType === 'individual' ? (
+                              <p className="muted">
+                                Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
+                              </p>
+                            ) : null}
+                          </>
+                        )}
 
                         <button type="submit" disabled={!canAddExpense}>
                           {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
@@ -1946,7 +2064,9 @@ export default function SplitPayWebApp() {
                             <div>
                               <strong>{expense.title}</strong>
                               <p>
-                                Platil {expense.payer}, účastníci: {expense.participants.join(', ')}
+                                {expense.expenseType === 'transfer'
+                                  ? `${expense.payer} poslal(a) ${expense.transferTo || expense.participants[0] || '-'}.`
+                                  : `Platil ${expense.payer}, účastníci: ${expense.participants.join(', ')}`}
                               </p>
                             </div>
                             <div className="expense-actions">
@@ -1966,7 +2086,7 @@ export default function SplitPayWebApp() {
                 </section>
               ) : null}
 
-              {detailScreen === 'balances' ? (
+              {activeDetailScreen === 'balances' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Bilancia</p>
