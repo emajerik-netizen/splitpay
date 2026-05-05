@@ -12,6 +12,7 @@ import {
   MessageSquare,
   QrCode,
   Receipt,
+  Settings2,
   Share2,
   Users,
 } from 'lucide-react';
@@ -260,6 +261,7 @@ export default function SplitPayWebApp() {
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showTripSettingsModal, setShowTripSettingsModal] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
@@ -815,18 +817,19 @@ export default function SplitPayWebApp() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal) return;
+    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showTripSettingsModal) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setShowCreateTripModal(false);
       setShowJoinTripModal(false);
       setShowExpenseModal(false);
+      setShowTripSettingsModal(false);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCreateTripModal, showJoinTripModal, showExpenseModal]);
+  }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showTripSettingsModal]);
 
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
@@ -1996,9 +1999,79 @@ export default function SplitPayWebApp() {
                 </div>
                 <div className="hero-actions hero-actions-end">
                   <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
+                  {currentTripOwnerIsSelf ? (
+                    <button type="button" className="ghost trip-settings-open-btn" onClick={() => setShowTripSettingsModal(true)}>
+                      <Settings2 size={15} aria-hidden="true" />
+                      <span>Nastavenie</span>
+                    </button>
+                  ) : null}
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
+
+              {showTripSettingsModal && currentTripOwnerIsSelf ? (
+                <div className="modal-overlay modal-overlay-top-right" role="presentation" onClick={() => setShowTripSettingsModal(false)}>
+                  <section className="section-card trip-settings-modal" role="dialog" aria-modal="true" aria-label="Nastavenia výletu" onClick={(event) => event.stopPropagation()}>
+                    <div className="modal-head">
+                      <div>
+                        <p className="eyebrow">Nastavenie výletu</p>
+                        <h2>{currentTrip.name}</h2>
+                      </div>
+                      <button type="button" className="ghost" onClick={() => setShowTripSettingsModal(false)}>Zavrieť</button>
+                    </div>
+                    <form className="stack trip-settings-form" onSubmit={(event) => event.preventDefault()}>
+                      <label className="field-block">
+                        <span>Názov výletu</span>
+                        <input
+                          type="text"
+                          value={currentTrip.name}
+                          onChange={(event) => updateTripSettings({ name: event.target.value })}
+                          placeholder="Názov výletu"
+                        />
+                      </label>
+                      <label className="field-block">
+                        <span>Mena</span>
+                        <select
+                          value={currentTrip.currency}
+                          onChange={(event) =>
+                            updateTripSettings({ currency: event.target.value as Trip['currency'] })
+                          }
+                        >
+                          <option value="EUR">EUR</option>
+                          <option value="USD">USD</option>
+                          <option value="CZK">CZK</option>
+                        </select>
+                      </label>
+                      <label className="field-block">
+                        <span>Farba výletu</span>
+                        <input
+                          type="color"
+                          value={currentTrip.color}
+                          onChange={(event) => updateTripSettings({ color: event.target.value })}
+                        />
+                      </label>
+                      <label className="archived-toggle">
+                        <input
+                          type="checkbox"
+                          checked={currentTrip.archived}
+                          onChange={(event) => updateTripSettings({ archived: event.target.checked })}
+                        />
+                        Archivovať výlet
+                      </label>
+                      <button
+                        type="button"
+                        className="ghost danger-btn"
+                        onClick={() => {
+                          deleteTrip(currentTrip.id);
+                          setShowTripSettingsModal(false);
+                        }}
+                      >
+                        Vymazať výlet
+                      </button>
+                    </form>
+                  </section>
+                </div>
+              ) : null}
 
               <section className="screen-nav">
                 <button
@@ -2059,72 +2132,26 @@ export default function SplitPayWebApp() {
                     <p className="eyebrow">Prehľad výletu</p>
                     <h2>Základné informácie</h2>
                   </div>
-                  <div className="stat-grid">
-                    <div className="stat-card">
+                  <div className="stat-grid overview-stat-grid">
+                    <div className="stat-card overview-stat-card">
                       <span>Členovia</span>
                       <strong>{members.length}</strong>
                     </div>
-                    <div className="stat-card">
+                    <div className="stat-card overview-stat-card">
                       <span>Výdavky</span>
                       <strong>{normalizedExpenses.length}</strong>
                     </div>
-                    <div className="stat-card">
+                    <div className="stat-card overview-stat-card">
                       <span>Pozvánky</span>
                       <strong>{currentTrip.pendingInvites.length}</strong>
                     </div>
-                    <div className="stat-card">
+                    <div className="stat-card overview-stat-card">
                       <span>Spolu minuté</span>
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
-                  {currentTripOwnerIsSelf ? (
-                    <div className="mini-panel owner-actions">
-                      <h3>Nastavenia</h3>
-                      <label className="field-block">
-                        <span>Názov výletu</span>
-                        <input
-                          type="text"
-                          value={currentTrip.name}
-                          onChange={(event) => updateTripSettings({ name: event.target.value })}
-                          placeholder="Názov výletu"
-                        />
-                      </label>
-                      <label className="field-block">
-                        <span>Mena</span>
-                        <select
-                          value={currentTrip.currency}
-                          onChange={(event) =>
-                            updateTripSettings({ currency: event.target.value as Trip['currency'] })
-                          }
-                        >
-                          <option value="EUR">EUR</option>
-                          <option value="USD">USD</option>
-                          <option value="CZK">CZK</option>
-                        </select>
-                      </label>
-                      <label className="field-block">
-                        <span>Farba</span>
-                        <input
-                          type="color"
-                          value={currentTrip.color}
-                          onChange={(event) => updateTripSettings({ color: event.target.value })}
-                        />
-                      </label>
-                      <label className="archived-toggle">
-                        <input
-                          type="checkbox"
-                          checked={currentTrip.archived}
-                          onChange={(event) => updateTripSettings({ archived: event.target.checked })}
-                        />
-                        Archivovať
-                      </label>
-                      <button type="button" className="ghost danger-btn" onClick={() => deleteTrip(currentTrip.id)}>
-                        Vymazať
-                      </button>
-                    </div>
-                  ) : null}
-                  <div className="screen-grid compact-grid">
-                    <div className="mini-panel">
+                  <div className="screen-grid compact-grid overview-compact-grid">
+                    <div className="mini-panel overview-mini-panel">
                       <h3>Členovia výletu</h3>
                       <div className="pill-list">
                         {members.map((name) => (
@@ -2134,12 +2161,12 @@ export default function SplitPayWebApp() {
                         ))}
                       </div>
                     </div>
-                    <div className="mini-panel">
+                    <div className="mini-panel overview-mini-panel">
                       <h3>Posledné výdavky</h3>
                       <div className="stack-list">
                         {recentExpenses.length === 0 ? <p className="muted">Zatiaľ žiadne záznamy.</p> : null}
                         {recentExpenses.map((expense) => (
-                          <div className="row" key={expense.id}>
+                          <div className="row overview-row" key={expense.id}>
                             <div>
                               <strong>{expense.title}</strong>
                               <p>Platil {expense.payer}</p>
@@ -2315,7 +2342,7 @@ export default function SplitPayWebApp() {
                       <p className="eyebrow">Výdavky</p>
                       <h2>Prehľad a história výdavkov</h2>
                     </div>
-                    <button type="button" className="primary-cta expense-open-modal-btn" onClick={openExpenseModalForCreate}>
+                    <button type="button" className="expense-open-modal-btn" onClick={openExpenseModalForCreate}>
                       + Pridať výdavok
                     </button>
                   </div>
