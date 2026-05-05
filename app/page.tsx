@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -37,6 +37,9 @@ type Trip = {
   name: string;
   date: string;
   owner: string;
+  currency: 'EUR' | 'USD' | 'CZK';
+  color: string;
+  archived: boolean;
   inviteCode: string;
   members: string[];
   expenses: TripExpense[];
@@ -53,12 +56,13 @@ type ExpenseDraft = {
 };
 
 type AppSession = {
+  userId: string;
   email: string;
   name: string;
   guest: boolean;
 };
 
-type AppScreen = 'trips' | 'trip-detail';
+type AppScreen = 'trips' | 'trip-detail' | 'admin';
 type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances';
 
 const DEFAULT_TRIP: Trip = {
@@ -66,6 +70,9 @@ const DEFAULT_TRIP: Trip = {
   name: 'Môj prvý výlet',
   date: 'Doplň dátum',
   owner: 'Ty',
+  currency: 'EUR',
+  color: '#2c79f6',
+  archived: false,
   inviteCode: 'DEMO01',
   members: ['Ty'],
   expenses: [],
@@ -78,10 +85,23 @@ function createTrip(name: string, date: string, owner: string = 'Ty'): Trip {
     name,
     date,
     owner,
+    currency: 'EUR',
+    color: '#2c79f6',
+    archived: false,
     inviteCode: makeInviteCode(),
     members: ['Ty'],
     expenses: [],
     pendingInvites: [],
+  };
+}
+
+function normalizeTrip(trip: Trip): Trip {
+  return {
+    ...trip,
+    owner: trip.owner || 'Ty',
+    currency: trip.currency || 'EUR',
+    color: trip.color || '#2c79f6',
+    archived: Boolean(trip.archived),
   };
 }
 
@@ -106,9 +126,10 @@ function readCachedSession() {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<AppSession>;
-    if (!parsed.email || !parsed.name) return null;
+    if (!parsed.userId || !parsed.email || !parsed.name) return null;
 
     return {
+      userId: parsed.userId,
       email: parsed.email,
       name: parsed.name,
       guest: Boolean(parsed.guest),
@@ -118,11 +139,12 @@ function readCachedSession() {
   }
 }
 
-function makeUserSession(email: string, fullName?: string | null): AppSession {
+function makeUserSession(userId: string, email: string, fullName?: string | null): AppSession {
   const normalizedEmail = email.trim().toLowerCase();
   const fallbackName = normalizedEmail.split('@')[0] || 'Pouzivatel';
 
   return {
+    userId,
     email: normalizedEmail,
     name: (fullName || '').trim() || fallbackName,
     guest: false,
@@ -151,6 +173,13 @@ export default function SplitPayWebApp() {
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [dbSyncMessage, setDbSyncMessage] = useState('');
+  const [visitsCount, setVisitsCount] = useState(0);
+  const [activeUsersCount, setActiveUsersCount] = useState(0);
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
@@ -161,6 +190,9 @@ export default function SplitPayWebApp() {
   });
 
   const supabase = getSupabaseBrowserClient();
+  const dbLoadedRef = useRef(false);
+  const skipFirstSaveRef = useRef(true);
+  const expenseCountRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowStartup(false), 3200);
@@ -180,8 +212,9 @@ export default function SplitPayWebApp() {
 
         const parsed = JSON.parse(raw) as { trips?: Trip[]; selectedTripId?: string };
         if (Array.isArray(parsed.trips) && parsed.trips.length > 0) {
-          setTrips(parsed.trips);
-          setSelectedTripId(parsed.selectedTripId || parsed.trips[0].id);
+          const normalized = parsed.trips.map((trip) => normalizeTrip(trip));
+          setTrips(normalized);
+          setSelectedTripId(parsed.selectedTripId || normalized[0].id);
         }
       } catch {
         // Ignore invalid local state and keep the deterministic fallback.
@@ -198,6 +231,7 @@ export default function SplitPayWebApp() {
     supabase.auth.getSession().then(({ data }) => {
       const nextSession = data.session?.user?.email
         ? makeUserSession(
+            data.session.user.id,
             data.session.user.email,
             typeof data.session.user.user_metadata?.full_name === 'string'
               ? data.session.user.user_metadata.full_name
@@ -212,6 +246,7 @@ export default function SplitPayWebApp() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextSession = session?.user?.email
         ? makeUserSession(
+            session.user.id,
             session.user.email,
             typeof session.user.user_metadata?.full_name === 'string'
               ? session.user.user_metadata.full_name
@@ -247,6 +282,148 @@ export default function SplitPayWebApp() {
 
     window.localStorage.removeItem(SESSION_CACHE_KEY);
   }, [appSession]);
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId || !authResolved || dbLoadedRef.current) return;
+    const supabaseClient = supabase;
+    const userId = appSession.userId;
+
+    let cancelled = false;
+
+    async function loadStateFromDb() {
+      const { data, error } = await supabaseClient
+        .from('trip_states')
+        .select('state_json')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        setDbSyncMessage('DB sync nie je ešte aktívny. Spúšťame lokálny režim.');
+        dbLoadedRef.current = true;
+        return;
+      }
+
+      const remote = data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null;
+      if (remote?.trips?.length) {
+        const normalized = remote.trips.map(normalizeTrip);
+        setTrips(normalized);
+        setSelectedTripId(remote.selectedTripId || normalized[0].id);
+        setDbSyncMessage('Výlety načítané z databázy.');
+      }
+
+      dbLoadedRef.current = true;
+    }
+
+    loadStateFromDb();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authResolved, appSession?.userId, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId || !dbLoadedRef.current) return;
+    const supabaseClient = supabase;
+    const userId = appSession.userId;
+    if (skipFirstSaveRef.current) {
+      skipFirstSaveRef.current = false;
+      return;
+    }
+
+    const payload = { trips, selectedTripId };
+    const timeoutId = window.setTimeout(async () => {
+      const { error } = await supabaseClient.from('trip_states').upsert({
+        user_id: userId,
+        state_json: payload,
+      });
+
+      if (!error) {
+        setDbSyncMessage('Zmeny uložené do databázy.');
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [appSession?.userId, selectedTripId, supabase, trips]);
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId) return;
+    const supabaseClient = supabase;
+    const userId = appSession.userId;
+    const userEmail = appSession.email;
+    const userName = appSession.name;
+
+    let cancelled = false;
+
+    async function trackUsageAndPresence() {
+      await supabaseClient.from('app_visits').insert({
+        user_id: userId,
+        user_email: userEmail,
+      });
+
+      await supabaseClient.from('user_presence').upsert({
+        user_id: userId,
+        user_email: userEmail,
+        user_name: userName,
+        last_seen: new Date().toISOString(),
+      });
+
+      if (cancelled) return;
+    }
+
+    trackUsageAndPresence();
+
+    const interval = window.setInterval(async () => {
+      await supabaseClient.from('user_presence').upsert({
+        user_id: userId,
+        user_email: userEmail,
+        user_name: userName,
+        last_seen: new Date().toISOString(),
+      });
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [appSession?.email, appSession?.name, appSession?.userId, supabase]);
+
+  const isAdmin = Boolean(
+    appSession?.email && process.env.NEXT_PUBLIC_ADMIN_EMAIL && appSession.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+  );
+
+  useEffect(() => {
+    if (!supabase || !isAdmin) return;
+    const supabaseClient = supabase;
+
+    let cancelled = false;
+
+    async function refreshAdminStats() {
+      const [visitsRes, presenceRes] = await Promise.all([
+        supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }),
+        supabaseClient.from('user_presence').select('last_seen'),
+      ]);
+
+      if (cancelled) return;
+
+      setVisitsCount(visitsRes.count || 0);
+
+      const now = Date.now();
+      const active = (presenceRes.data || []).filter((row) => {
+        const timestamp = new Date(row.last_seen).getTime();
+        return Number.isFinite(timestamp) && now - timestamp < 5 * 60 * 1000;
+      }).length;
+      setActiveUsersCount(active);
+    }
+
+    refreshAdminStats();
+    const interval = window.setInterval(refreshAdminStats, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [isAdmin, supabase]);
 
   async function handleEmailAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -413,6 +590,10 @@ export default function SplitPayWebApp() {
     setDetailScreen('overview');
   }
 
+  function goToAdmin() {
+    setAppScreen('admin');
+  }
+
   function handleCreateTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanedName = newTripName.trim();
@@ -426,6 +607,11 @@ export default function SplitPayWebApp() {
     setNewTripName('');
     setNewTripDate('');
     setInfoMessage(`Výlet ${trip.name} bol vytvorený.`);
+  }
+
+  function updateTripSettings(partial: Partial<Pick<Trip, 'currency' | 'color' | 'archived'>>) {
+    if (!currentTrip) return;
+    updateCurrentTrip((trip) => ({ ...trip, ...partial }));
   }
 
   function handleAddMember(event: FormEvent<HTMLFormElement>) {
@@ -623,7 +809,17 @@ export default function SplitPayWebApp() {
       participantWeights: normalizedWeights,
     };
 
-    updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
+    if (editingExpenseId) {
+      updateCurrentTrip((trip) => ({
+        ...trip,
+        expenses: trip.expenses.map((item) => (item.id === editingExpenseId ? { ...expense, id: editingExpenseId } : item)),
+      }));
+      setEditingExpenseId(null);
+      setInfoMessage('Transakcia bola upravená.');
+    } else {
+      updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
+    }
+
     setDraft((prev) => ({
       ...prev,
       title: '',
@@ -633,6 +829,23 @@ export default function SplitPayWebApp() {
     }));
   }
 
+  function editExpense(expenseId: string) {
+    if (!currentTrip) return;
+    const found = currentTrip.expenses.find((item) => item.id === expenseId);
+    if (!found) return;
+
+    setEditingExpenseId(expenseId);
+    setDraft({
+      title: found.title,
+      amount: String(found.amount),
+      payer: found.payer,
+      participants: found.participants,
+      splitType: found.splitType || 'equal',
+      participantWeights: found.participantWeights || {},
+    });
+    setDetailScreen('expenses');
+  }
+
   function removeExpense(expenseId: string) {
     updateCurrentTrip((trip) => ({
       ...trip,
@@ -640,8 +853,55 @@ export default function SplitPayWebApp() {
     }));
   }
 
+  async function toggleNotifications() {
+    if (typeof Notification === 'undefined') {
+      setInfoMessage('Tento prehliadač nepodporuje notifikácie.');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      setNotificationsEnabled((prev) => !prev);
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setNotificationsEnabled(permission === 'granted');
+    if (permission !== 'granted') {
+      setInfoMessage('Notifikácie neboli povolené.');
+    }
+  }
+
+  useEffect(() => {
+    if (!notificationsEnabled || !appSession) return;
+
+    const selfName = appSession.name;
+    trips.forEach((trip) => {
+      const previous = expenseCountRef.current[trip.id] ?? trip.expenses.length;
+      if (trip.expenses.length > previous) {
+        const newest = trip.expenses[0];
+        if (newest && newest.payer !== selfName && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification(`Nová transakcia v ${trip.name}`, {
+            body: `${newest.payer} pridal(a) výdavok ${newest.title} (${eur(newest.amount)})`,
+          });
+        }
+      }
+      expenseCountRef.current[trip.id] = trip.expenses.length;
+    });
+  }, [appSession, notificationsEnabled, trips]);
+
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = appScreen === 'trip-detail' && currentTrip;
+  const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
+
+  function money(value: number) {
+    const currency = currentTrip?.currency || 'EUR';
+    return new Intl.NumberFormat('sk-SK', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
 
   return (
     <>
@@ -748,7 +1008,56 @@ export default function SplitPayWebApp() {
         </main>
       ) : (
         <main className="page-wrap app-shell">
-          {!showTripDetail ? (
+          <div className="profile-fab-wrap">
+            <button type="button" className="profile-fab" onClick={() => setProfileOpen((prev) => !prev)}>
+              {(appSession?.name || 'U').slice(0, 1).toUpperCase()}
+            </button>
+            {profileOpen ? (
+              <section className="profile-menu section-card">
+                <h3>Môj profil</h3>
+                <p className="muted">{appSession?.name}</p>
+                <p className="muted">{appSession?.email}</p>
+                <button type="button" className="ghost" onClick={goToTripsHome}>Moje výlety</button>
+                {isAdmin ? <button type="button" className="ghost" onClick={goToAdmin}>Admin sekcia</button> : null}
+                <button type="button" className="ghost" onClick={toggleNotifications}>
+                  {notificationsEnabled ? 'Notifikácie: zapnuté' : 'Notifikácie: vypnuté'}
+                </button>
+                <button
+                  type="button"
+                  className="ghost danger-btn"
+                  onClick={() => setInfoMessage('Vymazanie účtu vyžaduje serverovú funkciu (service role).')}
+                >
+                  Vymazať účet
+                </button>
+                <button type="button" className="ghost" onClick={handleLogout}>Odhlásiť sa</button>
+              </section>
+            ) : null}
+          </div>
+
+          {dbSyncMessage ? <p className="info-banner">{dbSyncMessage}</p> : null}
+
+          {appScreen === 'admin' ? (
+            <section className="section-card full-window">
+              <div className="section-head compact-head">
+                <p className="eyebrow">Administrácia</p>
+                <h2>Prehľad aplikácie</h2>
+              </div>
+              <div className="stat-grid">
+                <div className="stat-card">
+                  <span>Počet návštev</span>
+                  <strong>{visitsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Aktívni používatelia (5 min)</span>
+                  <strong>{activeUsersCount}</strong>
+                </div>
+              </div>
+              <button type="button" className="ghost" onClick={goToTripsHome}>Späť do výletov</button>
+            </section>
+          ) : null}
+
+          {appScreen !== 'admin' ? (
+            !showTripDetail ? (
             <>
               <section className="hero hero-panel">
                 <div>
@@ -761,9 +1070,14 @@ export default function SplitPayWebApp() {
                 </div>
                 <div className="hero-actions">
                   <p className="muted">Prihlásený email: {appSession?.email}</p>
-                  <button type="button" className="ghost" onClick={handleLogout}>
-                    Odhlásiť
-                  </button>
+                  <label className="muted archived-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showArchived}
+                      onChange={(event) => setShowArchived(event.target.checked)}
+                    />
+                    Zobraziť archivované výlety
+                  </label>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
@@ -816,7 +1130,7 @@ export default function SplitPayWebApp() {
                   <h2>Moje výlety</h2>
                 </div>
                 <div className="trip-overview-list">
-                  {trips.map((trip) => {
+                  {visibleTrips.map((trip) => {
                     const tripBalances = computeBalances(trip.members, trip.expenses);
                     const tripTotal = trip.expenses.reduce((sum, expense) => sum + expense.amount, 0);
                     const userBalance = tripBalances[appSession?.name || 'Ty'] ?? 0;
@@ -828,7 +1142,7 @@ export default function SplitPayWebApp() {
                         className="trip-card-large"
                         onClick={() => openTrip(trip.id)}
                       >
-                        <div className="trip-card-cover" />
+                        <div className="trip-card-cover" style={{ backgroundColor: `${trip.color}22` }} />
                         <div className="trip-card-body">
                           <div className="trip-card-top">
                             <div>
@@ -836,13 +1150,15 @@ export default function SplitPayWebApp() {
                               <p>{trip.date}</p>
                             </div>
                             <span className={userBalance >= 0 ? 'positive trip-balance' : 'negative trip-balance'}>
-                              {eur(userBalance)}
+                              {money(userBalance)}
                             </span>
                           </div>
                           <div className="trip-card-meta">
                             <span>{trip.members.length} členov</span>
                             <span>{trip.expenses.length} výdavkov</span>
-                            <span>Spolu {eur(tripTotal)}</span>
+                            <span>Spolu {money(tripTotal)}</span>
+                            <span>{trip.currency}</span>
+                            {trip.archived ? <span>Archivované</span> : null}
                           </div>
                         </div>
                       </button>
@@ -866,9 +1182,6 @@ export default function SplitPayWebApp() {
                 </div>
                 <div className="hero-actions hero-actions-end">
                   <p className="muted">Kód výletu: {currentTrip.inviteCode}</p>
-                  <button type="button" className="ghost" onClick={handleLogout}>
-                    Odhlásiť
-                  </button>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
@@ -912,7 +1225,7 @@ export default function SplitPayWebApp() {
               </section>
 
               {detailScreen === 'overview' ? (
-                <section className="screen-window section-card screen-single">
+                <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Prehľad výletu</p>
                     <h2>Základné informácie</h2>
@@ -931,13 +1244,42 @@ export default function SplitPayWebApp() {
                       <strong>{currentTrip.pendingInvites.length}</strong>
                     </div>
                     <div className="stat-card">
-                      <span>Spolu minúté</span>
-                      <strong>{eur(totalSpent)}</strong>
+                      <span>Spolu minuté</span>
+                      <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
                   {currentTrip.owner === (appSession?.name || 'Ty') ? (
                     <div className="mini-panel owner-actions">
                       <h3>Správa výletu</h3>
+                      <label className="field-block">
+                        <span>Mena</span>
+                        <select
+                          value={currentTrip.currency}
+                          onChange={(event) =>
+                            updateTripSettings({ currency: event.target.value as Trip['currency'] })
+                          }
+                        >
+                          <option value="EUR">EUR</option>
+                          <option value="USD">USD</option>
+                          <option value="CZK">CZK</option>
+                        </select>
+                      </label>
+                      <label className="field-block">
+                        <span>Farba výletu</span>
+                        <input
+                          type="color"
+                          value={currentTrip.color}
+                          onChange={(event) => updateTripSettings({ color: event.target.value })}
+                        />
+                      </label>
+                      <label className="archived-toggle">
+                        <input
+                          type="checkbox"
+                          checked={currentTrip.archived}
+                          onChange={(event) => updateTripSettings({ archived: event.target.checked })}
+                        />
+                        Archivovať výlet
+                      </label>
                       <button type="button" className="ghost danger-btn" onClick={() => deleteTrip(currentTrip.id)}>
                         Vymazať výlet
                       </button>
@@ -964,7 +1306,7 @@ export default function SplitPayWebApp() {
                               <strong>{expense.title}</strong>
                               <p>Platil {expense.payer}</p>
                             </div>
-                            <strong>{eur(expense.amount)}</strong>
+                            <strong>{money(expense.amount)}</strong>
                           </div>
                         ))}
                       </div>
@@ -974,7 +1316,7 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {detailScreen === 'members' ? (
-                <section className="screen-window section-card screen-single">
+                <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Tím</p>
                     <h2>Členovia výletu</h2>
@@ -1037,7 +1379,7 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {detailScreen === 'invites' ? (
-                <section className="screen-window section-card screen-single">
+                <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Pozvanie</p>
                     <h2>Pozvánky a prístupy</h2>
@@ -1084,7 +1426,7 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {detailScreen === 'expenses' ? (
-                <section className="screen-window section-card screen-single">
+                <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Výdavky</p>
                     <h2>Pridať a spravovať výdavky</h2>
@@ -1166,8 +1508,13 @@ export default function SplitPayWebApp() {
                         </div>
 
                         <button type="submit" disabled={!canAddExpense}>
-                          Pridať výdavok
+                          {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
                         </button>
+                        {editingExpenseId ? (
+                          <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
+                            Zrušiť úpravu
+                          </button>
+                        ) : null}
                       </form>
                     </div>
 
@@ -1183,9 +1530,15 @@ export default function SplitPayWebApp() {
                                 Platil {expense.payer}, účastníci: {expense.participants.join(', ')}
                               </p>
                             </div>
-                            <button type="button" className="ghost" onClick={() => removeExpense(expense.id)}>
-                              {eur(expense.amount)}
-                            </button>
+                            <div className="expense-actions">
+                              <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
+                                Upraviť
+                              </button>
+                              <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
+                                Vymazať
+                              </button>
+                              <strong>{money(expense.amount)}</strong>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1195,7 +1548,7 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {detailScreen === 'balances' ? (
-                <section className="screen-window section-card screen-single">
+                <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
                     <p className="eyebrow">Bilancia</p>
                     <h2>Kto komu koľko dlží</h2>
@@ -1220,9 +1573,13 @@ export default function SplitPayWebApp() {
                         {settlements.map((transfer, index) => (
                           <div className="row" key={`${transfer.from}-${transfer.to}-${index}`}>
                             <span>
-                              {transfer.from} zaplatí {transfer.to}
+                              {transfer.to === (appSession?.name || 'Ty')
+                                ? `${transfer.from} zaplatí tebe`
+                                : transfer.from === (appSession?.name || 'Ty')
+                                  ? `Ty zaplatíš ${transfer.to}`
+                                  : `${transfer.from} zaplatí ${transfer.to}`}
                             </span>
-                            <strong>{eur(transfer.amount)}</strong>
+                            <strong>{money(transfer.amount)}</strong>
                           </div>
                         ))}
                       </div>
@@ -1231,7 +1588,8 @@ export default function SplitPayWebApp() {
                 </section>
               ) : null}
             </>
-          )}
+          )
+        ) : null}
         </main>
       )}
     </>

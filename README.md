@@ -41,6 +41,10 @@ cp .env.example .env.local
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_ADMIN_EMAIL` (email admina pre admin sekciu)
+
+4. V Supabase SQL Editore spusti obsah suboru `supabase/schema.sql`.
+Bez tohto kroku nebude fungovat DB ukladanie vyletov ani admin metriky.
 
 ## Spustenie
 
@@ -82,6 +86,13 @@ npm run build
 3. V Google Cloud Console nastav OAuth consent a callback URL zo Supabase:
 
 - `https://<project-ref>.supabase.co/auth/v1/callback`
+
+## Vlastny potvrdzovaci email
+
+Vlastny text potvrdenia registracie sa nastavuje v Supabase:
+
+1. Authentication -> Email Templates
+2. Confirm signup template uprav podla svojho brandingu
 
 ## Pred release over
 
