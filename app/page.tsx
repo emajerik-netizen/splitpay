@@ -1170,20 +1170,18 @@ export default function SplitPayWebApp() {
   }
 
   function shareViaEmail() {
-    if (!currentTrip) return;
-    const inviteUrl = `${window.location.origin}/trip/${currentTrip.inviteCode}`;
+    if (!currentTrip || !inviteJoinUrl) return;
     const subject = encodeURIComponent(`Pozvánka na výlet: ${currentTrip.name}`);
     const body = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz nižšie na prihlásenie a pridaj sa:\n${inviteUrl}\n\nTeším sa na teba!`
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz nižšie:\n${inviteJoinUrl}\n\nTeším sa na teba!`
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
   }
 
   function shareViaWhatsApp() {
-    if (!currentTrip) return;
-    const inviteUrl = `${window.location.origin}/trip/${currentTrip.inviteCode}`;
+    if (!currentTrip || !inviteJoinUrl) return;
     const text = encodeURIComponent(
-      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz na prihlásenie a pridaj sa:\n${inviteUrl}\n\nTeším sa na teba!`
+      `Ahoj!\n\nChcem ťa pozvať na môj výlet "${currentTrip.name}".\n\nKlikni na odkaz:\n${inviteJoinUrl}`
     );
     window.open(`https://wa.me/?text=${text}`);
   }
@@ -2390,143 +2388,7 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
 
-                  {showExpenseModal ? (
-                    <div className="modal-overlay" role="presentation" onClick={() => setShowExpenseModal(false)}>
-                      <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label="Pridať výdavok" onClick={(event) => event.stopPropagation()}>
-                        <div className="modal-head">
-                          <div>
-                            <p className="eyebrow">Výdavok</p>
-                            <h2>{editingExpenseId ? 'Upraviť výdavok' : 'Pridať výdavok'}</h2>
-                          </div>
-                          <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>Zavrieť</button>
-                        </div>
-                        <form className="stack" onSubmit={handleAddExpense}>
-                          <select
-                            value={draft.expenseType}
-                            onChange={(event) =>
-                              setDraft((prev) => ({
-                                ...prev,
-                                expenseType: event.target.value as ExpenseDraft['expenseType'],
-                              }))
-                            }
-                          >
-                            <option value="expense">Nový výdavok</option>
-                            <option value="transfer">Transfer (vyrovnanie)</option>
-                          </select>
-                          <input
-                            value={draft.title}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                            placeholder={
-                              draft.expenseType === 'transfer'
-                                ? 'Názov transferu (voliteľné)'
-                                : 'Názov výdavku'
-                            }
-                          />
-                          <input
-                            value={draft.amount}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
-                            inputMode="decimal"
-                            placeholder="Suma"
-                          />
-                          <select
-                            value={safePayer}
-                            onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}
-                          >
-                            {members.map((name) => (
-                              <option key={name} value={name}>
-                                {name}
-                              </option>
-                            ))}
-                          </select>
 
-                          {draft.expenseType === 'transfer' ? (
-                            <select
-                              value={safeTransferTo}
-                              onChange={(event) =>
-                                setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
-                              }
-                            >
-                              <option value="">Komu posielam</option>
-                              {members
-                                .filter((name) => name !== safePayer)
-                                .map((name) => (
-                                  <option key={name} value={name}>
-                                    {name}
-                                  </option>
-                                ))}
-                            </select>
-                          ) : (
-                            <>
-                              <div className="participants">
-                                {members.map((name) => {
-                                  const selected = safeParticipants.includes(name);
-                                  return (
-                                    <label key={name} className={selected ? 'participant active' : 'participant'}>
-                                      <input
-                                        type="checkbox"
-                                        checked={selected}
-                                        onChange={() => toggleParticipant(name)}
-                                      />
-                                      <span>{name}</span>
-                                      {draft.splitType === 'individual' && selected ? (
-                                        <input
-                                          className="weight"
-                                          inputMode="decimal"
-                                          value={String(draft.participantAmounts[name] || 0)}
-                                          onChange={(event) => {
-                                            const next = Number(event.target.value);
-                                            setDraft((prev) => ({
-                                              ...prev,
-                                              participantAmounts: {
-                                                ...prev.participantAmounts,
-                                                [name]: Number.isFinite(next) && next >= 0 ? next : 0,
-                                              },
-                                            }));
-                                          }}
-                                        />
-                                      ) : null}
-                                    </label>
-                                  );
-                                })}
-                              </div>
-
-                              <div className="split-switch">
-                                <button
-                                  type="button"
-                                  className={draft.splitType === 'equal' ? 'active' : ''}
-                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal', participants: members }))}
-                                >
-                                  Rovnomerne
-                                </button>
-                                <button
-                                  type="button"
-                                  className={draft.splitType === 'individual' ? 'active' : ''}
-                                  onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
-                                >
-                                  Individuálne
-                                </button>
-                              </div>
-
-                              {draft.splitType === 'individual' ? (
-                                <p className="muted">
-                                  Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
-                                </p>
-                              ) : null}
-                            </>
-                          )}
-
-                          <button type="submit" disabled={!canAddExpense}>
-                            {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
-                          </button>
-                          {editingExpenseId ? (
-                            <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
-                              Zrušiť úpravu
-                            </button>
-                          ) : null}
-                        </form>
-                      </section>
-                    </div>
-                  ) : null}
                 </section>
               ) : null}
 
@@ -2640,6 +2502,144 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
                 </section>
+              ) : null}
+
+              {showExpenseModal ? (
+                <div className="modal-overlay" role="presentation" onClick={() => setShowExpenseModal(false)}>
+                  <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label="Pridať výdavok" onClick={(event) => event.stopPropagation()}>
+                    <div className="modal-head">
+                      <div>
+                        <p className="eyebrow">Výdavok</p>
+                        <h2>{editingExpenseId ? 'Upraviť výdavok' : 'Pridať výdavok'}</h2>
+                      </div>
+                      <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>Zavrieť</button>
+                    </div>
+                    <form className="stack" onSubmit={handleAddExpense}>
+                      <select
+                        value={draft.expenseType}
+                        onChange={(event) =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            expenseType: event.target.value as ExpenseDraft['expenseType'],
+                          }))
+                        }
+                      >
+                        <option value="expense">Nový výdavok</option>
+                        <option value="transfer">Transfer (vyrovnanie)</option>
+                      </select>
+                      <input
+                        value={draft.title}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                        placeholder={
+                          draft.expenseType === 'transfer'
+                            ? 'Názov transferu (voliteľné)'
+                            : 'Názov výdavku'
+                        }
+                      />
+                      <input
+                        value={draft.amount}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
+                        inputMode="decimal"
+                        placeholder="Suma"
+                      />
+                      <select
+                        value={safePayer}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}
+                      >
+                        {members.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {draft.expenseType === 'transfer' ? (
+                        <select
+                          value={safeTransferTo}
+                          onChange={(event) =>
+                            setDraft((prev) => ({ ...prev, transferTo: event.target.value }))
+                          }
+                        >
+                          <option value="">Komu posielam</option>
+                          {members
+                            .filter((name) => name !== safePayer)
+                            .map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                        </select>
+                      ) : (
+                        <>
+                          <div className="participants">
+                            {members.map((name) => {
+                              const selected = safeParticipants.includes(name);
+                              return (
+                                <label key={name} className={selected ? 'participant active' : 'participant'}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => toggleParticipant(name)}
+                                  />
+                                  <span>{name}</span>
+                                  {draft.splitType === 'individual' && selected ? (
+                                    <input
+                                      className="weight"
+                                      inputMode="decimal"
+                                      value={String(draft.participantAmounts[name] || 0)}
+                                      onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        setDraft((prev) => ({
+                                          ...prev,
+                                          participantAmounts: {
+                                            ...prev.participantAmounts,
+                                            [name]: Number.isFinite(next) && next >= 0 ? next : 0,
+                                          },
+                                        }));
+                                      }}
+                                    />
+                                  ) : null}
+                                </label>
+                              );
+                            })}
+                          </div>
+
+                          <div className="split-switch">
+                            <button
+                              type="button"
+                              className={draft.splitType === 'equal' ? 'active' : ''}
+                              onClick={() => setDraft((prev) => ({ ...prev, splitType: 'equal', participants: members }))}
+                            >
+                              Rovnomerne
+                            </button>
+                            <button
+                              type="button"
+                              className={draft.splitType === 'individual' ? 'active' : ''}
+                              onClick={() => setDraft((prev) => ({ ...prev, splitType: 'individual' }))}
+                            >
+                              Individuálne
+                            </button>
+                          </div>
+
+                          {draft.splitType === 'individual' ? (
+                            <p className="muted">
+                              Súčet individuálnych súm: {money(individualTotal)} / Celkom: {money(amountNumber || 0)}
+                            </p>
+                          ) : null}
+                        </>
+                      )}
+
+                      <button type="submit" disabled={!canAddExpense}>
+                        {editingExpenseId ? 'Uložiť zmeny transakcie' : 'Pridať výdavok'}
+                      </button>
+                      {editingExpenseId ? (
+                        <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
+                          Zrušiť úpravu
+                        </button>
+                      ) : null}
+                    </form>
+                  </section>
+                </div>
               ) : null}
             </div>
           )
