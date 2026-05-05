@@ -333,6 +333,8 @@ const T = {
     notificationSendError: 'Chyba pri posielaní notifikácie:',
     newTransactionInTrip: 'Nová transakcia v',
     addedExpense: 'pridal(a) výdavok',
+    transactionUpdatedInTrip: 'Upravená transakcia v',
+    updatedExpense: 'upravil(a) výdavok',
     noDate: 'Bez dátumu',
     member1: '1 člen',
     membersPlural: 'členov',
@@ -593,6 +595,8 @@ const T = {
     notificationSendError: 'Error sending notification:',
     newTransactionInTrip: 'New transaction in',
     addedExpense: 'added expense',
+    transactionUpdatedInTrip: 'Updated transaction in',
+    updatedExpense: 'updated expense',
     noDate: 'No date',
     member1: '1 member',
     membersPlural: 'members',
@@ -879,7 +883,7 @@ export default function SplitPayWebApp() {
   const supabase = getSupabaseBrowserClient();
   const dbLoadedRef = useRef(false);
   const skipFirstSaveRef = useRef(true);
-  const expenseCountRef = useRef<Record<string, number>>({});
+  const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
@@ -2282,16 +2286,50 @@ export default function SplitPayWebApp() {
       return Boolean(normalizedSelfName) && normalizedName === normalizedSelfName;
     };
     trips.forEach((trip) => {
-      const previous = expenseCountRef.current[trip.id] ?? trip.expenses.length;
-      if (trip.expenses.length > previous) {
-        const newest = trip.expenses[0];
-        if (newest && newest.payer !== selfName && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification(`${langPack.newTransactionInTrip} ${trip.name}`, {
-            body: `${newest.payer} ${langPack.addedExpense} ${newest.title} (${eur(newest.amount)})`,
-          });
-        }
+      const previousExpenseSnapshot = expenseSnapshotRef.current[trip.id] || {};
+      const currentExpenseSnapshot: Record<string, string> = {};
+      trip.expenses.forEach((expense) => {
+        currentExpenseSnapshot[expense.id] = JSON.stringify({
+          title: expense.title,
+          amount: expense.amount,
+          payer: expense.payer,
+          participants: expense.participants,
+          expenseType: expense.expenseType,
+          transferTo: expense.transferTo,
+          splitType: expense.splitType,
+        });
+      });
+
+      const addedExpense = trip.expenses.find(
+        (expense) => !Object.prototype.hasOwnProperty.call(previousExpenseSnapshot, expense.id)
+      );
+      const updatedExpense = trip.expenses.find(
+        (expense) =>
+          Object.prototype.hasOwnProperty.call(previousExpenseSnapshot, expense.id) &&
+          previousExpenseSnapshot[expense.id] !== currentExpenseSnapshot[expense.id]
+      );
+
+      if (
+        addedExpense &&
+        !isSelf(addedExpense.payer) &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        new Notification(`${langPack.newTransactionInTrip} ${trip.name}`, {
+          body: `${addedExpense.payer} ${langPack.addedExpense} ${addedExpense.title} (${eur(addedExpense.amount)})`,
+        });
+      } else if (
+        updatedExpense &&
+        !isSelf(updatedExpense.payer) &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        new Notification(`${langPack.transactionUpdatedInTrip} ${trip.name}`, {
+          body: `${updatedExpense.payer} ${langPack.updatedExpense} ${updatedExpense.title} (${eur(updatedExpense.amount)})`,
+        });
       }
-      expenseCountRef.current[trip.id] = trip.expenses.length;
+
+      expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
 
       const previousMembers = memberSnapshotRef.current[trip.id] ?? trip.members;
       if (isSelf(trip.owner) && trip.members.length > previousMembers.length) {
