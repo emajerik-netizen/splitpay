@@ -172,6 +172,8 @@ const T = {
     ibanNotSet: 'IBAN nie je zadaný.',
     ibanCopied: 'IBAN bol skopírovaný.',
     contactSupport: 'Kontaktovať podporu',
+    supportAuthor: 'Podporiť autora',
+    openRevolutProfile: 'Otvoriť Revolut profil',
     guideBtn: 'Návod',
     guideTitle: 'Ako pridať aplikáciu na plochu',
     guideIntro: 'Vyber zariadenie a postupuj podľa krokov. Aplikácia sa potom otvorí ako samostatná appka.',
@@ -504,6 +506,8 @@ const T = {
     ibanNotSet: 'IBAN is not set.',
     ibanCopied: 'IBAN copied.',
     contactSupport: 'Contact Support',
+    supportAuthor: 'Support author',
+    openRevolutProfile: 'Open Revolut profile',
     guideBtn: 'Guide',
     guideTitle: 'How to add app to home screen',
     guideIntro: 'Choose your device and follow the steps. The app will then open like a standalone app.',
@@ -4397,16 +4401,28 @@ export default function SplitPayWebApp() {
                 >
                   {t('contactSupport')}
                 </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => {
+                    setGuidePlatform('ios');
+                    setShowGuideModal(true);
+                    setProfileOpen(false);
+                  }}
+                >
+                  {t('guideBtn')}
+                </button>
+                <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
                 <div className="support-author-section profile-support-section">
                   <details className="support-details">
-                    <summary className="support-summary">💙 Support author</summary>
+                    <summary className="support-summary">💙 {t('supportAuthor')}</summary>
                     <div className="support-details-content">
                       <a
                         href="https://revolut.me/eugen4w4e"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="support-qr-link"
-                        title="Open Revolut profile"
+                        title={t('openRevolutProfile')}
                       >
                         <QRCodeSVG
                           value="https://revolut.me/eugen4w4e"
@@ -4428,18 +4444,6 @@ export default function SplitPayWebApp() {
                     </div>
                   </details>
                 </div>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => {
-                    setGuidePlatform('ios');
-                    setShowGuideModal(true);
-                    setProfileOpen(false);
-                  }}
-                >
-                  {t('guideBtn')}
-                </button>
-                  <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
                   <div className="lang-picker">
                     <span className="lang-picker-label">{t('language')}</span>
                     <div className="lang-picker-flags">
