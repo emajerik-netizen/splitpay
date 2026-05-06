@@ -107,7 +107,7 @@ create policy "trip_states_select_own"
   on public.trip_states
   for select
   to authenticated
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id or public.is_admin(auth.uid()));
 
 drop policy if exists "trip_states_upsert_own" on public.trip_states;
 create policy "trip_states_upsert_own"

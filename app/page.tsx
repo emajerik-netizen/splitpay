@@ -865,6 +865,17 @@ type TopUser = {
   visits: number;
 };
 
+type AdminTripStateRow = {
+  user_id: string;
+  state_json: { trips?: Trip[]; selectedTripId?: string } | null;
+  updated_at?: string;
+};
+
+type AdminTripSummary = Trip & {
+  sourceUserId: string;
+  updatedAt: string;
+};
+
 type MemberAddNotification = {
   id: string;
   target_user_id: string;
@@ -1125,6 +1136,7 @@ export default function SplitPayWebApp() {
   const [adminPresence, setAdminPresence] = useState<AdminPresenceRow[]>([]);
   const [recentVisits, setRecentVisits] = useState<AdminVisitRow[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+  const [adminTrips, setAdminTrips] = useState<AdminTripSummary[]>([]);
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
@@ -1832,6 +1844,7 @@ export default function SplitPayWebApp() {
         presenceRes,
         rolesRes,
         tripsRes,
+        tripStatesRes,
         recentRes,
         recentForTopRes,
       ] = await Promise.all([
@@ -1840,6 +1853,7 @@ export default function SplitPayWebApp() {
         supabaseClient.from('user_presence').select('user_id, user_email, user_name, last_seen').order('last_seen', { ascending: false }).limit(100),
         supabaseClient.from('user_roles').select('user_id, role'),
         supabaseClient.from('trip_states').select('user_id', { count: 'exact', head: true }),
+        supabaseClient.from('trip_states').select('user_id, state_json, updated_at').order('updated_at', { ascending: false }).limit(1000),
         supabaseClient.from('app_visits').select('id, user_email, visited_at').order('visited_at', { ascending: false }).limit(250),
         supabaseClient.from('app_visits').select('user_email, visited_at').order('visited_at', { ascending: false }).limit(500),
       ]);
@@ -1849,6 +1863,42 @@ export default function SplitPayWebApp() {
       setVisitsCount(visitsRes.count || 0);
       setVisits24hCount(visits24Res.count || 0);
       setTotalTripsStored(tripsRes.count || 0);
+
+      const dedupedTrips = new Map<string, AdminTripSummary>();
+      ((tripStatesRes.data || []) as AdminTripStateRow[]).forEach((row) => {
+        const tripsInState = row.state_json?.trips || [];
+        tripsInState.forEach((trip) => {
+          const normalized = normalizeTrip(trip);
+          const dedupeKey = (normalized.inviteCode || '').trim().toUpperCase() || normalized.id;
+          if (!dedupeKey) return;
+
+          const candidate: AdminTripSummary = {
+            ...normalized,
+            sourceUserId: row.user_id,
+            updatedAt: row.updated_at || '',
+          };
+
+          const existing = dedupedTrips.get(dedupeKey);
+          if (!existing) {
+            dedupedTrips.set(dedupeKey, candidate);
+            return;
+          }
+
+          const existingTs = new Date(existing.updatedAt || 0).getTime();
+          const candidateTs = new Date(candidate.updatedAt || 0).getTime();
+          if (candidateTs >= existingTs) {
+            dedupedTrips.set(dedupeKey, candidate);
+          }
+        });
+      });
+
+      setAdminTrips(
+        [...dedupedTrips.values()].sort((left, right) => {
+          const leftTs = new Date(left.updatedAt || 0).getTime();
+          const rightTs = new Date(right.updatedAt || 0).getTime();
+          return rightTs - leftTs;
+        })
+      );
 
       const rawPresenceRows = (presenceRes.data || []) as AdminPresenceRow[];
       const roleMap = new Map((rolesRes.data || []).map((role) => [role.user_id, role.role as AdminRole]));
@@ -4416,24 +4466,17 @@ export default function SplitPayWebApp() {
                 <div className="mini-panel">
                   <h3>{t('activeTrips')}</h3>
                   <div className="stack-list">
-                    {trips.filter((t) => !t.archived).length === 0 ? (
+                    {adminTrips.filter((t) => !t.archived).length === 0 ? (
                       <p className="muted">{t('noActiveTrips')}</p>
                     ) : null}
-                    {trips
+                    {adminTrips
                       .filter((t) => !t.archived)
                       .map((trip) => (
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length, lang)}</p>
+                            <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
                           </div>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() => openTrip(trip.id, 'overview')}
-                          >
-                            {t('openBtn')}
-                          </button>
                         </div>
                       ))}
                   </div>
@@ -4442,24 +4485,17 @@ export default function SplitPayWebApp() {
                 <div className="mini-panel">
                   <h3>{t('archivedTrips')}</h3>
                   <div className="stack-list">
-                    {trips.filter((t) => t.archived).length === 0 ? (
+                    {adminTrips.filter((t) => t.archived).length === 0 ? (
                       <p className="muted">{t('noArchivedTrips')}</p>
                     ) : null}
-                    {trips
+                    {adminTrips
                       .filter((t) => t.archived)
                       .map((trip) => (
                         <div className="row" key={trip.id}>
                           <div>
                             <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length, lang)}</p>
+                            <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
                           </div>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() => openTrip(trip.id, 'overview')}
-                          >
-                            {t('openBtn')}
-                          </button>
                         </div>
                       ))}
                   </div>
