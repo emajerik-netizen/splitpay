@@ -984,11 +984,13 @@ export default function SplitPayWebApp() {
   const supabase = getSupabaseBrowserClient();
   const dbLoadedRef = useRef(false);
   const skipFirstSaveRef = useRef(true);
+  const skipNextSaveRef = useRef(false);
   const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
+  const latestLocalStateRef = useRef('');
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
 
@@ -1217,6 +1219,10 @@ export default function SplitPayWebApp() {
   }, [trips, selectedTripId]);
 
   useEffect(() => {
+    latestLocalStateRef.current = JSON.stringify({ trips, selectedTripId });
+  }, [trips, selectedTripId]);
+
+  useEffect(() => {
     if (appSession) {
       window.localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(appSession));
       return;
@@ -1299,6 +1305,10 @@ export default function SplitPayWebApp() {
     if (!supabase || !appSession?.userId || !dbLoadedRef.current) return;
     const supabaseClient = supabase;
     const userId = appSession.userId;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     if (skipFirstSaveRef.current) {
       skipFirstSaveRef.current = false;
       return;
@@ -1314,6 +1324,73 @@ export default function SplitPayWebApp() {
 
     return () => window.clearTimeout(timeoutId);
   }, [appSession?.userId, selectedTripId, supabase, trips]);
+
+  useEffect(() => {
+    if (!supabase || !authResolved || !appSession?.userId || !dbLoadedRef.current) return;
+
+    const supabaseClient = supabase;
+    const userId = appSession.userId;
+    let cancelled = false;
+
+    const applyRemoteState = (remote: { trips?: Trip[]; selectedTripId?: string } | null) => {
+      const sanitized = sanitizeLoadedState(remote || {});
+      const remoteSerialized = JSON.stringify({
+        trips: sanitized.trips,
+        selectedTripId: sanitized.selectedTripId,
+      });
+
+      if (remoteSerialized === latestLocalStateRef.current) return;
+
+      skipNextSaveRef.current = true;
+      setTrips(sanitized.trips);
+      setSelectedTripId(sanitized.selectedTripId);
+    };
+
+    const refreshFromDb = async () => {
+      const { data, error } = await supabaseClient
+        .from('trip_states')
+        .select('state_json')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (cancelled || error) return;
+      applyRemoteState((data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null) || null);
+    };
+
+    const channel = supabaseClient
+      .channel(`trip-state-sync-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trip_states',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void refreshFromDb();
+        }
+      )
+      .subscribe();
+
+    const interval = window.setInterval(() => {
+      void refreshFromDb();
+    }, 5000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshFromDb();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      void supabaseClient.removeChannel(channel);
+    };
+  }, [appSession?.userId, authResolved, supabase]);
 
   useEffect(() => {
     if (!supabase || !appSession?.userId) return;
