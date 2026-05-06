@@ -272,8 +272,10 @@ const T = {
     receivesTotal: 'dostane spolu',
     paysTotal: 'zaplatí spolu',
     fewestTransfers: 'Najmenej prevodov na vyrovnanie',
+    settlementsTitle: 'Odporúčané vyrovnania',
+    settlementAction: 'pošle',
     allSettled: 'Všetko je vyrovnané.',
-    balanceTip: 'Pošli kamarátom svoje číslo účtu alebo vyrovnajte v hotovosti.',
+    balanceTip: 'Pošli kamarátom IBAN alebo sa vyrovnajte v hotovosti.',
     expenseModalEyebrow: 'Výdavok',
     editExpenseTitle: 'Upraviť výdavok',
     addExpenseTitle: 'Pridať výdavok',
@@ -578,8 +580,10 @@ const T = {
     receivesTotal: 'receives in total',
     paysTotal: 'pays in total',
     fewestTransfers: 'Fewest transfers to settle',
+    settlementsTitle: 'Recommended settlements',
+    settlementAction: 'sends',
     allSettled: 'Everything is settled.',
-    balanceTip: 'Share your bank account number or settle in cash.',
+    balanceTip: 'Share your IBAN or settle in cash.',
     expenseModalEyebrow: 'Expense',
     editExpenseTitle: 'Edit Expense',
     addExpenseTitle: 'Add Expense',
@@ -1044,7 +1048,7 @@ export default function SplitPayWebApp() {
     return Notification.permission === 'granted';
   });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [balanceTab, setBalanceTab] = useState<'all' | 'settlements'>('settlements');
+  const [balanceTab, setBalanceTab] = useState<'all' | 'settlements'>('all');
   const [invitePendingCode, setInvitePendingCode] = useState<string | null>(null);
   const [inviteTrip, setInviteTrip] = useState<{ tripId: string; tripName: string; slots: string[] } | null>(null);
   const [inviteChosenSlot, setInviteChosenSlot] = useState('');
@@ -2461,6 +2465,7 @@ export default function SplitPayWebApp() {
   const selfBalance = appSession?.name
     ? (balances[appSession.name] ?? balances.Ty ?? 0)
     : (balances.Ty ?? 0);
+  const safeSelfBalance = Number.isFinite(selfBalance) ? selfBalance : 0;
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
@@ -4734,6 +4739,7 @@ export default function SplitPayWebApp() {
 
                         <div className="stack-list balance-transfer-list">
                           {Object.entries(balances).map(([name, value]) => {
+                            if (!Number.isFinite(value)) return null;
                             if (Math.abs(value) < 0.01) return null;
                             const displayName = formatMemberName(name);
                             return (
@@ -4754,10 +4760,10 @@ export default function SplitPayWebApp() {
 
                         <div className="balance-total-card">
                           <p>
-                              {selfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
+                              {safeSelfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
                           </p>
-                          <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
-                            {eur(Math.abs(selfBalance))}
+                          <strong className={safeSelfBalance >= 0 ? 'positive' : 'negative'}>
+                            {eur(Math.abs(safeSelfBalance))}
                           </strong>
                         </div>
                       </div>
@@ -4765,7 +4771,7 @@ export default function SplitPayWebApp() {
 
                     {balanceTab === 'settlements' ? (
                       <div className="balance-main-card">
-                          <h3>{t('balanceTitle')}</h3>
+                          <h3>{t('settlementsTitle')}</h3>
                           <p className="muted balance-subtitle">{t('fewestTransfers')}</p>
 
                           {settlements.length === 0 ? <p className="muted">{t('allSettled')}</p> : null}
@@ -4780,8 +4786,8 @@ export default function SplitPayWebApp() {
                                 <span className="balance-person">{fromName}</span>
                                 <span className="balance-arrow" aria-hidden="true">→</span>
                                 <span className="balance-target">
-                                  <span className="balance-avatar">{toName.slice(0, 1).toUpperCase()}</span>
-                                  {toName}
+                                  <span className="balance-avatar">€</span>
+                                  {t('settlementAction')} {toName}
                                 </span>
                                 <strong className="balance-amount">{money(transfer.amount)}</strong>
                               </div>
@@ -4791,10 +4797,10 @@ export default function SplitPayWebApp() {
 
                         <div className="balance-total-card">
                           <p>
-                              {selfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
+                              {safeSelfBalance >= 0 ? `${displayCurrentUserName} ${t('receivesTotal')}` : `${displayCurrentUserName} ${t('paysTotal')}`}
                           </p>
-                          <strong className={selfBalance >= 0 ? 'positive' : 'negative'}>
-                            {eur(Math.abs(selfBalance))}
+                          <strong className={safeSelfBalance >= 0 ? 'positive' : 'negative'}>
+                            {eur(Math.abs(safeSelfBalance))}
                           </strong>
                         </div>
                       </div>
