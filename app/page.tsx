@@ -4992,16 +4992,8 @@ export default function SplitPayWebApp() {
                   </div>
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
-                        <span>{t('membersLabel')}</span>
-                      <strong>{members.length}</strong>
-                    </div>
-                    <div className="stat-card overview-stat-card">
                         <span>{t('expensesLabel')}</span>
                       <strong>{normalizedExpenses.length}</strong>
-                    </div>
-                    <div className="stat-card overview-stat-card">
-                        <span>{t('invitesLabel')}</span>
-                      <strong>{currentTrip.pendingInvites.length}</strong>
                     </div>
                     <div className="stat-card overview-stat-card">
                         <span>{t('totalSpent')}</span>
@@ -5009,32 +5001,6 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
                   <div className="screen-grid compact-grid overview-compact-grid">
-                    <div className="mini-panel overview-mini-panel">
-                        <h3>{t('tripMembers')}</h3>
-                      <div className="member-avatar-list" ref={memberAvatarListRef}>
-                        {members.map((name) => (
-                          <button
-                            key={name}
-                            type="button"
-                            className="member-avatar-bubble"
-                            onClick={() => openMemberProfile(name)}
-                            title={formatMemberName(name)}
-                          >
-                            {getInitials(name)}
-                          </button>
-                        ))}
-                        {showAllMembersOverflow && (
-                          <button
-                            type="button"
-                            className="member-show-all-btn"
-                            onClick={() => openTrip(currentTrip.id, 'members')}
-                            title={t('showMoreExpenses')}
-                          >
-                            {t('showMoreExpenses')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
                     <div className="mini-panel overview-mini-panel">
                         <h3>{t('recentExpenses')}</h3>
                       <div className="stack-list">
