@@ -69,6 +69,32 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
 }
 
+function normalizeIban(value: string) {
+  return value.replace(/\s+/g, '').toUpperCase();
+}
+
+function formatIbanForDisplay(value: string) {
+  const normalized = normalizeIban(value);
+  return normalized.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function isValidIban(value: string) {
+  const normalized = normalizeIban(value);
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(normalized)) return false;
+
+  const rearranged = normalized.slice(4) + normalized.slice(0, 4);
+  let remainder = 0;
+
+  for (const ch of rearranged) {
+    const expanded = ch >= 'A' && ch <= 'Z' ? String(ch.charCodeAt(0) - 55) : ch;
+    for (const digit of expanded) {
+      remainder = (remainder * 10 + Number(digit)) % 97;
+    }
+  }
+
+  return remainder === 1;
+}
+
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
@@ -123,6 +149,7 @@ const T = {
     ibanPlaceholder: 'SKxx xxxx xxxx xxxx xxxx xxxx',
     saveIbanBtn: 'Uložiť IBAN',
     ibanSaved: 'IBAN bol uložený.',
+    ibanInvalid: 'Neplatný IBAN. Skontrolujte formát.',
     memberProfileTitle: 'Profil člena',
     profileNotFound: 'Profil člena zatiaľ neexistuje.',
     copyIbanBtn: 'Kopírovať IBAN',
@@ -424,6 +451,7 @@ const T = {
     ibanPlaceholder: 'SKxx xxxx xxxx xxxx xxxx xxxx',
     saveIbanBtn: 'Save IBAN',
     ibanSaved: 'IBAN was saved.',
+    ibanInvalid: 'Invalid IBAN. Please check the format.',
     memberProfileTitle: 'Member profile',
     profileNotFound: 'Member profile does not exist yet.',
     copyIbanBtn: 'Copy IBAN',
@@ -1135,7 +1163,7 @@ export default function SplitPayWebApp() {
         .maybeSingle();
 
       if (cancelled) return;
-      setSelfIban((data?.iban as string | undefined) || '');
+      setSelfIban(formatIbanForDisplay((data?.iban as string | undefined) || ''));
     };
 
     loadSelfProfile();
@@ -2529,15 +2557,22 @@ export default function SplitPayWebApp() {
   async function saveSelfIban() {
     if (!supabase || !appSession?.userId) return;
 
+    const normalizedIban = normalizeIban(selfIban);
+    if (normalizedIban && !isValidIban(normalizedIban)) {
+      setInfoMessage(t('ibanInvalid'));
+      return;
+    }
+
     setSavingIban(true);
     try {
       await supabase.from('user_profiles').upsert({
         user_id: appSession.userId,
         user_name: appSession.name,
         user_email: appSession.email,
-        iban: selfIban.trim(),
+        iban: normalizedIban,
         updated_at: new Date().toISOString(),
       });
+      setSelfIban(formatIbanForDisplay(normalizedIban));
       setInfoMessage(t('ibanSaved'));
     } finally {
       setSavingIban(false);
