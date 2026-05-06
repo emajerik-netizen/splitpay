@@ -172,6 +172,19 @@ const T = {
     ibanNotSet: 'IBAN nie je zadaný.',
     ibanCopied: 'IBAN bol skopírovaný.',
     contactSupport: 'Kontaktovať podporu',
+    guideBtn: 'Návod',
+    guideTitle: 'Ako pridať aplikáciu na plochu',
+    guideIntro: 'Vyber zariadenie a postupuj podľa krokov. Aplikácia sa potom otvorí ako samostatná appka.',
+    guideIosBtn: 'iOS',
+    guideAndroidBtn: 'Android',
+    guideStep1Ios: 'V Safari otvor Split Pay.',
+    guideStep2Ios: 'Ťukni na Zdieľať (ikona štvorca so šípkou nahor).',
+    guideStep3Ios: 'Zvoľ Pridať na plochu.',
+    guideStep4Ios: 'Potvrď názov a ťukni Pridať.',
+    guideStep1Android: 'V Chrome otvor Split Pay.',
+    guideStep2Android: 'Ťukni na menu (tri bodky vpravo hore).',
+    guideStep3Android: 'Zvoľ Pridať na plochu alebo Inštalovať aplikáciu.',
+    guideStep4Android: 'Potvrď voľbu Pridať/Inštalovať.',
     supportSubject: 'Predmet',
     supportMessage: 'Správa',
     supportMessagePlaceholder: 'Napíš, s čím potrebuješ pomôcť...',
@@ -490,6 +503,19 @@ const T = {
     ibanNotSet: 'IBAN is not set.',
     ibanCopied: 'IBAN copied.',
     contactSupport: 'Contact Support',
+    guideBtn: 'Guide',
+    guideTitle: 'How to add app to home screen',
+    guideIntro: 'Choose your device and follow the steps. The app will then open like a standalone app.',
+    guideIosBtn: 'iOS',
+    guideAndroidBtn: 'Android',
+    guideStep1Ios: 'Open Split Pay in Safari.',
+    guideStep2Ios: 'Tap Share (square icon with arrow up).',
+    guideStep3Ios: 'Choose Add to Home Screen.',
+    guideStep4Ios: 'Confirm the name and tap Add.',
+    guideStep1Android: 'Open Split Pay in Chrome.',
+    guideStep2Android: 'Tap menu (three dots in the top-right).',
+    guideStep3Android: 'Choose Add to Home screen or Install app.',
+    guideStep4Android: 'Confirm Add/Install.',
     supportSubject: 'Subject',
     supportMessage: 'Message',
     supportMessagePlaceholder: 'Describe what you need help with...',
@@ -1108,6 +1134,8 @@ export default function SplitPayWebApp() {
   const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
   const [staleTripWarning, setStaleTripWarning] = useState<StaleTripWarning | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [guidePlatform, setGuidePlatform] = useState<'ios' | 'android'>('ios');
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
@@ -2702,7 +2730,7 @@ export default function SplitPayWebApp() {
   }, [authResolved, dbLoadTick, appSession?.userId, invitePendingCode]);
 
   useEffect(() => {
-    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showExpenseDetailModal && !showTripSettingsModal) return;
+    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showExpenseDetailModal && !showTripSettingsModal && !showGuideModal) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -2711,11 +2739,12 @@ export default function SplitPayWebApp() {
       setShowExpenseModal(false);
       closeExpenseDetail();
       setShowTripSettingsModal(false);
+      setShowGuideModal(false);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showExpenseDetailModal, showTripSettingsModal]);
+  }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showExpenseDetailModal, showTripSettingsModal, showGuideModal]);
 
   useEffect(() => {
     if (!showJoinTripModal) return;
@@ -4305,6 +4334,17 @@ export default function SplitPayWebApp() {
                 >
                   {t('contactSupport')}
                 </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => {
+                    setGuidePlatform('ios');
+                    setShowGuideModal(true);
+                    setProfileOpen(false);
+                  }}
+                >
+                  {t('guideBtn')}
+                </button>
                   <button type="button" className="ghost" onClick={handleLogout}>{t('signOut')}</button>
                   <div className="lang-picker">
                     <span className="lang-picker-label">{t('language')}</span>
@@ -5719,6 +5759,69 @@ export default function SplitPayWebApp() {
                 {supportSending ? t('supportSending') : t('supportSend')}
               </button>
             </form>
+          </section>
+        </div>
+      ) : null}
+
+      {showGuideModal ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setShowGuideModal(false)}>
+          <section
+            className="section-card modal-card support-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('guideTitle')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">{t('guideBtn')}</p>
+                <h2>{t('guideTitle')}</h2>
+              </div>
+              <button type="button" className="ghost" onClick={() => setShowGuideModal(false)}>{t('close')}</button>
+            </div>
+
+            <p className="muted">{t('guideIntro')}</p>
+
+            <div className="guide-platform-switch" role="tablist" aria-label={t('guideTitle')}>
+              <button
+                type="button"
+                className={`guide-platform-btn${guidePlatform === 'ios' ? ' active' : ''}`}
+                onClick={() => setGuidePlatform('ios')}
+                role="tab"
+                aria-selected={guidePlatform === 'ios'}
+              >
+                <span aria-hidden="true">🍎</span>
+                <span>{t('guideIosBtn')}</span>
+              </button>
+              <button
+                type="button"
+                className={`guide-platform-btn${guidePlatform === 'android' ? ' active' : ''}`}
+                onClick={() => setGuidePlatform('android')}
+                role="tab"
+                aria-selected={guidePlatform === 'android'}
+              >
+                <span aria-hidden="true">🤖</span>
+                <span>{t('guideAndroidBtn')}</span>
+              </button>
+            </div>
+
+            <ol className="guide-steps">
+              {guidePlatform === 'ios' ? (
+                <>
+                  <li>{t('guideStep1Ios')}</li>
+                  <li>{t('guideStep2Ios')}</li>
+                  <li>{t('guideStep3Ios')}</li>
+                  <li>{t('guideStep4Ios')}</li>
+                </>
+              ) : (
+                <>
+                  <li>{t('guideStep1Android')}</li>
+                  <li>{t('guideStep2Android')}</li>
+                  <li>{t('guideStep3Android')}</li>
+                  <li>{t('guideStep4Android')}</li>
+                </>
+              )}
+            </ol>
           </section>
         </div>
       ) : null}

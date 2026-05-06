@@ -2594,6 +2594,45 @@ button:disabled {
   width: min(34rem, 100%);
 }
 
+.guide-platform-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.guide-platform-btn {
+  min-height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
+.guide-platform-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 60%, #fff);
+  box-shadow: 0 0 0 2px rgba(44, 121, 246, 0.16);
+}
+
+.guide-steps {
+  margin: 0.85rem 0 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.guide-steps li {
+  color: var(--text);
+  line-height: 1.35;
+}
+
 .support-form textarea {
   width: 100%;
   border: 1px solid var(--stroke);
