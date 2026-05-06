@@ -2875,7 +2875,7 @@ export default function SplitPayWebApp() {
     window.open(`sms:?body=${text}`);
   }
 
-  function handleJoinByCode(event: FormEvent<HTMLFormElement>) {
+  async function handleJoinByCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanedName = joinName.trim();
     const cleanedCode = joinCode.trim().toUpperCase();
@@ -2927,7 +2927,87 @@ export default function SplitPayWebApp() {
     );
 
     if (!foundTripId) {
-      setInfoMessage(t('invalidCode'));
+      if (!supabase || !appSession) {
+        setInfoMessage(t('invalidCode'));
+        return;
+      }
+
+      // Fallback to server-side join for trips owned by other users.
+      const { data } = (await supabase.rpc('join_trip_by_invite_code', {
+        p_invite_code: cleanedCode,
+        p_member_name: cleanedName,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      })) as unknown as { data: Record<string, any> };
+
+      if (data?.error === 'name_taken') {
+        setInfoMessage(`${cleanedName} ${t('nameAlreadyInGroup')}`);
+        return;
+      }
+
+      if (!data?.success || !data?.trip) {
+        setInfoMessage(t('invalidCode'));
+        return;
+      }
+
+      let normalized = normalizeTrip(data.trip as Trip);
+      const registrationName = (appSession.name || '').trim();
+      const effectiveName = registrationName || cleanedName;
+
+      const remapName = (n: string) => {
+        if (n === cleanedName) return effectiveName;
+        if (n.toLowerCase() === 'ty') return null;
+        if (n === effectiveName) return null;
+        return n;
+      };
+
+      const remapMembers = (members: string[]) => {
+        const result: string[] = [];
+        let addedSelf = false;
+        for (const m of members) {
+          const mapped = remapName(m);
+          if (mapped === null) {
+            if (!addedSelf && m === cleanedName) {
+              result.push(effectiveName);
+              addedSelf = true;
+            }
+            continue;
+          }
+          if (mapped === effectiveName) {
+            if (!addedSelf) {
+              result.push(effectiveName);
+              addedSelf = true;
+            }
+            continue;
+          }
+          result.push(mapped);
+        }
+        if (!addedSelf) result.push(effectiveName);
+        return result;
+      };
+
+      normalized = {
+        ...normalized,
+        members: remapMembers(normalized.members),
+        expenses: normalized.expenses.map((exp) => ({
+          ...exp,
+          payer: remapName(exp.payer) ?? effectiveName,
+          participants: exp.participants
+            .map((p) => remapName(p))
+            .filter((p): p is string => p !== null)
+            .filter((p, i, arr) => arr.indexOf(p) === i),
+        })),
+        pendingInvites: normalized.pendingInvites.map((inv) => ({
+          ...inv,
+          name: inv.name === cleanedName ? effectiveName : inv.name,
+        })),
+      };
+
+      setTrips((prev) => [...prev.filter((trip) => trip.id !== normalized.id), normalized]);
+      openTrip(data.tripId, 'overview');
+      setJoinName('');
+      setJoinCode('');
+      setShowJoinTripModal(false);
+      setInfoMessage(`${effectiveName} ${t('joinedTripInfo')}`);
       return;
     }
 
