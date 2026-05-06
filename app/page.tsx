@@ -1493,7 +1493,22 @@ export default function SplitPayWebApp() {
       return;
     }
 
+    let resolved = false;
+
+    // Safety timeout — if Supabase never responds (offline / token refresh hangs),
+    // unblock the app after 4 seconds so users aren't stuck on the loading screen.
+    const safetyTimer = window.setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        setAuthResolved(true);
+      }
+    }, 4000);
+
     supabase.auth.getSession().then(({ data }) => {
+      if (!resolved) {
+        resolved = true;
+        window.clearTimeout(safetyTimer);
+      }
       const nextSession = data.session?.user?.email
         ? makeUserSession(
             data.session.user.id,
@@ -1530,6 +1545,7 @@ export default function SplitPayWebApp() {
     });
 
     return () => {
+      window.clearTimeout(safetyTimer);
       sub.subscription.unsubscribe();
     };
   }, [supabase]);
