@@ -2534,6 +2534,16 @@ export default function SplitPayWebApp() {
       if (cancelled) return;
 
       if (!data?.found || !data.trip) {
+        const ownerNormalized = (currentTrip.owner || '').trim().toLowerCase();
+        const selfNormalized = (appSession?.name || '').trim().toLowerCase();
+        const isCurrentUserOwner =
+          ownerNormalized === 'ty' || (Boolean(selfNormalized) && ownerNormalized === selfNormalized);
+
+        // New owner-created trip may not be in DB yet; do not remove it locally.
+        if (isCurrentUserOwner) {
+          return;
+        }
+
         const removedTripId = currentTrip.id;
         const removedTripName = currentTrip.name;
         const removedInviteCode = currentTrip.inviteCode;
@@ -2588,7 +2598,7 @@ export default function SplitPayWebApp() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [canSyncWithDb, currentTrip?.id, currentTrip?.inviteCode, dbLoadTick, supabase]);
+  }, [appSession?.name, canSyncWithDb, currentTrip?.id, currentTrip?.inviteCode, dbLoadTick, supabase]);
 
   useEffect(() => {
     if (!supabase || !canSyncWithDb || !dbLoadedRef.current) return;
