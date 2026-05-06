@@ -2221,6 +2221,13 @@ export default function SplitPayWebApp() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showTripSettingsModal]);
 
+  useEffect(() => {
+    if (!showJoinTripModal) return;
+    const sessionName = appSession?.name?.trim();
+    if (!sessionName) return;
+    setJoinName(sessionName);
+  }, [showJoinTripModal, appSession?.name]);
+
   const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
   const safePayer = members.includes(draft.payer) ? draft.payer : members[0] || 'Ty';
