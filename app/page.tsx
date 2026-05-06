@@ -1354,6 +1354,56 @@ export default function SplitPayWebApp() {
   }, [trips, selectedTripId]);
 
   useEffect(() => {
+    if (!appSession?.name) return;
+
+    const selfKey = appSession.name.trim().toLowerCase();
+    if (!selfKey) return;
+
+    setTrips((prev) => {
+      let changed = false;
+
+      const next = prev.map((trip) => {
+        const seen = new Set<string>();
+        const canonicalMembers: string[] = [];
+
+        for (const member of trip.members || []) {
+          const cleaned = (member || '').trim();
+          if (!cleaned) continue;
+
+          const key = cleaned.toLowerCase();
+          const canonical = key === 'ty' || key === selfKey ? 'Ty' : cleaned;
+          const canonicalKey = canonical.toLowerCase();
+          if (seen.has(canonicalKey)) continue;
+          seen.add(canonicalKey);
+          canonicalMembers.push(canonical);
+        }
+
+        const ownerClean = (trip.owner || '').trim();
+        const ownerKey = ownerClean.toLowerCase();
+
+        if (ownerKey && ownerKey !== 'ty' && ownerKey !== selfKey && !seen.has(ownerKey)) {
+          canonicalMembers.unshift(ownerClean);
+          seen.add(ownerKey);
+        }
+
+        if ((ownerKey === selfKey || ownerKey === 'ty') && !seen.has('ty')) {
+          canonicalMembers.unshift('Ty');
+          seen.add('ty');
+        }
+
+        const sameLength = canonicalMembers.length === trip.members.length;
+        const sameValues = sameLength && canonicalMembers.every((value, idx) => value === trip.members[idx]);
+
+        if (sameValues) return trip;
+        changed = true;
+        return { ...trip, members: canonicalMembers };
+      });
+
+      return changed ? next : prev;
+    });
+  }, [appSession?.name]);
+
+  useEffect(() => {
     if (appSession) {
       window.localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(appSession));
       return;
@@ -4338,7 +4388,7 @@ export default function SplitPayWebApp() {
                       <div className="pill-list">
                         {members.map((name) => (
                           <div key={name} className="pill">
-                            <span>{name}</span>
+                            <span>{formatMemberName(name)}</span>
                           </div>
                         ))}
                       </div>
