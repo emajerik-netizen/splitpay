@@ -2918,6 +2918,25 @@ export default function SplitPayWebApp() {
   }, [selectedTripId, trips]);
 
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
+  
+  // Close add/edit expense modal if currentTrip becomes unavailable
+  useEffect(() => {
+    if (!currentTrip && editingExpenseId) {
+      setEditingExpenseId(null);
+      // Reset draft to default state
+      setDraft({
+        title: '',
+        amount: '',
+        expenseType: 'expense',
+        payer: displayCurrentUserName || 'Ty',
+        transferTo: '',
+        participants: [displayCurrentUserName || 'Ty'],
+        splitType: 'equal',
+        participantWeights: { [displayCurrentUserName || 'Ty']: 1 },
+        participantAmounts: { [displayCurrentUserName || 'Ty']: 0 },
+      });
+    }
+  }, [currentTrip, editingExpenseId]);
   const getInitials = (name: string): string => {
     const displayName = formatMemberName(name);
     return displayName
@@ -3897,11 +3916,13 @@ export default function SplitPayWebApp() {
 
   function openExpenseModalForCreate() {
     setEditingExpenseId(null);
+    // Determine payer: preferably current user if in members, else first member
+    const currentUserInMembers = members.find((m) => isSelfName(m)) || 'Ty';
     setDraft({
       title: '',
       amount: '',
       expenseType: 'expense',
-      payer: safePayer,
+      payer: currentUserInMembers,
       transferTo: '',
       participants: members,
       splitType: 'equal',
