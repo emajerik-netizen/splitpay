@@ -3313,7 +3313,12 @@ export default function SplitPayWebApp() {
       });
       const body = await res.json();
       if (!res.ok || !body.ok) {
-        setInfoMessage(t('accountDeleteFailed'));
+        console.error('[delete-account] error:', body?.error, 'status:', res.status);
+        if (body?.error === 'server_not_configured') {
+          setInfoMessage(t('accountDeleteRequiresServer'));
+        } else {
+          setInfoMessage(t('accountDeleteFailed'));
+        }
         return;
       }
       // Sign out locally and reset state

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !serviceKey || !anonKey) {
+    if (!supabaseUrl || !serviceKey) {
       return NextResponse.json({ error: 'server_not_configured' }, { status: 500 });
     }
 
@@ -20,19 +20,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    // Use anon client to verify the token
-    const anonClient = createClient(supabaseUrl, anonKey);
-    const { data: userData, error: userError } = await anonClient.auth.getUser(token);
+    // Use service role client to verify the token (admin.getUser accepts a JWT)
+    const adminClient = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: userData, error: userError } = await adminClient.auth.getUser(token);
     if (userError || !userData?.user?.id) {
+      console.error('[delete-account] token verification failed:', userError?.message);
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const userId = userData.user.id;
-
-    // Use service role client to delete the user
-    const adminClient = createClient(supabaseUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteError) {
