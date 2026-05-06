@@ -1583,6 +1583,20 @@ button:disabled {
   justify-content: flex-end;
 }
 
+.iban-available-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--stroke));
+  background: color-mix(in srgb, var(--accent-soft) 72%, #ffffff);
+  color: color-mix(in srgb, var(--accent) 88%, #18335f);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.45rem;
+}
+
 .balance-total-card {
   margin-top: 0.7rem;
   border-radius: 0.95rem;

@@ -5219,6 +5219,7 @@ export default function SplitPayWebApp() {
                                   >
                                     {toName}
                                   </button>
+                                  {recipientIban.trim() ? <span className="iban-available-chip">IBAN</span> : null}
                                 </span>
                                 <div className="settlement-actions">
                                   {canCopyRecipientIban ? (
