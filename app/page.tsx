@@ -106,11 +106,16 @@ function expenseIdTimestamp(value: string) {
   return parsed;
 }
 
+function memberKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
 const INVITE_PENDING_KEY = 'splitpay-invite-pending';
 const LANG_KEY = 'splitpay-lang';
+const STALE_TRIP_WARNING_ACK_KEY = 'splitpay-stale-trip-warning-acks-v1';
 
 type Lang = 'sk' | 'en';
 
@@ -276,6 +281,10 @@ const T = {
     settlementAction: 'pošle',
     allSettled: 'Všetko je vyrovnané.',
     balanceTip: 'Pošli kamarátom IBAN alebo sa vyrovnajte v hotovosti.',
+    copyRecipientIbanBtn: 'Kopírovať IBAN príjemcu',
+    tripNeedsSettlementTitle: 'Výlet čaká na vyrovnanie',
+    tripNeedsSettlementBody: 'Tento výlet skončil pred viac ako týždňom, ale financie ešte nie sú vyrovnané. Dokončite vyrovnania a až potom výlet archivujte.',
+    understoodBtn: 'OK',
     expenseModalEyebrow: 'Výdavok',
     editExpenseTitle: 'Upraviť výdavok',
     addExpenseTitle: 'Pridať výdavok',
@@ -584,6 +593,10 @@ const T = {
     settlementAction: 'sends',
     allSettled: 'Everything is settled.',
     balanceTip: 'Share your IBAN or settle in cash.',
+    copyRecipientIbanBtn: 'Copy recipient IBAN',
+    tripNeedsSettlementTitle: 'Trip still needs settlement',
+    tripNeedsSettlementBody: 'This trip ended more than a week ago, but finances are still not settled. Complete settlements first and archive the trip afterwards.',
+    understoodBtn: 'OK',
     expenseModalEyebrow: 'Expense',
     editExpenseTitle: 'Edit Expense',
     addExpenseTitle: 'Add Expense',
@@ -858,6 +871,11 @@ type PendingVerification = {
 type AppScreen = 'trips' | 'trip-detail' | 'admin';
 type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances';
 
+type StaleTripWarning = {
+  tripId: string;
+  tripName: string;
+};
+
 function detailScreenFromPath(value?: string): TripDetailScreen {
   if (value === 'members') return 'members';
   if (value === 'invites') return 'invites';
@@ -1052,6 +1070,9 @@ export default function SplitPayWebApp() {
   const [selfIban, setSelfIban] = useState('');
   const [savingIban, setSavingIban] = useState(false);
   const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
+  const [memberIbanByName, setMemberIbanByName] = useState<Record<string, string>>({});
+  const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
+  const [staleTripWarning, setStaleTripWarning] = useState<StaleTripWarning | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody] = useState('');
@@ -1376,6 +1397,25 @@ export default function SplitPayWebApp() {
   useEffect(() => {
     latestLocalStateRef.current = JSON.stringify({ trips, selectedTripId });
   }, [trips, selectedTripId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(STALE_TRIP_WARNING_ACK_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, true>;
+      if (parsed && typeof parsed === 'object') {
+        setDismissedStaleTripWarnings(parsed);
+      }
+    } catch {
+      // Ignore malformed local storage payload.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STALE_TRIP_WARNING_ACK_KEY, JSON.stringify(dismissedStaleTripWarnings));
+  }, [dismissedStaleTripWarnings]);
 
   useEffect(() => {
     if (!appSession?.name) return;
@@ -2628,6 +2668,22 @@ export default function SplitPayWebApp() {
 
   const balances = useMemo(() => computeBalances(members, normalizedExpenses), [members, normalizedExpenses]);
   const settlements = useMemo(() => settleDebts(balances), [balances]);
+
+  useEffect(() => {
+    if (!currentTrip) {
+      setMemberIbanByName({});
+      return;
+    }
+
+    const membersToPrime = settlements
+      .filter((transfer) => isSelfName(transfer.from))
+      .map((transfer) => transfer.to)
+      .filter((value, idx, arr) => arr.findIndex((it) => memberKey(it) === memberKey(value)) === idx);
+
+    if (!membersToPrime.length) return;
+    void Promise.all(membersToPrime.map((memberName) => primeSettlementRecipientIban(memberName)));
+  }, [currentTrip?.id, settlements]);
+
   const totalSpent = useMemo(
     () =>
       normalizedExpenses.reduce(
@@ -2831,6 +2887,15 @@ export default function SplitPayWebApp() {
 
   function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'date' | 'currency' | 'color' | 'archived'>>) {
     if (!currentTrip) return;
+    if (partial.archived) {
+      const tripBalances = computeBalances(currentTrip.members, currentTrip.expenses);
+      const tripSettlements = settleDebts(tripBalances);
+      if (tripSettlements.length > 0) {
+        setInfoMessage(t('tripNeedsSettlementBody'));
+        setStaleTripWarning({ tripId: currentTrip.id, tripName: currentTrip.name });
+        return;
+      }
+    }
     updateCurrentTrip((trip) => ({ ...trip, ...partial }));
   }
 
@@ -2960,21 +3025,19 @@ export default function SplitPayWebApp() {
     }
   }
 
-  async function openMemberProfile(memberName: string) {
-    if (!supabase) return;
+  async function resolveMemberProfile(memberName: string, options?: { silent?: boolean }) {
+    if (!supabase) return null;
 
     const normalized = memberName.trim().toLowerCase();
-    if (!normalized) return;
+    if (!normalized) return null;
 
-    // Show own profile immediately
     if (appSession && (normalized === appSession.name.trim().toLowerCase() || isSelfName(memberName))) {
-      setMemberProfile({
+      return {
         userId: appSession.userId,
         name: appSession.name,
         email: appSession.email,
         iban: selfIban.trim(),
-      });
-      return;
+      } satisfies MemberProfileView;
     }
 
     const inviteEmail = (currentTrip?.pendingInvites || [])
@@ -2983,7 +3046,6 @@ export default function SplitPayWebApp() {
       ?.trim()
       .toLowerCase();
 
-    // If the member is an alias from invite slot, resolve by invite email first.
     if (inviteEmail && inviteEmail.includes('@')) {
       const { data: profileByEmail } = await supabase
         .from('user_profiles')
@@ -2993,13 +3055,12 @@ export default function SplitPayWebApp() {
         .maybeSingle();
 
       if (profileByEmail?.user_id) {
-        setMemberProfile({
+        return {
           userId: profileByEmail.user_id,
           name: profileByEmail.user_name || memberName,
           email: profileByEmail.user_email || inviteEmail,
           iban: (profileByEmail.iban as string | undefined) || '',
-        });
-        return;
+        } satisfies MemberProfileView;
       }
 
       const { data: presenceByEmail } = await supabase
@@ -3016,13 +3077,12 @@ export default function SplitPayWebApp() {
           .eq('user_id', presenceByEmail.user_id)
           .maybeSingle();
 
-        setMemberProfile({
+        return {
           userId: presenceByEmail.user_id,
           name: presenceByEmail.user_name || memberName,
           email: presenceByEmail.user_email || inviteEmail,
           iban: (profileData?.iban as string | undefined) || '',
-        });
-        return;
+        } satisfies MemberProfileView;
       }
     }
 
@@ -3038,8 +3098,8 @@ export default function SplitPayWebApp() {
     ) || (presences || [])[0];
 
     if (!memberPresence?.user_id) {
-      setInfoMessage(t('profileNotFound'));
-      return;
+      if (!options?.silent) setInfoMessage(t('profileNotFound'));
+      return null;
     }
 
     const { data: profileData } = await supabase
@@ -3048,12 +3108,29 @@ export default function SplitPayWebApp() {
       .eq('user_id', memberPresence.user_id)
       .maybeSingle();
 
-    setMemberProfile({
+    return {
       userId: memberPresence.user_id,
       name: memberPresence.user_name || memberName,
       email: memberPresence.user_email || '',
       iban: (profileData?.iban as string | undefined) || '',
-    });
+    } satisfies MemberProfileView;
+  }
+
+  async function openMemberProfile(memberName: string) {
+    const profile = await resolveMemberProfile(memberName);
+    if (!profile) return;
+    setMemberProfile(profile);
+  }
+
+  async function primeSettlementRecipientIban(memberName: string) {
+    const key = memberKey(memberName);
+    if (!key || memberIbanByName[key] !== undefined) return;
+
+    const profile = await resolveMemberProfile(memberName, { silent: true });
+    setMemberIbanByName((prev) => ({
+      ...prev,
+      [key]: (profile?.iban || '').trim(),
+    }));
   }
 
   function copyIban(value: string) {
@@ -3061,6 +3138,16 @@ export default function SplitPayWebApp() {
     navigator.clipboard.writeText(value.trim()).then(() => {
       setInfoMessage(t('ibanCopied'));
     });
+  }
+
+  function acknowledgeStaleTripWarning() {
+    if (!staleTripWarning) return;
+    const userId = appSession?.userId || 'guest';
+    setDismissedStaleTripWarnings((prev) => ({
+      ...prev,
+      [`${userId}:${staleTripWarning.tripId}`]: true,
+    }));
+    setStaleTripWarning(null);
   }
 
   function removeMember(memberName: string) {
@@ -3585,6 +3672,7 @@ export default function SplitPayWebApp() {
     const runAutoArchive = () => {
       const now = Date.now();
       const archivedTripNames: string[] = [];
+      const staleUnsettled: StaleTripWarning[] = [];
 
       setTrips((prev) => {
         let changed = false;
@@ -3602,6 +3690,13 @@ export default function SplitPayWebApp() {
           if (!latestExpenseTs) return trip;
           if (now - latestExpenseTs < archiveThresholdMs) return trip;
 
+          const tripBalances = computeBalances(trip.members, trip.expenses);
+          const tripSettlements = settleDebts(tripBalances);
+          if (tripSettlements.length > 0) {
+            staleUnsettled.push({ tripId: trip.id, tripName: trip.name });
+            return trip;
+          }
+
           changed = true;
           archivedTripNames.push(trip.name);
           return { ...trip, archived: true };
@@ -3609,6 +3704,12 @@ export default function SplitPayWebApp() {
 
         return changed ? next : prev;
       });
+
+      const currentUserId = appSession.userId || 'guest';
+      const nextWarning = staleUnsettled.find(
+        (item) => !dismissedStaleTripWarnings[`${currentUserId}:${item.tripId}`]
+      );
+      setStaleTripWarning(nextWarning || null);
 
       if (!archivedTripNames.length) return;
 
@@ -3629,7 +3730,7 @@ export default function SplitPayWebApp() {
     runAutoArchive();
     const interval = window.setInterval(runAutoArchive, 60 * 60 * 1000);
     return () => window.clearInterval(interval);
-  }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
+  }, [appSession, dbLoadTick, dismissedStaleTripWarnings, lang, notificationsEnabled, supabase, trips]);
 
   useEffect(() => {
     if (!notificationsEnabled || !appSession) return;
@@ -4095,6 +4196,18 @@ export default function SplitPayWebApp() {
                 onClick={() => acknowledgeMemberAddNotification(memberAddNotifications[0].id)}
               >
                 {t('notificationAcknowledge')}
+              </button>
+            </section>
+          ) : null}
+
+          {staleTripWarning ? (
+            <section className="mini-panel member-add-notice">
+              <h3>{t('tripNeedsSettlementTitle')}</h3>
+              <p className="muted">
+                <strong>{staleTripWarning.tripName}</strong> - {t('tripNeedsSettlementBody')}
+              </p>
+              <button type="button" className="ghost" onClick={acknowledgeStaleTripWarning}>
+                {t('understoodBtn')}
               </button>
             </section>
           ) : null}
@@ -4649,7 +4762,13 @@ export default function SplitPayWebApp() {
                       <div className="pill-list">
                         {members.map((name) => (
                           <div key={name} className="pill">
-                            <span>{formatMemberName(name)}</span>
+                            <button
+                              type="button"
+                              className="member-link-inline"
+                              onClick={() => openMemberProfile(name)}
+                            >
+                              {formatMemberName(name)}
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -4662,7 +4781,16 @@ export default function SplitPayWebApp() {
                           <div className="row overview-row" key={expense.id}>
                             <div>
                               <strong>{expense.title}</strong>
-                                <p>{t('paidBy')} {expense.payer}</p>
+                              <p>
+                                {t('paidBy')}{' '}
+                                <button
+                                  type="button"
+                                  className="member-link-inline"
+                                  onClick={() => openMemberProfile(expense.payer)}
+                                >
+                                  {formatMemberName(expense.payer)}
+                                </button>
+                              </p>
                             </div>
                             <strong>{money(expense.amount)}</strong>
                           </div>
@@ -4917,8 +5045,51 @@ export default function SplitPayWebApp() {
                             <strong>{expense.title}</strong>
                             <p>
                               {expense.expenseType === 'transfer'
-                                  ? `${expense.payer} ${t('sent')} ${expense.transferTo || expense.participants[0] || '-'}.`
-                                  : `${t('paidBy')} ${expense.payer}, ${t('participantsLabel')} ${expense.participants.join(', ')}`}
+                                ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="member-link-inline"
+                                      onClick={() => openMemberProfile(expense.payer)}
+                                    >
+                                      {formatMemberName(expense.payer)}
+                                    </button>{' '}
+                                    {t('sent')}{' '}
+                                    <button
+                                      type="button"
+                                      className="member-link-inline"
+                                      onClick={() => openMemberProfile(expense.transferTo || expense.participants[0] || '')}
+                                    >
+                                      {formatMemberName(expense.transferTo || expense.participants[0] || '-')}
+                                    </button>
+                                    .
+                                  </>
+                                )
+                                : (
+                                  <>
+                                    {t('paidBy')}{' '}
+                                    <button
+                                      type="button"
+                                      className="member-link-inline"
+                                      onClick={() => openMemberProfile(expense.payer)}
+                                    >
+                                      {formatMemberName(expense.payer)}
+                                    </button>
+                                    , {t('participantsLabel')}{' '}
+                                    {expense.participants.map((participant, idx) => (
+                                      <span key={`${expense.id}-${participant}-${idx}`}>
+                                        {idx > 0 ? ', ' : null}
+                                        <button
+                                          type="button"
+                                          className="member-link-inline"
+                                          onClick={() => openMemberProfile(participant)}
+                                        >
+                                          {formatMemberName(participant)}
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </>
+                                )}
                             </p>
                           </div>
                           <div className="expense-actions">
@@ -4983,7 +5154,13 @@ export default function SplitPayWebApp() {
                             const displayName = formatMemberName(name);
                             return (
                               <div className="balance-transfer-row" key={name}>
-                                <span className="balance-person">{displayName}</span>
+                                <button
+                                  type="button"
+                                  className="balance-person member-link-inline"
+                                  onClick={() => openMemberProfile(name)}
+                                >
+                                  {displayName}
+                                </button>
                                 <span className="balance-arrow" aria-hidden="true">{value >= 0 ? '←' : '→'}</span>
                                 <span className="balance-target">
                                   <span className="balance-avatar">€</span>
@@ -5019,16 +5196,42 @@ export default function SplitPayWebApp() {
                           {settlements.map((transfer, index) => {
                             const fromName = formatMemberName(transfer.from);
                             const toName = formatMemberName(transfer.to);
+                            const recipientIban = memberIbanByName[memberKey(transfer.to)] || '';
+                            const canCopyRecipientIban = isSelfName(transfer.from) && Boolean(recipientIban.trim());
 
                             return (
                               <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
-                                <span className="balance-person">{fromName}</span>
+                                <button
+                                  type="button"
+                                  className="balance-person member-link-inline"
+                                  onClick={() => openMemberProfile(transfer.from)}
+                                >
+                                  {fromName}
+                                </button>
                                 <span className="balance-arrow" aria-hidden="true">→</span>
                                 <span className="balance-target">
                                   <span className="balance-avatar">€</span>
-                                  {t('settlementAction')} {toName}
+                                  {t('settlementAction')}{' '}
+                                  <button
+                                    type="button"
+                                    className="member-link-inline"
+                                    onClick={() => openMemberProfile(transfer.to)}
+                                  >
+                                    {toName}
+                                  </button>
                                 </span>
-                                <strong className="balance-amount">{money(transfer.amount)}</strong>
+                                <div className="settlement-actions">
+                                  {canCopyRecipientIban ? (
+                                    <button
+                                      type="button"
+                                      className="ghost"
+                                      onClick={() => copyIban(recipientIban)}
+                                    >
+                                      {t('copyRecipientIbanBtn')}
+                                    </button>
+                                  ) : null}
+                                  <strong className="balance-amount">{money(transfer.amount)}</strong>
+                                </div>
                               </div>
                             );
                           })}

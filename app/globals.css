@@ -973,6 +973,23 @@ button:disabled {
   padding: 0.45rem 0.8rem;
 }
 
+.member-link-inline {
+  min-height: auto;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.member-link-inline:hover {
+  color: color-mix(in srgb, var(--accent) 88%, #18335f);
+}
+
 .trip-strip {
   display: flex;
   flex-wrap: wrap;
@@ -1557,6 +1574,13 @@ button:disabled {
   font-weight: 800;
   color: var(--trip-accent, var(--accent));
   white-space: nowrap;
+}
+
+.settlement-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  justify-content: flex-end;
 }
 
 .balance-total-card {
