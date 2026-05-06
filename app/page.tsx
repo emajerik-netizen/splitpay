@@ -1154,9 +1154,8 @@ export default function SplitPayWebApp() {
         setAuthMode('login');
         setAuthMessage('');
       });
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     }
-
-    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
   }, [lang]);
 
   useEffect(() => {
