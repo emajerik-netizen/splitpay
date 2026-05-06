@@ -5291,49 +5291,6 @@ export default function SplitPayWebApp() {
                 </button>
                 <button type="button" className="ghost" onClick={goToTripsHome}>{t('backToTripsAdmin')}</button>
               </div>
-
-              {spamLogModal ? (
-                <div className="modal-backdrop" onClick={() => setSpamLogModal(null)}>
-                  <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                      <h3 style={{ margin: 0 }}>{t('adminSpamLog')}</h3>
-                      <span className="pill" style={{
-                        fontSize: '0.75rem',
-                        background: spamLogModal.reason === 'invalid_format' ? 'var(--danger-bg, #f8d7da)' : 'var(--warn-bg, #fff3cd)',
-                        color: spamLogModal.reason === 'invalid_format' ? 'var(--danger, #842029)' : 'var(--warn, #856404)',
-                      }}>
-                        {spamLogModal.reason === 'invalid_format' ? t('spamReasonInvalidFormat') : t('spamReasonNoMx')}
-                      </span>
-                    </div>
-                    <div style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
-                      <p style={{ margin: '0 0 4px' }}>
-                        <span className="muted" style={{ fontSize: '0.8rem' }}>{t('adminSpamLogEmail')}</span><br />
-                        <strong style={{ wordBreak: 'break-all' }}>{spamLogModal.email}</strong>
-                      </p>
-                      <p style={{ margin: '8px 0 0' }}>
-                        <span className="muted" style={{ fontSize: '0.8rem' }}>Subject</span><br />
-                        <span>{spamLogModal.subject || '—'}</span>
-                      </p>
-                    </div>
-                    {spamLogModal.message ? (
-                      <>
-                        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>{t('adminSpamLogMessage')}</p>
-                        <pre style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', fontSize: '0.82rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '220px', overflowY: 'auto', marginBottom: '12px' }}>
-                          {spamLogModal.message}
-                        </pre>
-                      </>
-                    ) : null}
-                    <p className="muted" style={{ fontSize: '0.75rem', marginBottom: '1rem' }}>
-                      {new Date(spamLogModal.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <button type="button" className="ghost" onClick={() => setSpamLogModal(null)}>
-                        {t('adminSpamLogClose')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </section>
           ) : null}
 
@@ -6403,7 +6360,50 @@ export default function SplitPayWebApp() {
         </div>
       ) : null}
 
-      {/* Invite slot picker modal - shows after auth when pending invite exists */}
+      {/* Spam log detail modal - rendered at root level so fixed positioning works */}
+      {spamLogModal ? (
+        <div className="modal-backdrop" onClick={() => setSpamLogModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>{t('adminSpamLog')}</h3>
+              <span className="pill" style={{
+                fontSize: '0.75rem',
+                background: spamLogModal.reason === 'invalid_format' ? 'var(--danger-bg, #f8d7da)' : 'var(--warn-bg, #fff3cd)',
+                color: spamLogModal.reason === 'invalid_format' ? 'var(--danger, #842029)' : 'var(--warn, #856404)',
+              }}>
+                {spamLogModal.reason === 'invalid_format' ? t('spamReasonInvalidFormat') : t('spamReasonNoMx')}
+              </span>
+            </div>
+            <div style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
+              <p style={{ margin: '0 0 4px' }}>
+                <span className="muted" style={{ fontSize: '0.8rem' }}>{t('adminSpamLogEmail')}</span><br />
+                <strong style={{ wordBreak: 'break-all' }}>{spamLogModal.email}</strong>
+              </p>
+              <p style={{ margin: '8px 0 0' }}>
+                <span className="muted" style={{ fontSize: '0.8rem' }}>Subject</span><br />
+                <span>{spamLogModal.subject || '—'}</span>
+              </p>
+            </div>
+            {spamLogModal.message ? (
+              <>
+                <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>{t('adminSpamLogMessage')}</p>
+                <pre style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', fontSize: '0.82rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '220px', overflowY: 'auto', marginBottom: '12px' }}>
+                  {spamLogModal.message}
+                </pre>
+              </>
+            ) : null}
+            <p className="muted" style={{ fontSize: '0.75rem', marginBottom: '1rem' }}>
+              {new Date(spamLogModal.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="ghost" onClick={() => setSpamLogModal(null)}>
+                {t('adminSpamLogClose')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showSupportModal ? (
         <div className="modal-overlay" role="presentation" onClick={() => setShowSupportModal(false)}>
           <section
