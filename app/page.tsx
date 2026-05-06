@@ -378,6 +378,13 @@ const T = {
     exportVisitsCsv: 'Export návštev do CSV',
     purgePresence: 'Vyčistiť prítomnosť staršiu ako 7 dní',
     backToTripsAdmin: 'Späť do výletov',
+    adminSpamLog: 'Spam pokusy',
+    adminSpamLogEmpty: 'Žiadne spam pokusy.',
+    adminSpamLogReason: 'Dôvod',
+    adminSpamLogEmail: 'Email',
+    adminSpamLogClose: 'Zavrieť',
+    adminSpamLogClearAll: 'Vymazať všetky',
+    adminSpamLogClearConfirm: 'Naozaj vymazať všetky spam záznamy?',
     removeSelfWarningLead: '⚠️ Ak sa odstránite:',
     removeSelfWarningSolo: 'Si jediný člen, výlet bude vymazaný.',
     removeSelfInfoLead: 'ℹ️ Ak sa odstránite:',
@@ -716,6 +723,13 @@ const T = {
     exportVisitsCsv: 'Export visits to CSV',
     purgePresence: 'Clean presence older than 7 days',
     backToTripsAdmin: 'Back to trips',
+    adminSpamLog: 'Spam attempts',
+    adminSpamLogEmpty: 'No spam attempts.',
+    adminSpamLogReason: 'Reason',
+    adminSpamLogEmail: 'Email',
+    adminSpamLogClose: 'Close',
+    adminSpamLogClearAll: 'Clear all',
+    adminSpamLogClearConfirm: 'Really delete all spam log entries?',
     removeSelfWarningLead: '⚠️ If you remove yourself:',
     removeSelfWarningSolo: 'You are the only member, the trip will be deleted.',
     removeSelfInfoLead: 'ℹ️ If you remove yourself:',
@@ -927,6 +941,15 @@ type MemberAddNotification = {
   actor_name: string;
   created_at: string;
   acknowledged_at: string | null;
+};
+
+type SpamLogEntry = {
+  id: string;
+  email: string;
+  subject: string;
+  message: string;
+  reason: string;
+  created_at: string;
 };
 
 type MemberProfileView = {
@@ -1187,6 +1210,8 @@ export default function SplitPayWebApp() {
   const [recentVisits, setRecentVisits] = useState<AdminVisitRow[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [adminTrips, setAdminTrips] = useState<AdminTripSummary[]>([]);
+  const [spamLog, setSpamLog] = useState<SpamLogEntry[]>([]);
+  const [spamLogModal, setSpamLogModal] = useState<SpamLogEntry | null>(null);
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
@@ -1916,6 +1941,7 @@ export default function SplitPayWebApp() {
         tripStatesRes,
         recentRes,
         recentForTopRes,
+        spamLogRes,
       ] = await Promise.all([
         supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }),
         supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', nowIso),
@@ -1925,6 +1951,7 @@ export default function SplitPayWebApp() {
         supabaseClient.from('trip_states').select('user_id, state_json, updated_at').order('updated_at', { ascending: false }).limit(1000),
         supabaseClient.from('app_visits').select('id, user_email, visited_at').order('visited_at', { ascending: false }).limit(250),
         supabaseClient.from('app_visits').select('user_email, visited_at').order('visited_at', { ascending: false }).limit(500),
+        supabaseClient.from('support_spam_log').select('id, email, subject, message, reason, created_at').order('created_at', { ascending: false }).limit(200),
       ]);
 
       if (cancelled) return;
@@ -2010,6 +2037,8 @@ export default function SplitPayWebApp() {
         .sort((a, b) => b.visits - a.visits)
         .slice(0, 8);
       setTopUsers(top);
+
+      if (!cancelled) setSpamLog((spamLogRes.data || []) as SpamLogEntry[]);
 
       setAdminLoading(false);
     }
@@ -3189,6 +3218,13 @@ export default function SplitPayWebApp() {
     }
 
     setInfoMessage(t('purgePresenceDone'));
+  }
+
+  async function clearSpamLog() {
+    if (!supabase || !isAdmin) return;
+    if (!window.confirm(t('adminSpamLogClearConfirm'))) return;
+    await supabase.from('support_spam_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    setSpamLog([]);
   }
 
   function exportVisitsCsv() {
@@ -5007,6 +5043,41 @@ export default function SplitPayWebApp() {
                 </div>
               </div>
 
+              <div className="admin-card" style={{ marginTop: '1.5rem' }}>
+                <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ margin: 0 }}>{t('adminSpamLog')} {spamLog.length > 0 ? <span className="badge">{spamLog.length}</span> : null}</h3>
+                  {spamLog.length > 0 ? (
+                    <button type="button" className="ghost danger-btn" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={clearSpamLog}>
+                      {t('adminSpamLogClearAll')}
+                    </button>
+                  ) : null}
+                </div>
+                {spamLog.length === 0 ? (
+                  <p className="muted" style={{ marginTop: '0.5rem' }}>{t('adminSpamLogEmpty')}</p>
+                ) : (
+                  <div className="stack-list" style={{ marginTop: '0.5rem' }}>
+                    {spamLog.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className="row row-clickable"
+                        style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}
+                        onClick={() => setSpamLogModal(entry)}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span className="muted" style={{ fontSize: '0.78rem' }}>{entry.email}</span>
+                          <span style={{ margin: '0 6px', color: '#888' }}>·</span>
+                          <span style={{ fontSize: '0.9rem' }}>{entry.subject || '—'}</span>
+                        </div>
+                        <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                          {new Date(entry.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="admin-actions">
                 <button type="button" className="ghost" onClick={exportVisitsCsv}>{t('exportVisitsCsv')}</button>
                 <button type="button" className="ghost danger-btn" onClick={purgeStalePresence}>
@@ -5014,6 +5085,39 @@ export default function SplitPayWebApp() {
                 </button>
                 <button type="button" className="ghost" onClick={goToTripsHome}>{t('backToTripsAdmin')}</button>
               </div>
+
+              {spamLogModal ? (
+                <div className="modal-backdrop" onClick={() => setSpamLogModal(null)}>
+                  <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+                    <h3 style={{ marginTop: 0 }}>{t('adminSpamLog')}</h3>
+                    <p style={{ marginBottom: '4px' }}>
+                      <span className="muted">{t('adminSpamLogEmail')}:</span>{' '}
+                      <strong>{spamLogModal.email}</strong>
+                    </p>
+                    <p style={{ marginBottom: '4px' }}>
+                      <span className="muted">{t('adminSpamLogReason')}:</span>{' '}
+                      <code style={{ fontSize: '0.85rem' }}>{spamLogModal.reason}</code>
+                    </p>
+                    <p style={{ marginBottom: '4px' }}>
+                      <span className="muted">Subject:</span>{' '}
+                      {spamLogModal.subject || '—'}
+                    </p>
+                    <p style={{ marginBottom: '8px' }}>
+                      <span className="muted">{new Date(spamLogModal.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}</span>
+                    </p>
+                    {spamLogModal.message ? (
+                      <pre style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '6px', padding: '10px 12px', fontSize: '0.82rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '240px', overflowY: 'auto', marginBottom: '1rem' }}>
+                        {spamLogModal.message}
+                      </pre>
+                    ) : null}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="button" className="ghost" onClick={() => setSpamLogModal(null)}>
+                        {t('adminSpamLogClose')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

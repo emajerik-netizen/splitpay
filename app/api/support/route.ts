@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { promises as dns } from 'dns';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -35,6 +36,18 @@ async function domainHasMx(email: string): Promise<boolean> {
   }
 }
 
+async function logSpam(email: string, subject: string, message: string, reason: string) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !serviceKey) return;
+    const supabase = createClient(supabaseUrl, serviceKey);
+    await supabase.from('support_spam_log').insert({ email, subject, message, reason });
+  } catch {
+    // non-critical, ignore
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as SupportPayload;
@@ -49,12 +62,14 @@ export async function POST(request: Request) {
 
     if (!isValidEmail(email)) {
       // Silently discard - don't tell the sender the email was rejected
+      void logSpam(email, subject, message, 'invalid_format');
       return NextResponse.json({ ok: true });
     }
 
     const mxExists = await domainHasMx(email);
     if (!mxExists) {
       // Silently discard - domain has no mail servers
+      void logSpam(email, subject, message, 'no_mx_record');
       return NextResponse.json({ ok: true });
     }
 

@@ -260,6 +260,41 @@ create policy "admin_announcements_update_admin"
   using (public.is_admin(auth.uid()))
   with check (public.is_admin(auth.uid()));
 
+-- support_spam_log: stores silently discarded support form submissions
+create table if not exists public.support_spam_log (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  subject text not null default '',
+  message text not null default '',
+  reason text not null default 'invalid_email',
+  created_at timestamptz not null default now()
+);
+
+alter table public.support_spam_log enable row level security;
+
+drop policy if exists "support_spam_log_insert_anon" on public.support_spam_log;
+create policy "support_spam_log_insert_anon"
+  on public.support_spam_log
+  for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "support_spam_log_select_admin" on public.support_spam_log;
+create policy "support_spam_log_select_admin"
+  on public.support_spam_log
+  for select
+  to authenticated
+  using (public.is_admin(auth.uid()));
+
+drop policy if exists "support_spam_log_delete_admin" on public.support_spam_log;
+create policy "support_spam_log_delete_admin"
+  on public.support_spam_log
+  for delete
+  to authenticated
+  using (public.is_admin(auth.uid()));
+
+create index if not exists idx_support_spam_log_created_at on public.support_spam_log (created_at desc);
+
 create index if not exists idx_app_visits_visited_at on public.app_visits (visited_at desc);
 create index if not exists idx_user_presence_last_seen on public.user_presence (last_seen desc);
 create index if not exists idx_user_roles_role on public.user_roles (role);
