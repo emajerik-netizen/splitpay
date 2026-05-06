@@ -95,6 +95,10 @@ function isValidIban(value: string) {
   return remainder === 1;
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
@@ -1054,6 +1058,7 @@ export default function SplitPayWebApp() {
   const latestLocalStateRef = useRef('');
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
+  const canSyncWithDb = Boolean(appSession?.userId && isUuid(appSession.userId));
 
   useEffect(() => {
     setVirtualPathname(pathname || '/');
@@ -1319,6 +1324,13 @@ export default function SplitPayWebApp() {
   }, [appSession]);
 
   useEffect(() => {
+    // Reset sync flags whenever auth user changes so each account gets its own DB load/save cycle.
+    dbLoadedRef.current = false;
+    skipFirstSaveRef.current = true;
+    skipNextSaveRef.current = false;
+  }, [appSession?.userId]);
+
+  useEffect(() => {
     if (!pendingVerification || !supabase) return;
 
     let cancelled = false;
@@ -1348,10 +1360,11 @@ export default function SplitPayWebApp() {
   }, [pendingVerification, supabase, lang]);
 
   useEffect(() => {
-    if (!supabase || !authResolved || !appSession?.userId || dbLoadedRef.current) return;
+    if (!supabase || !authResolved || !canSyncWithDb || dbLoadedRef.current) return;
 
     const supabaseClient = supabase;
-    const userId = appSession.userId;
+    const userId = appSession?.userId;
+    if (!userId) return;
 
     let cancelled = false;
 
@@ -1365,6 +1378,7 @@ export default function SplitPayWebApp() {
       if (cancelled) return;
 
       if (error) {
+        setInfoMessage('Cloud sync zlyhal pri nacitani vyletov. Skontrolujte prihlasenie alebo RLS politky.');
         dbLoadedRef.current = true;
         setDbLoadTick((prev) => prev + 1);
         return;
@@ -1386,12 +1400,13 @@ export default function SplitPayWebApp() {
     return () => {
       cancelled = true;
     };
-  }, [authResolved, appSession?.userId, supabase]);
+  }, [authResolved, canSyncWithDb, appSession?.userId, supabase]);
 
   useEffect(() => {
-    if (!supabase || !appSession?.userId || !dbLoadedRef.current) return;
+    if (!supabase || !canSyncWithDb || !dbLoadedRef.current) return;
     const supabaseClient = supabase;
-    const userId = appSession.userId;
+    const userId = appSession?.userId;
+    if (!userId) return;
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false;
       return;
@@ -1403,20 +1418,25 @@ export default function SplitPayWebApp() {
 
     const payload = { trips, selectedTripId };
     const timeoutId = window.setTimeout(async () => {
-      await supabaseClient.from('trip_states').upsert({
+      const { error } = await supabaseClient.from('trip_states').upsert({
         user_id: userId,
         state_json: payload,
       });
+
+      if (error) {
+        setInfoMessage('Cloud sync zlyhal pri ulozeni vyletu.');
+      }
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [appSession?.userId, selectedTripId, supabase, trips]);
+  }, [canSyncWithDb, appSession?.userId, selectedTripId, supabase, trips]);
 
   useEffect(() => {
-    if (!supabase || !authResolved || !appSession?.userId || !dbLoadedRef.current) return;
+    if (!supabase || !authResolved || !canSyncWithDb || !dbLoadedRef.current) return;
 
     const supabaseClient = supabase;
-    const userId = appSession.userId;
+    const userId = appSession?.userId;
+    if (!userId) return;
     let cancelled = false;
 
     const applyRemoteState = (remote: { trips?: Trip[]; selectedTripId?: string } | null) => {
@@ -1477,12 +1497,13 @@ export default function SplitPayWebApp() {
       document.removeEventListener('visibilitychange', onVisible);
       void supabaseClient.removeChannel(channel);
     };
-  }, [appSession?.userId, authResolved, supabase]);
+  }, [canSyncWithDb, appSession?.userId, authResolved, supabase]);
 
   useEffect(() => {
-    if (!supabase || !appSession?.userId) return;
+    if (!supabase || !canSyncWithDb) return;
     const supabaseClient = supabase;
-    const userId = appSession.userId;
+    const userId = appSession?.userId;
+    if (!userId) return;
     const userEmail = appSession.email;
     const userName = appSession.name;
 
@@ -1519,7 +1540,7 @@ export default function SplitPayWebApp() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [appSession?.email, appSession?.name, appSession?.userId, supabase]);
+  }, [canSyncWithDb, appSession?.email, appSession?.name, appSession?.userId, supabase]);
 
   const isEnvAdmin = Boolean(
     appSession?.email && process.env.NEXT_PUBLIC_ADMIN_EMAIL && appSession.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
@@ -1527,9 +1548,10 @@ export default function SplitPayWebApp() {
   const isAdmin = isEnvAdmin || adminRole === 'admin';
 
   useEffect(() => {
-    if (!supabase || !appSession?.userId) return;
+    if (!supabase || !canSyncWithDb) return;
     const supabaseClient = supabase;
-    const userId = appSession.userId;
+    const userId = appSession?.userId;
+    if (!userId) return;
 
     async function loadAdminRole() {
       const { data } = await supabaseClient
@@ -1542,7 +1564,7 @@ export default function SplitPayWebApp() {
     }
 
     loadAdminRole();
-  }, [appSession?.userId, supabase]);
+  }, [canSyncWithDb, appSession?.userId, supabase]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -2114,7 +2136,7 @@ export default function SplitPayWebApp() {
 
   useEffect(() => {
     const shouldWaitForDbLoad = Boolean(
-      supabase && authResolved && appSession?.userId && !dbLoadedRef.current
+      supabase && authResolved && canSyncWithDb && !dbLoadedRef.current
     );
 
     if (!routeTripKey) return;
@@ -2124,6 +2146,7 @@ export default function SplitPayWebApp() {
     if (routeTrip) return;
     navigateInApp('/', 'replace');
   }, [
+    canSyncWithDb,
     appSession?.userId,
     authResolved,
     dbLoadTick,
