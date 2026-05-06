@@ -1935,6 +1935,9 @@ export default function SplitPayWebApp() {
       ((tripStatesRes.data || []) as AdminTripStateRow[]).forEach((row) => {
         const tripsInState = row.state_json?.trips || [];
         tripsInState.forEach((trip) => {
+          // Skip deleted trips in admin view
+          if (trip.deletedAt) return;
+          
           const normalized = normalizeTrip(trip);
           const dedupeKey = (normalized.inviteCode || '').trim().toUpperCase() || normalized.id;
           if (!dedupeKey) return;
@@ -2010,7 +2013,7 @@ export default function SplitPayWebApp() {
     }
 
     refreshAdminStats();
-    const interval = window.setInterval(refreshAdminStats, 30000);
+    const interval = window.setInterval(refreshAdminStats, 3000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -3504,8 +3507,8 @@ export default function SplitPayWebApp() {
         }
       }
 
-      // Force refresh all clients to immediately apply the deletion
-      if (removedEverywhere && refreshFromDbRef.current) {
+      // Force refresh all clients to immediately apply the deletion (both remove and fallback sync)
+      if (refreshFromDbRef.current) {
         await refreshFromDbRef.current();
       }
     }
