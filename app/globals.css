@@ -1153,6 +1153,31 @@ button:disabled {
   flex-shrink: 0;
 }
 
+.member-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.member-history-chip {
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+
+.leave-trip-box {
+  padding: 0.65rem;
+}
+
+.leave-trip-btn {
+  width: 100%;
+}
+
+.member-add-notice {
+  background: #eef6ff;
+  border-color: #cde2ff;
+}
+
 .member-row strong {
   overflow-wrap: anywhere;
   font-size: 0.95rem;

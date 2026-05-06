@@ -183,6 +183,14 @@ const T = {
     membersTitle: 'Členovia výletu',
     memberNamePlaceholder: 'Meno člena',
     addBtn: 'Pridať',
+    leaveTripBtn: 'Opustiť výlet',
+    leftTripInfo: 'Opustili ste výlet.',
+    historyMembersTitle: 'Členovia z minulosti',
+    historyMembersHint: 'Rýchlo pridaj člena, ktorého si už mal v inom výlete.',
+    memberAddedInAppTitle: 'Boli ste pridaný do výletu',
+    memberAddedInAppBody: 'pridal(a) vás do výletu',
+    memberAddedAt: 'Kedy',
+    notificationAcknowledge: 'Rozumiem',
     ownerLabel: 'Vlastník',
     confirmIdentity: 'Potvrď svoju identitu',
     guestPickInvite: 'Ak si hosť, vyber si jednu z pozvánok:',
@@ -465,6 +473,14 @@ const T = {
     membersTitle: 'Trip Members',
     memberNamePlaceholder: 'Member name',
     addBtn: 'Add',
+    leaveTripBtn: 'Leave trip',
+    leftTripInfo: 'You left the trip.',
+    historyMembersTitle: 'Members from history',
+    historyMembersHint: 'Quickly add someone who was already in another trip.',
+    memberAddedInAppTitle: 'You were added to a trip',
+    memberAddedInAppBody: 'added you to trip',
+    memberAddedAt: 'When',
+    notificationAcknowledge: 'Got it',
     ownerLabel: 'Owner',
     confirmIdentity: 'Confirm your identity',
     guestPickInvite: 'If you are a guest, pick one of the invites:',
@@ -735,6 +751,17 @@ type TopUser = {
   visits: number;
 };
 
+type MemberAddNotification = {
+  id: string;
+  target_user_id: string;
+  trip_id: string;
+  trip_name: string;
+  member_name: string;
+  actor_name: string;
+  created_at: string;
+  acknowledged_at: string | null;
+};
+
 type PendingVerification = {
   email: string;
   password: string;
@@ -926,6 +953,7 @@ export default function SplitPayWebApp() {
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
+  const [memberAddNotifications, setMemberAddNotifications] = useState<MemberAddNotification[]>([]);
   const [localStateHydrated, setLocalStateHydrated] = useState(false);
     const [lang, setLang] = useState<Lang>(() => {
       if (typeof window === 'undefined') return 'sk';
@@ -991,6 +1019,37 @@ export default function SplitPayWebApp() {
 
     return () => window.clearTimeout(timer);
   }, [authMessage]);
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId) {
+      setMemberAddNotifications([]);
+      return;
+    }
+
+    const supabaseClient = supabase;
+    let cancelled = false;
+
+    const loadNotifications = async () => {
+      const { data, error } = await supabaseClient
+        .from('member_add_notifications')
+        .select('id, target_user_id, trip_id, trip_name, member_name, actor_name, created_at, acknowledged_at')
+        .eq('target_user_id', appSession.userId)
+        .is('acknowledged_at', null)
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+      if (cancelled || error) return;
+      setMemberAddNotifications((data || []) as MemberAddNotification[]);
+    };
+
+    loadNotifications();
+    const timer = window.setInterval(loadNotifications, 20000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [appSession?.userId, supabase]);
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -2029,6 +2088,28 @@ export default function SplitPayWebApp() {
   };
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
   const currentTripOwnerIsSelf = currentTrip ? isSelfName(currentTrip.owner) : false;
+  const memberHistorySuggestions = useMemo(() => {
+    if (!currentTrip) return [] as string[];
+
+    const currentMembers = new Set(currentTrip.members.map((name) => name.trim().toLowerCase()));
+    const seen = new Set<string>();
+    const suggestions: string[] = [];
+
+    for (const trip of trips) {
+      if (trip.id === currentTrip.id) continue;
+
+      for (const member of trip.members) {
+        const cleaned = member.trim();
+        const key = cleaned.toLowerCase();
+        if (!cleaned || key === 'ty') continue;
+        if (currentMembers.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        suggestions.push(cleaned);
+      }
+    }
+
+    return suggestions.slice(0, 8);
+  }, [currentTrip, trips]);
   const selfBalance = appSession?.name
     ? (balances[appSession.name] ?? balances.Ty ?? 0)
     : (balances.Ty ?? 0);
@@ -2166,6 +2247,7 @@ export default function SplitPayWebApp() {
 
   function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!currentTripOwnerIsSelf) return;
     if (!currentTrip) return;
     const cleaned = newMember.trim();
 
@@ -2187,6 +2269,81 @@ export default function SplitPayWebApp() {
       },
     }));
     setNewMember('');
+
+    if (supabase && appSession?.userId) {
+      void notifyMemberAdded(cleaned, currentTrip);
+    }
+  }
+
+  async function notifyMemberAdded(memberName: string, trip: Trip) {
+    if (!supabase || !appSession?.userId) return;
+
+    const { data: candidates, error } = await supabase
+      .from('user_presence')
+      .select('user_id, user_name, last_seen')
+      .ilike('user_name', memberName)
+      .order('last_seen', { ascending: false })
+      .limit(3);
+
+    if (error || !candidates?.length) return;
+
+    const target = candidates.find((row) => row.user_id !== appSession.userId);
+    if (!target?.user_id) return;
+
+    await supabase.from('member_add_notifications').insert({
+      target_user_id: target.user_id,
+      trip_id: trip.id,
+      trip_name: trip.name,
+      member_name: memberName,
+      actor_name: appSession.name,
+    });
+  }
+
+  function handleAddMemberFromHistory(memberName: string) {
+    if (!currentTripOwnerIsSelf || !currentTrip) return;
+
+    const exists = currentTrip.members.some(
+      (name) => name.trim().toLowerCase() === memberName.trim().toLowerCase()
+    );
+    if (exists) return;
+
+    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, memberName] }));
+    setDraft((prev) => ({
+      ...prev,
+      participants: [...new Set([...prev.participants, memberName])],
+      participantWeights: {
+        ...prev.participantWeights,
+        [memberName]: 1,
+      },
+      participantAmounts: {
+        ...prev.participantAmounts,
+        [memberName]: 0,
+      },
+    }));
+
+    if (supabase && appSession?.userId) {
+      void notifyMemberAdded(memberName, currentTrip);
+    }
+  }
+
+  async function acknowledgeMemberAddNotification(notificationId: string) {
+    if (!supabase) return;
+
+    await supabase
+      .from('member_add_notifications')
+      .update({ acknowledged_at: new Date().toISOString() })
+      .eq('id', notificationId)
+      .eq('target_user_id', appSession?.userId || '');
+
+    setMemberAddNotifications((prev) => prev.filter((item) => item.id !== notificationId));
+  }
+
+  function leaveCurrentTrip() {
+    if (!currentTrip || currentTripOwnerIsSelf) return;
+
+    setTrips((prev) => prev.filter((trip) => trip.id !== currentTrip.id));
+    goToTripsHome();
+    setInfoMessage(t('leftTripInfo'));
   }
 
   function removeMember(memberName: string) {
@@ -2997,6 +3154,22 @@ export default function SplitPayWebApp() {
           </div>
 
           {globalAnnouncement ? <p className="info-banner admin-announcement">{globalAnnouncement}</p> : null}
+          {memberAddNotifications.length > 0 ? (
+            <section className="mini-panel member-add-notice">
+              <h3>{t('memberAddedInAppTitle')}</h3>
+              <p className="muted">
+                <strong>{memberAddNotifications[0].actor_name}</strong> {t('memberAddedInAppBody')} <strong>{memberAddNotifications[0].trip_name}</strong>.
+              </p>
+              <p className="muted">{t('memberAddedAt')}: {formatDateTime(memberAddNotifications[0].created_at)}</p>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => acknowledgeMemberAddNotification(memberAddNotifications[0].id)}
+              >
+                {t('notificationAcknowledge')}
+              </button>
+            </section>
+          ) : null}
 
           {activeAppScreen === 'admin' ? (
             <section className="section-card full-window admin-panel">
@@ -3587,6 +3760,31 @@ export default function SplitPayWebApp() {
                       />
                         <button type="submit">{t('addBtn')}</button>
                     </form>
+                  ) : null}
+                  {!currentTripOwnerIsSelf ? (
+                    <div className="owner-actions leave-trip-box">
+                      <button type="button" className="ghost danger-btn leave-trip-btn" onClick={leaveCurrentTrip}>
+                        {t('leaveTripBtn')}
+                      </button>
+                    </div>
+                  ) : null}
+                  {currentTripOwnerIsSelf && memberHistorySuggestions.length > 0 ? (
+                    <div className="mini-panel">
+                      <h3>{t('historyMembersTitle')}</h3>
+                      <p className="muted">{t('historyMembersHint')}</p>
+                      <div className="member-history-list">
+                        {memberHistorySuggestions.map((memberName) => (
+                          <button
+                            key={memberName}
+                            type="button"
+                            className="ghost member-history-chip"
+                            onClick={() => handleAddMemberFromHistory(memberName)}
+                          >
+                            + {memberName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                   {currentTripOwnerIsSelf && members.length === 1 ? (
                     <div className="mini-panel" style={{ background: '#fff8e7', borderColor: '#f59f00', color: '#9b5d00' }}>
