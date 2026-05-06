@@ -22,6 +22,7 @@ BEGIN
   FROM trip_states ts,
        jsonb_array_elements(ts.state_json->'trips') trip_elem
   WHERE trip_elem.value->>'inviteCode' = p_invite_code
+    ORDER BY ts.updated_at DESC
   LIMIT 1;
 
   IF v_trip IS NULL THEN
@@ -32,6 +33,7 @@ BEGIN
     'found', true,
     'tripId',       v_trip->>'id',
     'tripName',     v_trip->>'name',
+    'trip',         v_trip,
     'pendingSlots', COALESCE(
       (
         SELECT jsonb_agg(invite->>'name')
@@ -76,6 +78,7 @@ BEGIN
   FROM   trip_states ts,
          jsonb_array_elements(ts.state_json->'trips') trip_elem
   WHERE  trip_elem.value->>'inviteCode' = p_invite_code
+    ORDER BY ts.updated_at DESC
   LIMIT  1;
 
   IF v_trip IS NULL THEN
@@ -140,7 +143,8 @@ BEGIN
              )
              FROM jsonb_array_elements(state_json->'trips') t
            )
-         )
+          ),
+          updated_at = now()
   WHERE  user_id = v_owner_user_id;
 
   -- Fetch the updated trip
@@ -169,7 +173,8 @@ BEGIN
     ),
     'selectedTripId',
     COALESCE(trip_states.state_json->>'selectedTripId', v_updated_trip->>'id')
-  );
+  ),
+      updated_at = now();
 
   RETURN json_build_object(
     'success',    true,
@@ -226,7 +231,8 @@ BEGIN
              )
              FROM jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t
            )
-         )
+          ),
+          updated_at = now()
   WHERE EXISTS (
     SELECT 1
     FROM   jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t

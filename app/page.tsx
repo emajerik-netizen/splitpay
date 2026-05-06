@@ -1097,6 +1097,7 @@ export default function SplitPayWebApp() {
   const notificationsPrimedForUserRef = useRef<string | null>(null);
   const syncRpcMissingWarnedRef = useRef(false);
   const tempSessionWarnedRef = useRef(false);
+  const lastPropagatedTripSnapshotRef = useRef<Record<string, string>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -1425,6 +1426,7 @@ export default function SplitPayWebApp() {
     skipNextSaveRef.current = false;
     syncRpcMissingWarnedRef.current = false;
     tempSessionWarnedRef.current = false;
+    lastPropagatedTripSnapshotRef.current = {};
   }, [appSession?.userId]);
 
   useEffect(() => {
@@ -1527,6 +1529,7 @@ export default function SplitPayWebApp() {
       const { error } = await supabaseClient.from('trip_states').upsert({
         user_id: userId,
         state_json: payload,
+        updated_at: new Date().toISOString(),
       });
 
       if (error) {
@@ -1534,8 +1537,16 @@ export default function SplitPayWebApp() {
         return;
       }
 
-      // Propagate changed trip payload to all participant copies by invite code.
-      const syncableTrips = payload.trips.filter((trip) => Boolean(trip.inviteCode));
+      // Propagate only changed trips by inviteCode to avoid stale-copy overwrites.
+      const syncableTrips = payload.trips.filter((trip) => {
+        if (!trip.inviteCode) return false;
+        const snapshot = JSON.stringify(trip);
+        const previous = lastPropagatedTripSnapshotRef.current[trip.inviteCode];
+        return snapshot !== previous;
+      });
+
+      if (!syncableTrips.length) return;
+
       await Promise.all(
         syncableTrips.map(async (trip) => {
           const { error: syncError } = await supabaseClient.rpc('sync_trip_state_by_invite_code', {
@@ -1553,7 +1564,10 @@ export default function SplitPayWebApp() {
 
           if (syncError) {
             console.error('Trip propagation sync failed:', syncError.message);
+            return;
           }
+
+          lastPropagatedTripSnapshotRef.current[trip.inviteCode] = JSON.stringify(trip);
         })
       );
     }, 500);
@@ -2291,6 +2305,50 @@ export default function SplitPayWebApp() {
     virtualPathname,
     trips,
   ]);
+
+  useEffect(() => {
+    if (!supabase || !canSyncWithDb || !dbLoadedRef.current) return;
+    if (!currentTrip?.inviteCode) return;
+
+    const supabaseClient = supabase;
+    let cancelled = false;
+
+    const refreshActiveTripFromShared = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = (await supabaseClient.rpc('lookup_trip_by_invite_code', {
+        p_invite_code: currentTrip.inviteCode,
+      })) as unknown as { data: Record<string, any> | null };
+
+      if (cancelled || !data?.found || !data.trip) return;
+
+      const sharedTrip = normalizeTrip(data.trip as Trip);
+
+      setTrips((prev) => {
+        const idx = prev.findIndex((trip) => trip.id === currentTrip.id);
+        if (idx < 0) return prev;
+
+        const existing = prev[idx];
+        const existingSerialized = JSON.stringify(existing);
+        const sharedSerialized = JSON.stringify(sharedTrip);
+        if (existingSerialized === sharedSerialized) return prev;
+
+        skipNextSaveRef.current = true;
+        const next = [...prev];
+        next[idx] = sharedTrip;
+        return next;
+      });
+    };
+
+    void refreshActiveTripFromShared();
+    const interval = window.setInterval(() => {
+      void refreshActiveTripFromShared();
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [canSyncWithDb, currentTrip?.id, currentTrip?.inviteCode, dbLoadTick, supabase]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
