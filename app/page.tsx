@@ -3244,6 +3244,7 @@ export default function SplitPayWebApp() {
   }
 
   function goToAdmin() {
+    setProfileOpen(false);
     navigateInApp('/admin');
   }
 
