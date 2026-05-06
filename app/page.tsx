@@ -1181,6 +1181,8 @@ export default function SplitPayWebApp() {
   const [virtualPathname, setVirtualPathname] = useState(pathname || '/');
   const [showStartup, setShowStartup] = useState(() => {
     if (typeof window === 'undefined') return false;
+    // Skip startup screen if user is already logged in (cached session exists)
+    if (readCachedSession()) return false;
     return window.sessionStorage.getItem(STARTUP_SEEN_KEY) !== '1';
   });
   const [trips, setTrips] = useState<Trip[]>(() => readInitialState().trips);
