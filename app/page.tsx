@@ -2397,8 +2397,14 @@ export default function SplitPayWebApp() {
       trips.find(
         (trip) =>
           trip.id === routeTripKey || trip.inviteCode.toUpperCase() === routeTripKey.toUpperCase()
-      ) || null,
-    [routeTripKey, trips]
+      ) ||
+      (isAdmin
+        ? adminTrips.find(
+            (trip) =>
+              trip.id === routeTripKey || trip.inviteCode.toUpperCase() === routeTripKey.toUpperCase()
+          ) || null
+        : null),
+    [adminTrips, isAdmin, routeTripKey, trips]
   );
   const activeAppScreen: AppScreen =
     virtualPathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : 'trips';
@@ -2409,10 +2415,13 @@ export default function SplitPayWebApp() {
 
   const currentTrip = useMemo(() => {
     if (activeTripId) {
-      return trips.find((trip) => trip.id === activeTripId) || null;
+      return (
+        trips.find((trip) => trip.id === activeTripId) ||
+        (isAdmin ? adminTrips.find((trip) => trip.id === activeTripId) || null : null)
+      );
     }
     return trips[0] || null;
-  }, [activeTripId, trips]);
+  }, [activeTripId, adminTrips, isAdmin, trips]);
 
   useEffect(() => {
     const shouldWaitForDbLoad = Boolean(
@@ -2848,7 +2857,9 @@ export default function SplitPayWebApp() {
     nextScreen: TripDetailScreen = 'overview',
     tripKeyOverride?: string
   ) {
-    const selectedTrip = trips.find((trip) => trip.id === tripId);
+    const selectedTrip =
+      trips.find((trip) => trip.id === tripId) ||
+      (isAdmin ? adminTrips.find((trip) => trip.id === tripId) : undefined);
     const tripKey = tripKeyOverride || selectedTrip?.inviteCode;
     if (!tripKey) return;
 
@@ -4477,6 +4488,13 @@ export default function SplitPayWebApp() {
                             <strong>{trip.name}</strong>
                             <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
                           </div>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}
+                          >
+                            {t('openBtn')}
+                          </button>
                         </div>
                       ))}
                   </div>
@@ -4496,6 +4514,13 @@ export default function SplitPayWebApp() {
                             <strong>{trip.name}</strong>
                             <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
                           </div>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}
+                          >
+                            {t('openBtn')}
+                          </button>
                         </div>
                       ))}
                   </div>
