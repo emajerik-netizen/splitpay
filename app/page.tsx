@@ -99,6 +99,13 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function expenseIdTimestamp(value: string) {
+  const raw = value.split('-')[0];
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
 const STORAGE_KEY = 'splitpay-web-v1';
 const SESSION_CACHE_KEY = 'splitpay-web-session';
 const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
@@ -377,6 +384,10 @@ const T = {
     removedFromTrip: 'Si odstránený(á) z výletu.',
     memberRemoved: 'bol(a) odstránený(á) z výletu.',
     tripDeleted: 'Výlet bol vymazaný.',
+    tripAutoArchivedTitle: 'Výlet bol archivovaný',
+    tripAutoArchivedBody: 'Výlet bol automaticky archivovaný po 7 dňoch bez nových výdavkov.',
+    tripAutoArchivedInfo: 'bol automaticky archivovaný (7 dní bez výdavkov).',
+    tripsAutoArchivedInfo: 'výlety boli automaticky archivované (7 dní bez výdavkov).',
     identityNow: 'Tvoja identita v tomto výlete je teraz',
     invitePreparedFor: 'Pozvánka pre',
     inviteCodeLabel: 'Kód:',
@@ -679,6 +690,10 @@ const T = {
     removedFromTrip: 'You were removed from the trip.',
     memberRemoved: 'was removed from the trip.',
     tripDeleted: 'Trip was deleted.',
+    tripAutoArchivedTitle: 'Trip archived',
+    tripAutoArchivedBody: 'The trip was automatically archived after 7 days without new expenses.',
+    tripAutoArchivedInfo: 'was automatically archived (7 days without expenses).',
+    tripsAutoArchivedInfo: 'trips were automatically archived (7 days without expenses).',
     identityNow: 'Your identity in this trip is now',
     invitePreparedFor: 'Invite for',
     inviteCodeLabel: 'Code:',
@@ -3243,6 +3258,62 @@ export default function SplitPayWebApp() {
       console.error(t('notificationSendError'), error);
     }
   }
+
+  useEffect(() => {
+    if (!appSession) return;
+    if (supabase && !dbLoadedRef.current) return;
+
+    const archiveThresholdMs = 7 * 24 * 60 * 60 * 1000;
+    const langPack = T[lang];
+
+    const runAutoArchive = () => {
+      const now = Date.now();
+      const archivedTripNames: string[] = [];
+
+      setTrips((prev) => {
+        let changed = false;
+
+        const next = prev.map((trip) => {
+          if (trip.archived) return trip;
+          if (!trip.expenses.length) return trip;
+
+          let latestExpenseTs = 0;
+          for (const expense of trip.expenses) {
+            const ts = expenseIdTimestamp(expense.id);
+            if (ts && ts > latestExpenseTs) latestExpenseTs = ts;
+          }
+
+          if (!latestExpenseTs) return trip;
+          if (now - latestExpenseTs < archiveThresholdMs) return trip;
+
+          changed = true;
+          archivedTripNames.push(trip.name);
+          return { ...trip, archived: true };
+        });
+
+        return changed ? next : prev;
+      });
+
+      if (!archivedTripNames.length) return;
+
+      archivedTripNames.forEach((tripName) => {
+        sendNotification(`${tripName} - ${langPack.tripAutoArchivedTitle}`, {
+          body: langPack.tripAutoArchivedBody,
+          icon: '/icon.png',
+        });
+      });
+
+      if (archivedTripNames.length === 1) {
+        setInfoMessage(`${archivedTripNames[0]} ${langPack.tripAutoArchivedInfo}`);
+      } else {
+        setInfoMessage(`${archivedTripNames.length} ${langPack.tripsAutoArchivedInfo}`);
+      }
+    };
+
+    runAutoArchive();
+    const interval = window.setInterval(runAutoArchive, 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
 
   useEffect(() => {
     if (!notificationsEnabled || !appSession) return;
