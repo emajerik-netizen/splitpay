@@ -5040,57 +5040,61 @@ export default function SplitPayWebApp() {
                     <div className="stack-list">
                         {currentTrip.expenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                       {currentTrip.expenses.map((expense) => (
-                        <div className="row" key={expense.id}>
-                          <div>
+                        <div className="row expense-row" key={expense.id}>
+                          <div className="expense-main">
                             <strong>{expense.title}</strong>
-                            <p>
+                            <p className="expense-meta-line">
                               {expense.expenseType === 'transfer'
                                 ? (
                                   <>
                                     <button
                                       type="button"
-                                      className="member-link-inline"
+                                      className="member-link-inline expense-member-link"
                                       onClick={() => openMemberProfile(expense.payer)}
                                     >
                                       {formatMemberName(expense.payer)}
-                                    </button>{' '}
-                                    {t('sent')}{' '}
+                                    </button>
+                                    <span>{t('sent')}</span>
                                     <button
                                       type="button"
-                                      className="member-link-inline"
+                                      className="member-link-inline expense-member-link"
                                       onClick={() => openMemberProfile(expense.transferTo || expense.participants[0] || '')}
                                     >
                                       {formatMemberName(expense.transferTo || expense.participants[0] || '-')}
                                     </button>
-                                    .
                                   </>
                                 )
                                 : (
                                   <>
-                                    {t('paidBy')}{' '}
+                                    <span>{t('paidBy')}</span>
                                     <button
                                       type="button"
-                                      className="member-link-inline"
+                                      className="member-link-inline expense-member-link"
                                       onClick={() => openMemberProfile(expense.payer)}
                                     >
                                       {formatMemberName(expense.payer)}
                                     </button>
-                                    , {t('participantsLabel')}{' '}
-                                    {expense.participants.map((participant, idx) => (
-                                      <span key={`${expense.id}-${participant}-${idx}`}>
-                                        {idx > 0 ? ', ' : null}
-                                        <button
-                                          type="button"
-                                          className="member-link-inline"
-                                          onClick={() => openMemberProfile(participant)}
-                                        >
-                                          {formatMemberName(participant)}
-                                        </button>
-                                      </span>
-                                    ))}
                                   </>
                                 )}
                             </p>
+                            {expense.expenseType !== 'transfer' ? (
+                              <div className="expense-participants-line">
+                                <span className="muted">{t('participantsLabel')}</span>
+                                <div className="expense-member-list">
+                                  {expense.participants.map((participant, idx) => (
+                                    <span className="expense-member-chip" key={`${expense.id}-${participant}-${idx}`}>
+                                      <button
+                                        type="button"
+                                        className="member-link-inline expense-member-link"
+                                        onClick={() => openMemberProfile(participant)}
+                                      >
+                                        {formatMemberName(participant)}
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                           <div className="expense-actions">
                               <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
