@@ -1077,8 +1077,6 @@ export default function SplitPayWebApp() {
   const [newTripName, setNewTripName] = useState('');
   const [newTripDate, setNewTripDate] = useState('');
   const [newMember, setNewMember] = useState('');
-  const [inviteName, setInviteName] = useState('');
-  const [inviteContact, setInviteContact] = useState('');
   const [showInviteQr, setShowInviteQr] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
@@ -3288,30 +3286,6 @@ export default function SplitPayWebApp() {
     setInfoMessage(`${t('mergedFictionalMember')} ${realName}.`);
   }
 
-  function handleAddInvite(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!currentTrip) return;
-    const cleanedName = inviteName.trim();
-    const cleanedContact = inviteContact.trim();
-    if (!cleanedName) return;
-
-    updateCurrentTrip((trip) => ({
-      ...trip,
-      pendingInvites: [
-        {
-          id: makeId(),
-          name: cleanedName,
-          contact: cleanedContact,
-          status: 'Pozvany',
-        },
-        ...trip.pendingInvites,
-      ],
-    }));
-    setInviteName('');
-    setInviteContact('');
-    setInfoMessage(`${t('invitePreparedFor')} ${cleanedName}. ${t('inviteCodeLabel')} ${currentTrip.inviteCode}`);
-  }
-
   function copyInviteCodeToClipboard() {
     if (!currentTrip || !inviteJoinUrl) return;
     navigator.clipboard.writeText(inviteJoinUrl).then(() => {
@@ -5058,73 +5032,43 @@ export default function SplitPayWebApp() {
                       <p className="eyebrow">{t('invitation')}</p>
                       <h2>{t('invitesTitle')}</h2>
                   </div>
-                  {currentTripOwnerIsSelf ? (
-                    <>
-                      <div className="invite-code-box">
-                          <span>{t('code')}</span>
-                        <strong>{currentTrip.inviteCode}</strong>
-                        <div className="share-buttons">
-                          <button type="button" className="ghost share-action-btn" onClick={copyInviteCodeToClipboard}>
-                            <Clipboard size={14} aria-hidden="true" />
-                              <span>{t('copy')}</span>
-                          </button>
-                          <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
-                            <Mail size={14} aria-hidden="true" />
-                            <span>{t('shareEmail')}</span>
-                          </button>
-                          <button type="button" className="ghost share-action-btn" onClick={shareViaWhatsApp}>
-                            <Share2 size={14} aria-hidden="true" />
-                            <span>{t('shareWhatsApp')}</span>
-                          </button>
-                          <button type="button" className="ghost share-action-btn" onClick={shareViaSMS}>
-                            <MessageSquare size={14} aria-hidden="true" />
-                            <span>{t('shareSms')}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost share-action-btn"
-                            onClick={() => setShowInviteQr((prev) => !prev)}
-                          >
-                            <QrCode size={14} aria-hidden="true" />
-                              <span>{showInviteQr ? t('hideQr') : t('showQr')}</span>
-                          </button>
-                        </div>
-                        {showInviteQr ? (
-                          <div className="qr-share-box">
-                            <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
-                            <div>
-                                <p className="muted">{t('scanQr')}</p>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                      <form className="stack compact-form" onSubmit={handleAddInvite}>
-                        <input
-                          value={inviteName}
-                          onChange={(event) => setInviteName(event.target.value)}
-                            placeholder={t('namePlaceholderInvite')}
-                        />
-                        <input
-                          value={inviteContact}
-                          onChange={(event) => setInviteContact(event.target.value)}
-                            placeholder={t('contactPlaceholder')}
-                        />
-                          <button type="submit">{t('addBtn')}</button>
-                      </form>
-                    </>
-                  ) : (
-                      <p className="muted">{t('tripCode')} {currentTrip.inviteCode}</p>
-                  )}
-                  <div className="stack-list">
-                    {currentTrip.pendingInvites.map((invite) => (
-                      <div key={invite.id} className="row">
+                  <div className="invite-code-box">
+                    <span>{t('code')}</span>
+                    <strong>{currentTrip.inviteCode}</strong>
+                    <div className="share-buttons">
+                      <button type="button" className="ghost share-action-btn" onClick={copyInviteCodeToClipboard}>
+                        <Clipboard size={14} aria-hidden="true" />
+                        <span>{t('copy')}</span>
+                      </button>
+                      <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
+                        <Mail size={14} aria-hidden="true" />
+                        <span>{t('shareEmail')}</span>
+                      </button>
+                      <button type="button" className="ghost share-action-btn" onClick={shareViaWhatsApp}>
+                        <Share2 size={14} aria-hidden="true" />
+                        <span>{t('shareWhatsApp')}</span>
+                      </button>
+                      <button type="button" className="ghost share-action-btn" onClick={shareViaSMS}>
+                        <MessageSquare size={14} aria-hidden="true" />
+                        <span>{t('shareSms')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost share-action-btn"
+                        onClick={() => setShowInviteQr((prev) => !prev)}
+                      >
+                        <QrCode size={14} aria-hidden="true" />
+                        <span>{showInviteQr ? t('hideQr') : t('showQr')}</span>
+                      </button>
+                    </div>
+                    {showInviteQr ? (
+                      <div className="qr-share-box">
+                        <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
                         <div>
-                          <strong>{invite.name}</strong>
-                          {invite.contact && <p>{invite.contact}</p>}
+                          <p className="muted">{t('scanQr')}</p>
                         </div>
-                        <p className="muted">{invite.status}</p>
                       </div>
-                    ))}
+                    ) : null}
                   </div>
                 </section>
               ) : null}
