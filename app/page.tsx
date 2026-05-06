@@ -391,6 +391,9 @@ const T = {
     removeSelfInfoTransfer: 'Vlastníctvo preberá',
     anotherMember: 'ďalší člen',
     accountDeleteRequiresServer: 'Vymazanie účtu vyžaduje serverovú funkciu (service role).',
+    accountDeleteConfirm: 'Naozaj chceš vymazať účet? Táto akcia je nenávratná.',
+    accountDeleteSuccess: 'Účet bol vymazaný.',
+    accountDeleteFailed: 'Vymazanie účtu zlyhalo. Skús znova.',
     supabaseNotConfigured: 'Supabase nie je nastavene. Doplnenie .env je povinne.',
     supabaseNotConfiguredShort: 'Supabase nie je nastavene.',
     enterEmailPassword: 'Zadaj email aj heslo.',
@@ -736,6 +739,9 @@ const T = {
     removeSelfInfoTransfer: 'Ownership will transfer to',
     anotherMember: 'another member',
     accountDeleteRequiresServer: 'Deleting account requires a server function (service role).',
+    accountDeleteConfirm: 'Really delete your account? This action is irreversible.',
+    accountDeleteSuccess: 'Account deleted.',
+    accountDeleteFailed: 'Account deletion failed. Please try again.',
     supabaseNotConfigured: 'Supabase is not configured. .env setup is required.',
     supabaseNotConfiguredShort: 'Supabase is not configured.',
     enterEmailPassword: 'Enter email and password.',
@@ -3227,6 +3233,39 @@ export default function SplitPayWebApp() {
     setSpamLog([]);
   }
 
+  async function handleDeleteAccount() {
+    if (!supabase) return;
+    if (!window.confirm(t('accountDeleteConfirm'))) return;
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      setInfoMessage(t('accountDeleteFailed'));
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        setInfoMessage(t('accountDeleteFailed'));
+        return;
+      }
+      // Sign out locally and reset state
+      await supabase.auth.signOut();
+      setAppSession(null);
+      setTrips([]);
+      setSelectedTripId('');
+      goToTripsHome();
+      setInfoMessage(t('accountDeleteSuccess'));
+    } catch {
+      setInfoMessage(t('accountDeleteFailed'));
+    }
+  }
+
   function exportVisitsCsv() {
     if (!recentVisits.length) {
       setInfoMessage(t('noVisitsForExport'));
@@ -4765,7 +4804,7 @@ export default function SplitPayWebApp() {
                 <button
                   type="button"
                   className="ghost danger-btn"
-                  onClick={() => setInfoMessage(t('accountDeleteRequiresServer'))}
+                  onClick={handleDeleteAccount}
                 >
                     {t('deleteAccount')}
                 </button>
