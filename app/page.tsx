@@ -770,6 +770,13 @@ type TripExpense = Expense & {
   title: string;
 };
 
+type TripExpenseRow = {
+  trip_id: string;
+  expense_id: string;
+  payload: TripExpense;
+  updated_at: string;
+};
+
 type Trip = {
   id: string;
   name: string;
@@ -915,6 +922,14 @@ function normalizeTrip(trip: Trip): Trip {
     archived: Boolean(trip.archived),
     members: dedupedMembers,
   };
+}
+
+function sortTripExpensesByNewest(expenses: TripExpense[]) {
+  return [...expenses].sort((left, right) => {
+    const leftTs = expenseIdTimestamp(left.id) || 0;
+    const rightTs = expenseIdTimestamp(right.id) || 0;
+    return rightTs - leftTs;
+  });
 }
 
 function sanitizeLoadedState(state: { trips?: Trip[]; selectedTripId?: string }) {
@@ -1098,6 +1113,8 @@ export default function SplitPayWebApp() {
   const syncRpcMissingWarnedRef = useRef(false);
   const tempSessionWarnedRef = useRef(false);
   const lastPropagatedTripSnapshotRef = useRef<Record<string, string>>({});
+  const lastPersistedExpenseSnapshotRef = useRef<Record<string, string>>({});
+  const skipExpenseDbWriteRef = useRef(false);
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -1427,6 +1444,8 @@ export default function SplitPayWebApp() {
     syncRpcMissingWarnedRef.current = false;
     tempSessionWarnedRef.current = false;
     lastPropagatedTripSnapshotRef.current = {};
+    lastPersistedExpenseSnapshotRef.current = {};
+    skipExpenseDbWriteRef.current = false;
   }, [appSession?.userId]);
 
   useEffect(() => {
@@ -2349,6 +2368,145 @@ export default function SplitPayWebApp() {
       window.clearInterval(interval);
     };
   }, [canSyncWithDb, currentTrip?.id, currentTrip?.inviteCode, dbLoadTick, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !canSyncWithDb || !dbLoadedRef.current) return;
+    if (!currentTrip?.id) return;
+
+    const supabaseClient = supabase;
+    const tripId = currentTrip.id;
+    let cancelled = false;
+
+    const refreshTripExpensesFromDb = async () => {
+      const { data, error } = await supabaseClient
+        .from('trip_expenses')
+        .select('trip_id, expense_id, payload, updated_at')
+        .eq('trip_id', tripId)
+        .order('updated_at', { ascending: false });
+
+      if (cancelled || error) return;
+
+      const rows = (data || []) as TripExpenseRow[];
+      const dbExpenses = sortTripExpensesByNewest(
+        rows
+          .map((row) => {
+            if (!row?.payload || typeof row.payload !== 'object') return null;
+            return {
+              ...row.payload,
+              id: row.expense_id,
+            } as TripExpense;
+          })
+          .filter((expense): expense is TripExpense => Boolean(expense))
+      );
+
+      setTrips((prev) => {
+        const idx = prev.findIndex((trip) => trip.id === tripId);
+        if (idx < 0) return prev;
+
+        const existing = prev[idx];
+        const existingSerialized = JSON.stringify(sortTripExpensesByNewest(existing.expenses || []));
+        const dbSerialized = JSON.stringify(dbExpenses);
+        if (existingSerialized === dbSerialized) {
+          lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
+          return prev;
+        }
+
+        skipNextSaveRef.current = true;
+        skipExpenseDbWriteRef.current = true;
+        lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
+        const next = [...prev];
+        next[idx] = {
+          ...existing,
+          expenses: dbExpenses,
+        };
+        return next;
+      });
+    };
+
+    void refreshTripExpensesFromDb();
+    const interval = window.setInterval(() => {
+      void refreshTripExpensesFromDb();
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [canSyncWithDb, currentTrip?.id, dbLoadTick, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !canSyncWithDb || !dbLoadedRef.current) return;
+    if (!currentTrip?.id) return;
+
+    const tripId = currentTrip.id;
+    const expenses = sortTripExpensesByNewest(currentTrip.expenses || []);
+    const snapshot = JSON.stringify(expenses);
+
+    if (skipExpenseDbWriteRef.current) {
+      skipExpenseDbWriteRef.current = false;
+      return;
+    }
+
+    if (lastPersistedExpenseSnapshotRef.current[tripId] === snapshot) return;
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      if (cancelled) return;
+
+      const rows = expenses.map((expense) => ({
+        trip_id: tripId,
+        expense_id: expense.id,
+        payload: expense,
+        created_by: appSession?.userId || null,
+        updated_at: new Date().toISOString(),
+      }));
+
+      if (rows.length > 0) {
+        const { error: upsertError } = await supabase.from('trip_expenses').upsert(rows, {
+          onConflict: 'trip_id,expense_id',
+        });
+
+        if (cancelled || upsertError) {
+          if (upsertError) setInfoMessage('Cloud sync zlyhal pri ulozeni vydavkov.');
+          return;
+        }
+      }
+
+      const { data: existingRows, error: existingError } = await supabase
+        .from('trip_expenses')
+        .select('expense_id')
+        .eq('trip_id', tripId);
+
+      if (cancelled || existingError) {
+        if (existingError) setInfoMessage('Cloud sync zlyhal pri kontrole vydavkov.');
+        return;
+      }
+
+      const existingIds = ((existingRows || []) as Array<{ expense_id: string }>).map((row) => row.expense_id);
+      const localIds = new Set(expenses.map((expense) => expense.id));
+      const toDelete = existingIds.filter((id) => !localIds.has(id));
+
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('trip_expenses')
+          .delete()
+          .eq('trip_id', tripId)
+          .in('expense_id', toDelete);
+
+        if (cancelled || deleteError) {
+          if (deleteError) setInfoMessage('Cloud sync zlyhal pri mazani vydavkov.');
+          return;
+        }
+      }
+
+      lastPersistedExpenseSnapshotRef.current[tripId] = snapshot;
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [appSession?.userId, canSyncWithDb, currentTrip?.id, currentTrip?.expenses, dbLoadTick, supabase]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
