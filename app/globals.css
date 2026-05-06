@@ -1770,7 +1770,7 @@ button:disabled {
 
 .balance-transfer-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 2fr) auto;
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.2rem;
@@ -1794,9 +1794,11 @@ button:disabled {
 }
 
 .balance-target {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.45rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .balance-avatar {
@@ -2271,7 +2273,7 @@ button:disabled {
   .balance-transfer-row {
     gap: 0.35rem;
     padding: 0.5rem 0.1rem;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 2fr) auto;
   }
 
   .balance-person,
