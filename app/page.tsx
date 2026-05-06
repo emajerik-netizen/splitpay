@@ -203,7 +203,7 @@ const T = {
     quickInvites: 'Rýchle pozvánky',
     fairSplit: 'Spravodlivé rozdelenie',
     instantBalance: 'Okamžitá bilancia',
-    loggedInEmail: 'Prihlásený email:',
+    loggedInEmail: 'Prihlásený:',
     showArchived: 'Zobraziť archivované výlety',
     expenses: 'výdavkov',
     totalMeta: 'Spolu',
@@ -4939,7 +4939,7 @@ export default function SplitPayWebApp() {
                   </div>
                 </div>
                 <div className="hero-actions">
-                    <p className="muted">{t('loggedInEmail')} {appSession?.name || appSession?.email}</p>
+                    <p><span className="muted">{t('loggedInEmail')}</span> <strong>{appSession?.name || appSession?.email}</strong></p>
                   <label className="muted archived-toggle">
                     <input
                       type="checkbox"
