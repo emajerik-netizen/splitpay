@@ -2461,13 +2461,13 @@ button:disabled {
 
   .overview-mini-panel .pill-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.48rem;
   }
 
   .overview-mini-panel .pill {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 0.44rem 0.62rem;
     min-height: 2.35rem;
     border-radius: 0.78rem;
@@ -2476,10 +2476,11 @@ button:disabled {
   .overview-mini-panel .member-link-inline {
     display: block;
     width: 100%;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    text-align: left;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
     text-decoration: none;
   }
 

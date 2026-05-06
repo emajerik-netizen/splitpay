@@ -5032,7 +5032,7 @@ export default function SplitPayWebApp() {
                             <strong>{money(expense.amount)}</strong>
                           </div>
                         ))}
-                        {normalizedExpenses.length > recentExpenses.length ? (
+                        {normalizedExpenses.length >= recentExpenses.length && recentExpenses.length > 0 ? (
                           <button
                             type="button"
                             className="ghost overview-more-expenses-btn"
