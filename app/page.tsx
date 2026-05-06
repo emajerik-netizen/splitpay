@@ -5580,16 +5580,19 @@ export default function SplitPayWebApp() {
                       <button type="button" className="ghost" onClick={closeExpenseDetail}>{t('close')}</button>
                     </div>
 
-                    <div className="stack">
-                      <div className="mini-panel">
-                        <strong>{selectedExpense.title}</strong>
-                        <p className="muted">
-                          {t('paidBy')} {formatMemberName(selectedExpense.payer)} • {money(selectedExpense.amount)}
+                    <div className="stack expense-detail-stack">
+                      <div className="mini-panel expense-detail-summary">
+                        <div className="expense-detail-title-row">
+                          <strong className="expense-detail-title">{selectedExpense.title}</strong>
+                          <span className="expense-detail-amount">{money(selectedExpense.amount)}</span>
+                        </div>
+                        <p className="muted expense-detail-meta">
+                          {t('paidBy')} {formatMemberName(selectedExpense.payer)}
                         </p>
-                        <p className="muted">
+                        <p className="muted expense-detail-meta">
                           {t('participantsLabel')} {selectedExpense.participants.map((name) => formatMemberName(name)).join(', ')}
                         </p>
-                        <div className="expense-actions">
+                        <div className="expense-detail-actions">
                           <button type="button" className="ghost" onClick={() => editExpense(selectedExpense.id)}>
                             {t('editBtn')}
                           </button>
@@ -5599,7 +5602,7 @@ export default function SplitPayWebApp() {
                         </div>
                       </div>
 
-                      <div className="mini-panel">
+                      <div className="mini-panel expense-detail-history">
                         <h3>{t('expenseHistoryTimeline')}</h3>
                         {expenseHistoryLoading ? <p className="muted">{t('loading')}...</p> : null}
                         {!expenseHistoryLoading && selectedExpenseHistory.length === 0 ? (
@@ -5607,7 +5610,7 @@ export default function SplitPayWebApp() {
                         ) : null}
                         <div className="stack-list">
                           {selectedExpenseHistory.map((entry) => (
-                            <div className="row" key={entry.id}>
+                            <div className="row expense-history-row" key={entry.id}>
                               <div>
                                 <strong>{expenseEventLabel(entry.event_type)}</strong>
                                 <p>{formatDateTime(entry.created_at)}</p>

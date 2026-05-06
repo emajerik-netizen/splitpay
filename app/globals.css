@@ -2710,6 +2710,75 @@ button:disabled {
   color: color-mix(in srgb, var(--trip-accent, var(--accent)) 85%, #16325e);
 }
 
+.expense-detail-stack {
+  gap: 0.7rem;
+}
+
+.expense-detail-summary {
+  background: linear-gradient(160deg, #ffffff 0%, #f5f9ff 100%);
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 30%, var(--stroke));
+  gap: 0.55rem;
+}
+
+.expense-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.expense-detail-title {
+  font-size: 1.06rem;
+  line-height: 1.25;
+}
+
+.expense-detail-amount {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 35%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 58%, #ffffff);
+  color: color-mix(in srgb, var(--trip-accent, var(--accent)) 88%, #16325e);
+  padding: 0.2rem 0.62rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.expense-detail-meta {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.expense-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.expense-detail-actions button {
+  min-height: 2.2rem;
+  padding-inline: 0.8rem;
+}
+
+.expense-detail-history {
+  gap: 0.6rem;
+}
+
+.expense-history-row {
+  align-items: flex-start;
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 20%, var(--stroke));
+}
+
+@media (max-width: 640px) {
+  .expense-detail-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .admin-panel {
   display: flex;
   flex-direction: column;
