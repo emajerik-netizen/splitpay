@@ -4048,25 +4048,26 @@ export default function SplitPayWebApp() {
       return;
     }
 
+    const langPack = T[lang];
+
     const currentIds = memberAddNotifications.map((item) => item.id);
     const seenIds = seenMemberAddNotificationIdsRef.current;
-
-    // Prime baseline once per session/user to avoid replaying old rows.
-    if (seenIds.length === 0) {
-      seenMemberAddNotificationIdsRef.current = currentIds;
-      return;
-    }
 
     const seenSet = new Set(seenIds);
     const freshItems = memberAddNotifications.filter((item) => !seenSet.has(item.id));
 
-    if (freshItems.length > 0 && notificationsEnabled) {
-      freshItems.forEach((item) => {
-        sendNotification(t('memberAddedInAppTitle'), {
-          body: `${item.actor_name} ${t('memberAddedInAppBody')} ${item.trip_name}.`,
-          icon: '/icon.png',
+    if (freshItems.length > 0) {
+      if (notificationsEnabled) {
+        freshItems.forEach((item) => {
+          sendNotification(langPack.memberAddedInAppTitle, {
+            body: `${item.actor_name} ${langPack.memberAddedInAppBody} ${item.trip_name}.`,
+            icon: '/icon.png',
+          });
         });
-      });
+      } else {
+        const latest = freshItems[0];
+        setInfoMessage(`${latest.actor_name} ${langPack.memberAddedInAppBody} ${latest.trip_name}.`);
+      }
     }
 
     seenMemberAddNotificationIdsRef.current = currentIds;

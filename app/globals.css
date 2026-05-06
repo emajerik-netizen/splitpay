@@ -2480,8 +2480,13 @@ button:disabled {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
+    min-height: auto;
+    padding: 0;
+    border-radius: 0;
     text-decoration: none;
+    line-height: 1.25;
   }
 
   .overview-mini-panel .member-link-inline:hover {
