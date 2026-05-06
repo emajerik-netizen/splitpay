@@ -879,6 +879,7 @@ function createTrip(name: string, date: string, inviteCode: string, owner: strin
 
 function normalizeTrip(trip: Trip): Trip {
   const owner = trip.owner || 'Ty';
+  const ownerKey = owner.trim().toLowerCase();
   const rawMembers = Array.isArray(trip.members) ? trip.members : [];
   const dedupedMembers: string[] = [];
   const seen = new Set<string>();
@@ -886,14 +887,17 @@ function normalizeTrip(trip: Trip): Trip {
   for (const member of rawMembers) {
     const cleaned = (member || '').trim();
     if (!cleaned) continue;
-    const key = cleaned.toLowerCase();
+    const mapped =
+      cleaned.toLowerCase() === 'ty' && ownerKey && ownerKey !== 'ty'
+        ? owner
+        : cleaned;
+    const key = mapped.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    dedupedMembers.push(cleaned);
+    dedupedMembers.push(mapped);
   }
 
-  const ownerKey = owner.trim().toLowerCase();
-  if (ownerKey && !seen.has(ownerKey)) {
+  if (ownerKey && ownerKey !== 'ty' && !seen.has(ownerKey)) {
     dedupedMembers.unshift(owner);
   }
 
@@ -2096,9 +2100,11 @@ export default function SplitPayWebApp() {
       // - memberName === registrationName (e.g. slot "Janco", registered as "Janco") — "Ty" still removed
       const registrationName = (appSession?.name || '').trim();
       const effectiveName = registrationName || memberName;
+      const ownerKey = (normalized.owner || '').trim().toLowerCase();
+      const ownerLabel = ownerKey && ownerKey !== 'ty' ? normalized.owner : 'Ty';
       const remapName = (n: string) => {
         if (n === memberName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return 'Ty';
+        if (n.toLowerCase() === 'ty') return ownerLabel;
         if (n === effectiveName) return null; // remove pre-existing duplicate
         return n;
       };
@@ -2989,10 +2995,12 @@ export default function SplitPayWebApp() {
       let normalized = normalizeTrip(data.trip as Trip);
       const registrationName = (appSession.name || '').trim();
       const effectiveName = registrationName || cleanedName;
+      const ownerKey = (normalized.owner || '').trim().toLowerCase();
+      const ownerLabel = ownerKey && ownerKey !== 'ty' ? normalized.owner : 'Ty';
 
       const remapName = (n: string) => {
         if (n === cleanedName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return 'Ty';
+        if (n.toLowerCase() === 'ty') return ownerLabel;
         if (n === effectiveName) return null;
         return n;
       };
