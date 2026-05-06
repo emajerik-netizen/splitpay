@@ -194,6 +194,7 @@ const T = {
     supportSending: 'Odosielam...',
     supportSent: 'Správa bola odoslaná na podporu.',
     supportSendFailed: 'Správu sa nepodarilo odoslať. Skús to znova.',
+    supportInvalidEmail: 'Zadaj platnú emailovú adresu.',
     supportSmtpMissing: 'Podpora nie je správne nakonfigurovaná (SMTP). Kontaktuj administrátora.',
     supportSmtpAuthFailed: 'Emailová schránka podpory odmietla prihlásenie. Skontroluj SMTP údaje.',
     supportSmtpUnreachable: 'SMTP server je dočasne nedostupný. Skús to znova neskôr.',
@@ -531,6 +532,7 @@ const T = {
     supportSending: 'Sending...',
     supportSent: 'Message was sent to support.',
     supportSendFailed: 'Message could not be sent. Please try again.',
+    supportInvalidEmail: 'Please enter a valid email address.',
     supportSmtpMissing: 'Support is not configured correctly (SMTP). Contact the administrator.',
     supportSmtpAuthFailed: 'Support mailbox login failed. Check SMTP credentials.',
     supportSmtpUnreachable: 'SMTP server is temporarily unreachable. Please try again later.',
@@ -2249,6 +2251,15 @@ export default function SplitPayWebApp() {
     const senderEmail = (appSession?.email || supportEmail).trim().toLowerCase();
     if (!senderEmail) return;
 
+    // Client-side email validation: reject display-name format and basic invalid patterns
+    const isValidEmail = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(senderEmail)
+      && !/<[^>]+>/.test(senderEmail)
+      && !senderEmail.includes(',');
+    if (!isValidEmail) {
+      setInfoMessage(t('supportInvalidEmail'));
+      return;
+    }
+
     const subject = supportSubject.trim();
     const message = supportBody.trim();
     if (!subject || !message) return;
@@ -2275,6 +2286,11 @@ export default function SplitPayWebApp() {
       } | null;
 
       if (!response.ok) {
+        if (payload?.error === 'invalid_email') {
+          setInfoMessage(t('supportInvalidEmail'));
+          return;
+        }
+
         if (payload?.error === 'smtp_not_configured') {
           const missing = Array.isArray(payload?.missing) && payload.missing.length > 0
             ? ` (${payload.missing.join(', ')})`

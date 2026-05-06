@@ -12,23 +12,31 @@ type SupportPayload = {
 };
 
 function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  // Strict: single @ sign, proper domain with TLD, no display-name format like "Name <addr>"
+  if (/<[^>]+>/.test(value)) return false;
+  if (value.includes(',') || value.includes(';')) return false;
+  return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(value);
+}
+
+function sanitizeText(value: string): string {
+  // Strip HTML tags and null bytes
+  return value.replace(/<[^>]*>/g, '').replace(/\0/g, '').trim();
 }
 
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as SupportPayload;
     const email = (payload.email || '').trim().toLowerCase();
-    const name = (payload.name || '').trim() || 'Unknown';
-    const subject = (payload.subject || '').trim().replace(/[\r\n]+/g, ' ');
-    const message = (payload.message || '').trim();
+    const name = sanitizeText((payload.name || '').slice(0, 100)) || 'Unknown';
+    const subject = sanitizeText((payload.subject || '').replace(/[\r\n]+/g, ' ')).slice(0, 140);
+    const message = sanitizeText(payload.message || '').slice(0, 5000);
 
     if (!email || !subject || !message) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
     }
 
-    if (subject.length > 140 || message.length > 5000) {
-      return NextResponse.json({ error: 'invalid_lengths' }, { status: 400 });
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
     }
 
     const apiKey = process.env.RESEND_API_KEY?.trim();
