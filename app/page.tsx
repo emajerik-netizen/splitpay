@@ -275,6 +275,7 @@ const T = {
     expensesTitle: 'Prehľad a história výdavkov',
     addExpenseBtn: '+ Pridať výdavok',
     expenseHistory: 'História výdavkov',
+    showMoreExpenses: 'Zobraziť viac',
     expenseDetailTitle: 'Detail výdavku',
     expenseHistoryTimeline: 'História zmien',
     noExpenseHistory: 'Zatiaľ žiadna história zmien.',
@@ -606,6 +607,7 @@ const T = {
     expensesTitle: 'Expense Overview & History',
     addExpenseBtn: '+ Add Expense',
     expenseHistory: 'Expense History',
+    showMoreExpenses: 'Show more',
     expenseDetailTitle: 'Expense detail',
     expenseHistoryTimeline: 'Change history',
     noExpenseHistory: 'No change history yet.',
@@ -1203,6 +1205,7 @@ export default function SplitPayWebApp() {
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
   const latestLocalStateRef = useRef('');
+  const seenMemberAddNotificationIdsRef = useRef<string[]>([]);
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
   const canSyncWithDb = Boolean(appSession?.userId && isUuid(appSession.userId));
@@ -4039,6 +4042,36 @@ export default function SplitPayWebApp() {
     });
   }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
 
+  useEffect(() => {
+    if (!appSession?.userId) {
+      seenMemberAddNotificationIdsRef.current = [];
+      return;
+    }
+
+    const currentIds = memberAddNotifications.map((item) => item.id);
+    const seenIds = seenMemberAddNotificationIdsRef.current;
+
+    // Prime baseline once per session/user to avoid replaying old rows.
+    if (seenIds.length === 0) {
+      seenMemberAddNotificationIdsRef.current = currentIds;
+      return;
+    }
+
+    const seenSet = new Set(seenIds);
+    const freshItems = memberAddNotifications.filter((item) => !seenSet.has(item.id));
+
+    if (freshItems.length > 0 && notificationsEnabled) {
+      freshItems.forEach((item) => {
+        sendNotification(t('memberAddedInAppTitle'), {
+          body: `${item.actor_name} ${t('memberAddedInAppBody')} ${item.trip_name}.`,
+          icon: '/icon.png',
+        });
+      });
+    }
+
+    seenMemberAddNotificationIdsRef.current = currentIds;
+  }, [appSession?.userId, memberAddNotifications, notificationsEnabled, lang]);
+
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
   const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
@@ -4967,7 +5000,19 @@ export default function SplitPayWebApp() {
                       <div className="stack-list">
                           {recentExpenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                         {recentExpenses.map((expense) => (
-                          <div className="row overview-row" key={expense.id}>
+                          <div
+                            className="row overview-row expense-row"
+                            key={expense.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => openExpenseDetail(expense.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                openExpenseDetail(expense.id);
+                              }
+                            }}
+                          >
                             <div>
                               <strong>{expense.title}</strong>
                               <p>
@@ -4975,7 +5020,10 @@ export default function SplitPayWebApp() {
                                 <button
                                   type="button"
                                   className="member-link-inline"
-                                  onClick={() => openMemberProfile(expense.payer)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openMemberProfile(expense.payer);
+                                  }}
                                 >
                                   {formatMemberName(expense.payer)}
                                 </button>
@@ -4984,6 +5032,15 @@ export default function SplitPayWebApp() {
                             <strong>{money(expense.amount)}</strong>
                           </div>
                         ))}
+                        {normalizedExpenses.length > recentExpenses.length ? (
+                          <button
+                            type="button"
+                            className="ghost overview-more-expenses-btn"
+                            onClick={() => openTrip(currentTrip.id, 'expenses')}
+                          >
+                            {t('showMoreExpenses')}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
