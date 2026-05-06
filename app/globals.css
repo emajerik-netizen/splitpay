@@ -1378,13 +1378,20 @@ button:disabled {
   color: var(--trip-accent);
 }
 
-.pill button {
+.pill .pill-remove-btn {
   min-height: auto;
   height: 1.5rem;
   width: 1.5rem;
   border-radius: 999px;
   padding: 0;
   background: #d14f4f;
+}
+
+.pill .member-link-inline {
+  height: auto;
+  width: auto;
+  border-radius: 0;
+  background: transparent;
 }
 
 .participants {
