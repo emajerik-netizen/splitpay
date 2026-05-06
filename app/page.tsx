@@ -2596,6 +2596,55 @@ export default function SplitPayWebApp() {
       return;
     }
 
+    const inviteEmail = (currentTrip?.pendingInvites || [])
+      .find((invite) => invite.name.trim().toLowerCase() === normalized)
+      ?.contact
+      ?.trim()
+      .toLowerCase();
+
+    // If the member is an alias from invite slot, resolve by invite email first.
+    if (inviteEmail && inviteEmail.includes('@')) {
+      const { data: profileByEmail } = await supabase
+        .from('user_profiles')
+        .select('user_id, user_name, user_email, iban')
+        .eq('user_email', inviteEmail)
+        .limit(1)
+        .maybeSingle();
+
+      if (profileByEmail?.user_id) {
+        setMemberProfile({
+          userId: profileByEmail.user_id,
+          name: profileByEmail.user_name || memberName,
+          email: profileByEmail.user_email || inviteEmail,
+          iban: (profileByEmail.iban as string | undefined) || '',
+        });
+        return;
+      }
+
+      const { data: presenceByEmail } = await supabase
+        .from('user_presence')
+        .select('user_id, user_name, user_email')
+        .eq('user_email', inviteEmail)
+        .limit(1)
+        .maybeSingle();
+
+      if (presenceByEmail?.user_id) {
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('iban')
+          .eq('user_id', presenceByEmail.user_id)
+          .maybeSingle();
+
+        setMemberProfile({
+          userId: presenceByEmail.user_id,
+          name: presenceByEmail.user_name || memberName,
+          email: presenceByEmail.user_email || inviteEmail,
+          iban: (profileData?.iban as string | undefined) || '',
+        });
+        return;
+      }
+    }
+
     const { data: presences } = await supabase
       .from('user_presence')
       .select('user_id, user_name, user_email, last_seen')
