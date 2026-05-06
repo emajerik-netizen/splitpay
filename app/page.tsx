@@ -3023,14 +3023,30 @@ export default function SplitPayWebApp() {
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
     let updatedTripForSync: Trip | null = null;
-    setTrips((prev) =>
-      prev.map((trip) => {
-        if (trip.id !== currentTrip.id) return trip;
-        const nextTrip = updater(trip);
-        updatedTripForSync = nextTrip;
-        return nextTrip;
-      })
-    );
+     // Update in either normal trips or admin trips depending on current context
+     const isCurrentTripAdmin = isAdmin && currentTrip.id === activeTripId && !trips.some((t) => t.id === currentTrip.id);
+   
+     if (isCurrentTripAdmin) {
+       // Admin is viewing a trip from adminTrips
+       setAdminTrips((prev) =>
+         prev.map((trip) => {
+           if (trip.id !== currentTrip.id) return trip;
+           const nextTrip = updater(trip);
+           updatedTripForSync = nextTrip;
+          return { ...nextTrip, sourceUserId: trip.sourceUserId, updatedAt: trip.updatedAt };
+         })
+       );
+     } else {
+       // Normal user or admin viewing their own trip
+       setTrips((prev) =>
+         prev.map((trip) => {
+           if (trip.id !== currentTrip.id) return trip;
+           const nextTrip = updater(trip);
+           updatedTripForSync = nextTrip;
+           return nextTrip;
+         })
+       );
+     }
 
     if (updatedTripForSync) {
       void propagateTripStateImmediately(updatedTripForSync);
