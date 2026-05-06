@@ -48,12 +48,14 @@ export async function POST(request: Request) {
     }
 
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+      // Silently discard - don't tell the sender the email was rejected
+      return NextResponse.json({ ok: true });
     }
 
     const mxExists = await domainHasMx(email);
     if (!mxExists) {
-      return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+      // Silently discard - domain has no mail servers
+      return NextResponse.json({ ok: true });
     }
 
     const apiKey = process.env.RESEND_API_KEY?.trim();

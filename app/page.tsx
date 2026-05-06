@@ -2251,12 +2251,17 @@ export default function SplitPayWebApp() {
     const senderEmail = (appSession?.email || supportEmail).trim().toLowerCase();
     if (!senderEmail) return;
 
-    // Client-side email validation: reject display-name format and basic invalid patterns
-    const isValidEmail = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(senderEmail)
+    // Client-side format check only - invalid emails are silently dropped server-side
+    const isValidEmailFormat = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(senderEmail)
       && !/<[^>]+>/.test(senderEmail)
       && !senderEmail.includes(',');
-    if (!isValidEmail) {
-      setInfoMessage(t('supportInvalidEmail'));
+    if (!isValidEmailFormat) {
+      // Show success anyway - don't reveal validation to potential spammers
+      setSupportSubject('');
+      setSupportBody('');
+      setSupportEmail('');
+      setInfoMessage(t('supportSent'));
+      setShowSupportModal(false);
       return;
     }
 
@@ -2286,11 +2291,6 @@ export default function SplitPayWebApp() {
       } | null;
 
       if (!response.ok) {
-        if (payload?.error === 'invalid_email') {
-          setInfoMessage(t('supportInvalidEmail'));
-          return;
-        }
-
         if (payload?.error === 'smtp_not_configured') {
           const missing = Array.isArray(payload?.missing) && payload.missing.length > 0
             ? ` (${payload.missing.join(', ')})`
