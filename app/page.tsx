@@ -1218,6 +1218,7 @@ export default function SplitPayWebApp() {
   const notificationsPrimedForUserRef = useRef<string | null>(null);
   const syncRpcMissingWarnedRef = useRef(false);
   const tempSessionWarnedRef = useRef(false);
+  const refreshFromDbRef = useRef<(() => Promise<void>) | null>(null);
   const lastPropagatedTripSnapshotRef = useRef<Record<string, string>>({});
   const lastPersistedExpenseSnapshotRef = useRef<Record<string, string>>({});
   const skipExpenseDbWriteRef = useRef(false);
@@ -1754,6 +1755,9 @@ export default function SplitPayWebApp() {
       applyRemoteState((data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null) || null);
     };
 
+    // Store refreshFromDb in ref so deleteTrip can call it
+    refreshFromDbRef.current = refreshFromDb;
+
     const channel = supabaseClient
       .channel(`trip-state-sync-${userId}`)
       .on(
@@ -1774,7 +1778,7 @@ export default function SplitPayWebApp() {
 
     const interval = window.setInterval(() => {
       void refreshFromDb();
-    }, 2000);
+    }, 1000);
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
@@ -3447,6 +3451,11 @@ export default function SplitPayWebApp() {
           syncRpcMissingWarnedRef.current = true;
           setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
         }
+      }
+
+      // Force refresh all clients to immediately apply the deletion
+      if (removedEverywhere && refreshFromDbRef.current) {
+        await refreshFromDbRef.current();
       }
     }
 
