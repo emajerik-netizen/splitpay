@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { promises as dns } from 'dns';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,17 @@ function sanitizeText(value: string): string {
   return value.replace(/<[^>]*>/g, '').replace(/\0/g, '').trim();
 }
 
+async function domainHasMx(email: string): Promise<boolean> {
+  try {
+    const domain = email.split('@')[1];
+    if (!domain) return false;
+    const records = await dns.resolveMx(domain);
+    return Array.isArray(records) && records.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as SupportPayload;
@@ -36,6 +48,11 @@ export async function POST(request: Request) {
     }
 
     if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+    }
+
+    const mxExists = await domainHasMx(email);
+    if (!mxExists) {
       return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
     }
 
