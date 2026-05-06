@@ -3643,10 +3643,13 @@ export default function SplitPayWebApp() {
     const selfName = appSession.name;
     const normalizedSelfName = selfName.trim().toLowerCase();
     const langPack = T[lang];
-    const isSelf = (name: string) => {
+    const isSelf = (name: string, trip: Trip) => {
       const normalizedName = name.trim().toLowerCase();
       if (!normalizedName) return false;
-      if (normalizedName === 'ty') return true;
+      if (normalizedName === 'ty') {
+        const ownerNormalized = trip.owner.trim().toLowerCase();
+        return ownerNormalized === 'ty' || ownerNormalized === normalizedSelfName;
+      }
       return Boolean(normalizedSelfName) && normalizedName === normalizedSelfName;
     };
 
@@ -3716,7 +3719,7 @@ export default function SplitPayWebApp() {
 
       if (
         addedExpense &&
-        !isSelf(addedExpense.payer) &&
+        !isSelf(addedExpense.payer, trip) &&
         typeof Notification !== 'undefined' &&
         Notification.permission === 'granted'
       ) {
@@ -3725,7 +3728,7 @@ export default function SplitPayWebApp() {
         });
       } else if (
         updatedExpense &&
-        !isSelf(updatedExpense.payer) &&
+        !isSelf(updatedExpense.payer, trip) &&
         typeof Notification !== 'undefined' &&
         Notification.permission === 'granted'
       ) {
@@ -3735,7 +3738,7 @@ export default function SplitPayWebApp() {
       } else if (
         deletedExpense &&
         deletedExpense.payer &&
-        !isSelf(deletedExpense.payer) &&
+        !isSelf(deletedExpense.payer, trip) &&
         typeof Notification !== 'undefined' &&
         Notification.permission === 'granted'
       ) {
@@ -3747,7 +3750,7 @@ export default function SplitPayWebApp() {
       expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
 
       const previousMembers = memberSnapshotRef.current[trip.id] ?? trip.members;
-      if (isSelf(trip.owner) && trip.members.length > previousMembers.length) {
+      if (isSelf(trip.owner, trip) && trip.members.length > previousMembers.length) {
         const previousSet = new Set(previousMembers.map((name) => name.trim().toLowerCase()));
         const addedMembers = trip.members.filter(
           (name) => !previousSet.has(name.trim().toLowerCase())
@@ -3756,7 +3759,7 @@ export default function SplitPayWebApp() {
 
         if (
           newestMember &&
-          !isSelf(newestMember) &&
+          !isSelf(newestMember, trip) &&
           typeof Notification !== 'undefined' &&
           Notification.permission === 'granted'
         ) {
