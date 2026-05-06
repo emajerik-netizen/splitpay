@@ -2090,6 +2090,7 @@ export default function SplitPayWebApp() {
   const currentTripOwnerIsSelf = currentTrip ? isSelfName(currentTrip.owner) : false;
   const memberHistorySuggestions = useMemo(() => {
     if (!currentTrip) return [] as string[];
+    if (!normalizedCurrentUser) return [] as string[];
 
     const currentMembers = new Set(currentTrip.members.map((name) => name.trim().toLowerCase()));
     const seen = new Set<string>();
@@ -2098,10 +2099,15 @@ export default function SplitPayWebApp() {
     for (const trip of trips) {
       if (trip.id === currentTrip.id) continue;
 
+      const tripHasCurrentUser =
+        trip.owner.trim().toLowerCase() === normalizedCurrentUser ||
+        trip.members.some((member) => member.trim().toLowerCase() === normalizedCurrentUser);
+      if (!tripHasCurrentUser) continue;
+
       for (const member of trip.members) {
         const cleaned = member.trim();
         const key = cleaned.toLowerCase();
-        if (!cleaned || key === 'ty') continue;
+        if (!cleaned || key === 'ty' || key === normalizedCurrentUser) continue;
         if (currentMembers.has(key) || seen.has(key)) continue;
         seen.add(key);
         suggestions.push(cleaned);
