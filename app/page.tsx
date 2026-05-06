@@ -262,6 +262,12 @@ const T = {
     expensesTitle: 'Prehľad a história výdavkov',
     addExpenseBtn: '+ Pridať výdavok',
     expenseHistory: 'História výdavkov',
+    expenseDetailTitle: 'Detail výdavku',
+    expenseHistoryTimeline: 'História zmien',
+    noExpenseHistory: 'Zatiaľ žiadna história zmien.',
+    eventCreated: 'Vytvorený',
+    eventUpdated: 'Upravený',
+    eventDeleted: 'Vymazaný',
     sent: 'poslal(a)',
     participantsLabel: 'účastníci:',
     editBtn: 'Upraviť',
@@ -574,6 +580,12 @@ const T = {
     expensesTitle: 'Expense Overview & History',
     addExpenseBtn: '+ Add Expense',
     expenseHistory: 'Expense History',
+    expenseDetailTitle: 'Expense detail',
+    expenseHistoryTimeline: 'Change history',
+    noExpenseHistory: 'No change history yet.',
+    eventCreated: 'Created',
+    eventUpdated: 'Updated',
+    eventDeleted: 'Deleted',
     sent: 'sent',
     participantsLabel: 'participants:',
     editBtn: 'Edit',
@@ -788,6 +800,15 @@ type TripExpenseRow = {
   expense_id: string;
   payload: TripExpense;
   updated_at: string;
+};
+
+type ExpenseHistoryEvent = {
+  id: number;
+  trip_id: string;
+  expense_id: string;
+  event_type: 'created' | 'updated' | 'deleted';
+  payload: TripExpense | null;
+  created_at: string;
 };
 
 type Trip = {
@@ -1062,6 +1083,10 @@ export default function SplitPayWebApp() {
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showExpenseDetailModal, setShowExpenseDetailModal] = useState(false);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const [selectedExpenseHistory, setSelectedExpenseHistory] = useState<ExpenseHistoryEvent[]>([]);
+  const [expenseHistoryLoading, setExpenseHistoryLoading] = useState(false);
   const [showTripSettingsModal, setShowTripSettingsModal] = useState(false);
   const [joinName, setJoinName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -2620,19 +2645,20 @@ export default function SplitPayWebApp() {
   }, [authResolved, dbLoadTick, appSession?.userId, invitePendingCode]);
 
   useEffect(() => {
-    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showTripSettingsModal) return;
+    if (!showCreateTripModal && !showJoinTripModal && !showExpenseModal && !showExpenseDetailModal && !showTripSettingsModal) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setShowCreateTripModal(false);
       setShowJoinTripModal(false);
       setShowExpenseModal(false);
+      closeExpenseDetail();
       setShowTripSettingsModal(false);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showTripSettingsModal]);
+  }, [showCreateTripModal, showJoinTripModal, showExpenseModal, showExpenseDetailModal, showTripSettingsModal]);
 
   useEffect(() => {
     if (!showJoinTripModal) return;
@@ -2702,6 +2728,11 @@ export default function SplitPayWebApp() {
     (isTransferDraft
       ? safeTransferTo.trim().length > 0 && safeTransferTo !== safePayer
       : safeParticipants.length > 0 && validIndividualSplit);
+
+  const selectedExpense = useMemo(() => {
+    if (!currentTrip || !selectedExpenseId) return null;
+    return currentTrip.expenses.find((expense) => expense.id === selectedExpenseId) || null;
+  }, [currentTrip, selectedExpenseId]);
 
   const normalizedCurrentUser = (appSession?.name || '').trim().toLowerCase();
   const displayCurrentUserName = (appSession?.name || '').trim() || 'Používateľ';
@@ -3489,6 +3520,65 @@ export default function SplitPayWebApp() {
     });
   }
 
+  async function logExpenseEvent(expenseId: string, eventType: ExpenseHistoryEvent['event_type'], payload: TripExpense | null) {
+    if (!supabase || !canSyncWithDb || !currentTrip) return;
+
+    const { error } = await supabase.from('trip_expense_events').insert({
+      trip_id: currentTrip.id,
+      expense_id: expenseId,
+      event_type: eventType,
+      payload,
+      actor_user_id: appSession?.userId || null,
+    });
+
+    if (!error) return;
+    // Ignore environments where migration has not been applied yet.
+    if (error.code === 'PGRST205' || error.code === '42P01') return;
+    console.error('Expense event logging failed:', error.message);
+  }
+
+  async function loadExpenseHistory(expenseId: string) {
+    if (!supabase || !canSyncWithDb || !currentTrip) {
+      setSelectedExpenseHistory([]);
+      return;
+    }
+
+    setExpenseHistoryLoading(true);
+    const { data, error } = await supabase
+      .from('trip_expense_events')
+      .select('id, trip_id, expense_id, event_type, payload, created_at')
+      .eq('trip_id', currentTrip.id)
+      .eq('expense_id', expenseId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      if (error.code !== 'PGRST205' && error.code !== '42P01') {
+        console.error('Expense history load failed:', error.message);
+      }
+      setSelectedExpenseHistory([]);
+      setExpenseHistoryLoading(false);
+      return;
+    }
+
+    setSelectedExpenseHistory((data || []) as ExpenseHistoryEvent[]);
+    setExpenseHistoryLoading(false);
+  }
+
+  function openExpenseDetail(expenseId: string) {
+    setSelectedExpenseId(expenseId);
+    setSelectedExpenseHistory([]);
+    setShowExpenseDetailModal(true);
+    void loadExpenseHistory(expenseId);
+  }
+
+  function closeExpenseDetail() {
+    setShowExpenseDetailModal(false);
+    setSelectedExpenseId(null);
+    setSelectedExpenseHistory([]);
+    setExpenseHistoryLoading(false);
+  }
+
   function handleAddExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentTrip || !canAddExpense) return;
@@ -3536,6 +3626,7 @@ export default function SplitPayWebApp() {
         ...trip,
         expenses: trip.expenses.map((item) => (item.id === editingExpenseId ? { ...expense, id: editingExpenseId } : item)),
       }));
+      void logExpenseEvent(editingExpenseId, 'updated', { ...expense, id: editingExpenseId });
       setEditingExpenseId(null);
       setInfoMessage(t('transactionUpdatedInfo'));
       sendNotification(`${currentTrip?.name || t('tripLabel')} - ${t('transactionUpdatedTitle')}`, {
@@ -3543,6 +3634,7 @@ export default function SplitPayWebApp() {
       });
     } else {
       updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
+      void logExpenseEvent(expense.id, 'created', expense);
       sendNotification(`${currentTrip?.name || t('tripLabel')} - ${t('newTransactionTitle')}`, {
         body: `${expense.title} (${eur(expense.amount)})`,
       });
@@ -3563,6 +3655,7 @@ export default function SplitPayWebApp() {
     }));
 
     setShowExpenseModal(false);
+    closeExpenseDetail();
   }
 
   function openExpenseModalForCreate() {
@@ -3605,14 +3698,21 @@ export default function SplitPayWebApp() {
       participantAmounts: found.participantAmounts || {},
     });
     openTrip(currentTrip.id, 'expenses');
+    closeExpenseDetail();
     setShowExpenseModal(true);
   }
 
   function removeExpense(expenseId: string) {
+    if (!currentTrip) return;
+    const found = currentTrip.expenses.find((expense) => expense.id === expenseId) || null;
+    if (found) {
+      void logExpenseEvent(expenseId, 'deleted', found);
+    }
     updateCurrentTrip((trip) => ({
       ...trip,
       expenses: trip.expenses.filter((expense) => expense.id !== expenseId),
     }));
+    closeExpenseDetail();
   }
 
   async function toggleNotifications() {
@@ -3910,6 +4010,12 @@ export default function SplitPayWebApp() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+  }
+
+  function expenseEventLabel(eventType: ExpenseHistoryEvent['event_type']) {
+    if (eventType === 'created') return t('eventCreated');
+    if (eventType === 'updated') return t('eventUpdated');
+    return t('eventDeleted');
   }
 
   return (
@@ -5040,7 +5146,19 @@ export default function SplitPayWebApp() {
                     <div className="stack-list">
                         {currentTrip.expenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                       {currentTrip.expenses.map((expense) => (
-                        <div className="row expense-row" key={expense.id}>
+                        <div
+                          className="row expense-row"
+                          key={expense.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => openExpenseDetail(expense.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              openExpenseDetail(expense.id);
+                            }
+                          }}
+                        >
                           <div className="expense-main">
                             <strong>{expense.title}</strong>
                             <p className="expense-meta-line">
@@ -5097,10 +5215,10 @@ export default function SplitPayWebApp() {
                             ) : null}
                           </div>
                           <div className="expense-actions">
-                              <button type="button" className="ghost" onClick={() => editExpense(expense.id)}>
+                              <button type="button" className="ghost" onClick={(event) => { event.stopPropagation(); editExpense(expense.id); }}>
                                 {t('editBtn')}
                             </button>
-                              <button type="button" className="ghost danger-btn" onClick={() => removeExpense(expense.id)}>
+                              <button type="button" className="ghost danger-btn" onClick={(event) => { event.stopPropagation(); removeExpense(expense.id); }}>
                                 {t('deleteBtn')}
                             </button>
                             <strong>{money(expense.amount)}</strong>
@@ -5394,6 +5512,67 @@ export default function SplitPayWebApp() {
                         </button>
                       ) : null}
                     </form>
+                  </section>
+                </div>
+              ) : null}
+
+              {showExpenseDetailModal && selectedExpense ? (
+                <div className="modal-overlay" role="presentation" onClick={closeExpenseDetail}>
+                  <section
+                    className="section-card modal-card expense-modal-card"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={t('expenseDetailTitle')}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="modal-head">
+                      <div>
+                        <p className="eyebrow">{t('expensesTab')}</p>
+                        <h2>{t('expenseDetailTitle')}</h2>
+                      </div>
+                      <button type="button" className="ghost" onClick={closeExpenseDetail}>{t('close')}</button>
+                    </div>
+
+                    <div className="stack">
+                      <div className="mini-panel">
+                        <strong>{selectedExpense.title}</strong>
+                        <p className="muted">
+                          {t('paidBy')} {formatMemberName(selectedExpense.payer)} • {money(selectedExpense.amount)}
+                        </p>
+                        <p className="muted">
+                          {t('participantsLabel')} {selectedExpense.participants.map((name) => formatMemberName(name)).join(', ')}
+                        </p>
+                        <div className="expense-actions">
+                          <button type="button" className="ghost" onClick={() => editExpense(selectedExpense.id)}>
+                            {t('editBtn')}
+                          </button>
+                          <button type="button" className="ghost danger-btn" onClick={() => removeExpense(selectedExpense.id)}>
+                            {t('deleteBtn')}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mini-panel">
+                        <h3>{t('expenseHistoryTimeline')}</h3>
+                        {expenseHistoryLoading ? <p className="muted">{t('loading')}...</p> : null}
+                        {!expenseHistoryLoading && selectedExpenseHistory.length === 0 ? (
+                          <p className="muted">{t('noExpenseHistory')}</p>
+                        ) : null}
+                        <div className="stack-list">
+                          {selectedExpenseHistory.map((entry) => (
+                            <div className="row" key={entry.id}>
+                              <div>
+                                <strong>{expenseEventLabel(entry.event_type)}</strong>
+                                <p>{formatDateTime(entry.created_at)}</p>
+                                {entry.payload ? (
+                                  <p className="muted">{entry.payload.title} • {money(entry.payload.amount)}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </section>
                 </div>
               ) : null}
