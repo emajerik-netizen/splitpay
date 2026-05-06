@@ -2426,6 +2426,7 @@ export default function SplitPayWebApp() {
       };
 
       setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
+      void propagateTripStateImmediately(normalized);
     }
 
     clearInvite();
@@ -2881,6 +2882,10 @@ export default function SplitPayWebApp() {
       const deletedByOwner = unseenDeletedTrips.find((trip) => !isSelfName(trip.owner));
       if (deletedByOwner) {
         setInfoMessage(`${deletedByOwner.name}: ${t('tripDeletedByOwner')}`);
+        sendNotification(`${deletedByOwner.name} - ${t('tripDeleted')}`, {
+          body: t('tripDeletedByOwner'),
+          icon: '/icon.png',
+        });
       }
       unseenDeletedTrips.forEach((trip) => {
         seenDeletedTripNoticeIdsRef.current[trip.id] = true;
@@ -2948,7 +2953,19 @@ export default function SplitPayWebApp() {
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
-    setTrips((prev) => prev.map((trip) => (trip.id === currentTrip.id ? updater(trip) : trip)));
+    let updatedTripForSync: Trip | null = null;
+    setTrips((prev) =>
+      prev.map((trip) => {
+        if (trip.id !== currentTrip.id) return trip;
+        const nextTrip = updater(trip);
+        updatedTripForSync = nextTrip;
+        return nextTrip;
+      })
+    );
+
+    if (updatedTripForSync) {
+      void propagateTripStateImmediately(updatedTripForSync);
+    }
   }
 
   function openTrip(
@@ -3497,6 +3514,30 @@ export default function SplitPayWebApp() {
     window.open(`sms:?body=${text}`);
   }
 
+  async function propagateTripStateImmediately(trip: Trip) {
+    if (!supabase || !canSyncWithDb || !trip.inviteCode) return;
+
+    const { error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
+      p_invite_code: trip.inviteCode,
+      p_trip: trip,
+    });
+
+    if (syncError?.code === 'PGRST202') {
+      if (!syncRpcMissingWarnedRef.current) {
+        syncRpcMissingWarnedRef.current = true;
+        setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
+      }
+      return;
+    }
+
+    if (syncError) {
+      console.error('Immediate trip propagation failed:', syncError.message);
+      return;
+    }
+
+    lastPropagatedTripSnapshotRef.current[trip.inviteCode] = JSON.stringify(trip);
+  }
+
   async function handleJoinByCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanedName = joinName.trim();
@@ -3506,6 +3547,7 @@ export default function SplitPayWebApp() {
     let foundTripId = '';
     let duplicateMember = false;
     let hasMatchingInvite = false;
+    let joinedTrip: Trip | null = null;
 
     setTrips((prev) =>
       prev.map((trip) => {
@@ -3521,14 +3563,16 @@ export default function SplitPayWebApp() {
           if (matchingInvite) {
             // They're claiming an existing fictional member slot
             hasMatchingInvite = true;
-            return {
+            const updatedTrip = {
               ...trip,
               pendingInvites: trip.pendingInvites.map((invite) =>
                 invite.name.toLowerCase() === cleanedName.toLowerCase()
-                  ? { ...invite, status: 'Prijate' }
+                  ? { ...invite, status: 'Prijate' as const }
                   : invite
               ),
-            };
+            } satisfies Trip;
+            joinedTrip = updatedTrip;
+            return updatedTrip;
           }
           
           // Name exists but no matching invite
@@ -3536,15 +3580,17 @@ export default function SplitPayWebApp() {
           return trip;
         }
 
-        return {
+        const updatedTrip = {
           ...trip,
           members: [...trip.members, cleanedName],
           pendingInvites: trip.pendingInvites.map((invite) =>
             invite.name.toLowerCase() === cleanedName.toLowerCase()
-              ? { ...invite, status: 'Prijate' }
+              ? { ...invite, status: 'Prijate' as const }
               : invite
           ),
-        };
+        } satisfies Trip;
+        joinedTrip = updatedTrip;
+        return updatedTrip;
       })
     );
 
@@ -3627,6 +3673,7 @@ export default function SplitPayWebApp() {
       };
 
       setTrips((prev) => [...prev.filter((trip) => trip.id !== normalized.id), normalized]);
+      void propagateTripStateImmediately(normalized);
       openTrip(data.tripId, 'overview');
       setJoinName('');
       setJoinCode('');
@@ -3638,6 +3685,10 @@ export default function SplitPayWebApp() {
     if (duplicateMember) {
       setInfoMessage(`${cleanedName} ${t('nameAlreadyInGroup')}`);
       return;
+    }
+
+    if (joinedTrip) {
+      void propagateTripStateImmediately(joinedTrip);
     }
 
     openTrip(foundTripId, 'overview');
