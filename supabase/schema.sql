@@ -293,6 +293,38 @@ create policy "support_spam_log_delete_admin"
   to authenticated
   using (public.is_admin(auth.uid()));
 
+-- deleted_accounts_log: audit trail of deleted user accounts
+create table if not exists public.deleted_accounts_log (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  deleted_at timestamptz not null default now()
+);
+
+alter table public.deleted_accounts_log enable row level security;
+
+drop policy if exists "deleted_accounts_log_insert_service" on public.deleted_accounts_log;
+create policy "deleted_accounts_log_insert_service"
+  on public.deleted_accounts_log
+  for insert
+  to service_role
+  with check (true);
+
+drop policy if exists "deleted_accounts_log_select_admin" on public.deleted_accounts_log;
+create policy "deleted_accounts_log_select_admin"
+  on public.deleted_accounts_log
+  for select
+  to authenticated
+  using (public.is_admin(auth.uid()));
+
+drop policy if exists "deleted_accounts_log_delete_admin" on public.deleted_accounts_log;
+create policy "deleted_accounts_log_delete_admin"
+  on public.deleted_accounts_log
+  for delete
+  to authenticated
+  using (public.is_admin(auth.uid()));
+
+create index if not exists idx_deleted_accounts_log_deleted_at on public.deleted_accounts_log (deleted_at desc);
+
 create index if not exists idx_support_spam_log_created_at on public.support_spam_log (created_at desc);
 
 create index if not exists idx_app_visits_visited_at on public.app_visits (visited_at desc);

@@ -394,6 +394,8 @@ const T = {
     adminUnverifiedEmpty: 'Všetci používatelia majú overený email.',
     adminUnverifiedRegistered: 'Registrovaný:',
     adminUnverifiedLastLogin: 'Posledné prihlásenie:',
+    adminDeletedAccountsTitle: 'Vymazané účty',
+    adminDeletedAccountsEmpty: 'Žiadne vymazané účty.',
     removeSelfWarningLead: '⚠️ Ak sa odstránite:',
     removeSelfWarningSolo: 'Si jediný člen, výlet bude vymazaný.',
     removeSelfInfoLead: 'ℹ️ Ak sa odstránite:',
@@ -751,6 +753,8 @@ const T = {
     adminUnverifiedEmpty: 'All users have verified their email.',
     adminUnverifiedRegistered: 'Registered:',
     adminUnverifiedLastLogin: 'Last login:',
+    adminDeletedAccountsTitle: 'Deleted accounts',
+    adminDeletedAccountsEmpty: 'No deleted accounts.',
     removeSelfWarningLead: '⚠️ If you remove yourself:',
     removeSelfWarningSolo: 'You are the only member, the trip will be deleted.',
     removeSelfInfoLead: 'ℹ️ If you remove yourself:',
@@ -984,6 +988,12 @@ type AdminAuthUser = {
   last_sign_in_at: string | null;
   provider?: string;
   is_oauth?: boolean;
+};
+
+type DeletedAccountEntry = {
+  id: string;
+  email: string;
+  deleted_at: string;
 };
 
 type MemberProfileView = {
@@ -1247,6 +1257,7 @@ export default function SplitPayWebApp() {
   const [spamLog, setSpamLog] = useState<SpamLogEntry[]>([]);
   const [spamLogModal, setSpamLogModal] = useState<SpamLogEntry | null>(null);
   const [adminAuthUsers, setAdminAuthUsers] = useState<AdminAuthUser[]>([]);
+  const [deletedAccounts, setDeletedAccounts] = useState<DeletedAccountEntry[]>([]);
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
@@ -2107,6 +2118,14 @@ export default function SplitPayWebApp() {
       } catch {
         // non-critical
       }
+
+      // Fetch deleted accounts log
+      const deletedRes = await supabaseClient
+        .from('deleted_accounts_log')
+        .select('id, email, deleted_at')
+        .order('deleted_at', { ascending: false })
+        .limit(200);
+      if (!cancelled) setDeletedAccounts((deletedRes.data || []) as DeletedAccountEntry[]);
 
       setAdminLoading(false);
     }
@@ -5194,6 +5213,28 @@ export default function SplitPayWebApp() {
                   </div>
                 );
               })()}
+
+              {/* Deleted accounts log */}
+              <div className="admin-card" style={{ marginTop: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem' }}>
+                  {t('adminDeletedAccountsTitle')}
+                  {deletedAccounts.length > 0 ? <span className="badge" style={{ marginLeft: '8px' }}>{deletedAccounts.length}</span> : null}
+                </h3>
+                {deletedAccounts.length === 0 ? (
+                  <p className="muted">{t('adminDeletedAccountsEmpty')}</p>
+                ) : (
+                  <div className="stack-list">
+                    {deletedAccounts.map((entry) => (
+                      <div className="row" key={entry.id} style={{ padding: '6px 0' }}>
+                        <span style={{ fontSize: '0.88rem' }}>{entry.email}</span>
+                        <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                          {new Date(entry.deleted_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="admin-card" style={{ marginTop: '1.5rem' }}>
                 <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

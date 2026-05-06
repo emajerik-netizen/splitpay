@@ -32,6 +32,10 @@ export async function POST(request: Request) {
     }
 
     const userId = userData.user.id;
+    const userEmail = userData.user.email ?? '';
+
+    // Log the deleted email before removing the account
+    await adminClient.from('deleted_accounts_log').insert({ email: userEmail });
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteError) {
