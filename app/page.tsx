@@ -6362,8 +6362,8 @@ export default function SplitPayWebApp() {
 
       {/* Spam log detail modal - rendered at root level so fixed positioning works */}
       {spamLogModal ? (
-        <div className="modal-backdrop" onClick={() => setSpamLogModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-overlay" onClick={() => setSpamLogModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0 }}>{t('adminSpamLog')}</h3>
               <span className="pill" style={{
