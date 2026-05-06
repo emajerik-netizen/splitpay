@@ -486,6 +486,39 @@ body {
   background: #ffffff;
 }
 
+.expense-row-compact {
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--stroke);
+  justify-content: space-between;
+}
+
+.expense-row-compact:hover {
+  background: color-mix(in srgb, var(--accent-soft) 40%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--stroke));
+}
+
+.expense-row-compact:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.expense-row-compact strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.expense-row-compact strong:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .expense-row:hover {
   border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 35%, var(--stroke));
 }
@@ -580,6 +613,16 @@ body {
     align-items: flex-start;
     gap: 0.55rem;
     padding: 0.62rem 0.68rem;
+  }
+
+  .expense-row-compact {
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .expense-row-compact strong {
+    font-size: 0.9rem;
   }
 
   .expense-actions {

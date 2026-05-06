@@ -5263,7 +5263,7 @@ export default function SplitPayWebApp() {
                         {currentTrip.expenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                       {currentTrip.expenses.map((expense) => (
                         <div
-                          className="row expense-row"
+                          className="row expense-row expense-row-compact"
                           key={expense.id}
                           role="button"
                           tabIndex={0}
@@ -5275,75 +5275,8 @@ export default function SplitPayWebApp() {
                             }
                           }}
                         >
-                          <div className="expense-main">
-                            <strong>{expense.title}</strong>
-                            <p className="expense-meta-line">
-                              {expense.expenseType === 'transfer'
-                                ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      className="member-link-inline expense-member-link"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        openMemberProfile(expense.payer);
-                                      }}
-                                    >
-                                      {formatMemberName(expense.payer)}
-                                    </button>
-                                    <span>{t('sent')}</span>
-                                    <button
-                                      type="button"
-                                      className="member-link-inline expense-member-link"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        openMemberProfile(expense.transferTo || expense.participants[0] || '');
-                                      }}
-                                    >
-                                      {formatMemberName(expense.transferTo || expense.participants[0] || '-')}
-                                    </button>
-                                  </>
-                                )
-                                : (
-                                  <>
-                                    <span>{t('paidBy')}</span>
-                                    <button
-                                      type="button"
-                                      className="member-link-inline expense-member-link"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        openMemberProfile(expense.payer);
-                                      }}
-                                    >
-                                      {formatMemberName(expense.payer)}
-                                    </button>
-                                  </>
-                                )}
-                            </p>
-                            {expense.expenseType !== 'transfer' ? (
-                              <div className="expense-participants-line">
-                                <span className="muted">{t('participantsLabel')}</span>
-                                <div className="expense-member-list">
-                                  {expense.participants.map((participant, idx) => (
-                                    <button
-                                      key={`${expense.id}-${participant}-${idx}`}
-                                      type="button"
-                                      className="member-link-inline expense-member-link"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        openMemberProfile(participant);
-                                      }}
-                                    >
-                                      {formatMemberName(participant)}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                          <div className="expense-actions">
-                            <strong>{money(expense.amount)}</strong>
-                          </div>
+                          <strong>{expense.title}</strong>
+                          <strong>{money(expense.amount)}</strong>
                         </div>
                       ))}
                     </div>
