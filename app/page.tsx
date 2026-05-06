@@ -1514,7 +1514,24 @@ export default function SplitPayWebApp() {
 
       if (error) {
         setInfoMessage('Cloud sync zlyhal pri ulozeni vyletu.');
+        return;
       }
+
+      // Propagate changed trip payload to all participant copies by invite code.
+      const syncableTrips = payload.trips.filter((trip) => Boolean(trip.inviteCode));
+      await Promise.all(
+        syncableTrips.map(async (trip) => {
+          const { error: syncError } = await supabaseClient.rpc('sync_trip_state_by_invite_code', {
+            p_invite_code: trip.inviteCode,
+            p_trip: trip,
+          });
+
+          // If RPC is not deployed yet, skip silently to keep local save working.
+          if (syncError && syncError.code !== 'PGRST202') {
+            console.error('Trip propagation sync failed:', syncError.message);
+          }
+        })
+      );
     }, 500);
 
     return () => window.clearTimeout(timeoutId);

@@ -182,3 +182,64 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION join_trip_by_invite_code TO authenticated;
+
+
+-- 3. Sync trip state to all participants by invite code (requires auth)
+--    - Caller must already have this invite code in their own state
+--    - Updates matching trip in every user's trip_states copy
+CREATE OR REPLACE FUNCTION sync_trip_state_by_invite_code(p_invite_code TEXT, p_trip JSONB)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_updated_rows INTEGER := 0;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN json_build_object('error', 'not_authenticated');
+  END IF;
+
+  IF COALESCE(trim(p_invite_code), '') = '' OR p_trip IS NULL THEN
+    RETURN json_build_object('error', 'invalid_payload');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   trip_states ts,
+           jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) trip_elem
+    WHERE  ts.user_id = auth.uid()
+      AND  trip_elem.value->>'inviteCode' = p_invite_code
+  ) THEN
+    RETURN json_build_object('error', 'forbidden');
+  END IF;
+
+  UPDATE trip_states ts
+  SET    state_json = jsonb_set(
+           ts.state_json, '{trips}',
+           (
+             SELECT jsonb_agg(
+               CASE
+                 WHEN t->>'inviteCode' = p_invite_code THEN p_trip
+                 ELSE t
+               END
+             )
+             FROM jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t
+           )
+         )
+  WHERE EXISTS (
+    SELECT 1
+    FROM   jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t
+    WHERE  t->>'inviteCode' = p_invite_code
+  );
+
+  GET DIAGNOSTICS v_updated_rows = ROW_COUNT;
+
+  RETURN json_build_object(
+    'success', true,
+    'updatedRows', v_updated_rows
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION sync_trip_state_by_invite_code TO authenticated;
