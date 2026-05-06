@@ -417,6 +417,7 @@ const T = {
     removedFromTrip: 'Si odstránený(á) z výletu.',
     memberRemoved: 'bol(a) odstránený(á) z výletu.',
     tripDeleted: 'Výlet bol vymazaný.',
+    tripDeletedByOwner: 'Výlet bol vymazaný vlastníkom.',
     tripAutoArchivedTitle: 'Výlet bol archivovaný',
     tripAutoArchivedBody: 'Výlet bol automaticky archivovaný po 7 dňoch bez nových výdavkov.',
     tripAutoArchivedInfo: 'bol automaticky archivovaný (7 dní bez výdavkov).',
@@ -751,6 +752,7 @@ const T = {
     removedFromTrip: 'You were removed from the trip.',
     memberRemoved: 'was removed from the trip.',
     tripDeleted: 'Trip was deleted.',
+    tripDeletedByOwner: 'The trip was deleted by the owner.',
     tripAutoArchivedTitle: 'Trip archived',
     tripAutoArchivedBody: 'The trip was automatically archived after 7 days without new expenses.',
     tripAutoArchivedInfo: 'was automatically archived (7 days without expenses).',
@@ -852,6 +854,8 @@ type Trip = {
   color: string;
   archived: boolean;
   inviteCode: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
   members: string[];
   expenses: TripExpense[];
   pendingInvites: Invite[];
@@ -964,6 +968,8 @@ function createTrip(name: string, date: string, inviteCode: string, owner: strin
     color: '#2c79f6',
     archived: false,
     inviteCode,
+    deletedAt: null,
+    deletedBy: null,
     members: ['Ty'],
     expenses: [],
     pendingInvites: [],
@@ -1002,6 +1008,8 @@ function normalizeTrip(trip: Trip): Trip {
     color: trip.color || '#2c79f6',
     inviteCode: (trip.inviteCode || makeInviteCode()).toUpperCase(),
     archived: Boolean(trip.archived),
+    deletedAt: trip.deletedAt || null,
+    deletedBy: trip.deletedBy || null,
     members: dedupedMembers,
   };
 }
@@ -2863,6 +2871,22 @@ export default function SplitPayWebApp() {
     if (leftNormalized === rightNormalized) return true;
     return isSelfName(left) && isSelfName(right);
   };
+  useEffect(() => {
+    const deletedTrips = trips.filter((trip) => Boolean(trip.deletedAt));
+    if (!deletedTrips.length) return;
+
+    const deletedByOwner = deletedTrips.find((trip) => !isSelfName(trip.owner));
+    if (deletedByOwner) {
+      setInfoMessage(`${deletedByOwner.name}: ${t('tripDeletedByOwner')}`);
+    }
+
+    if (deletedTrips.some((trip) => trip.id === selectedTripId)) {
+      goToTripsHome();
+    }
+
+    setTrips((prev) => prev.filter((trip) => !trip.deletedAt));
+  }, [selectedTripId, trips]);
+
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
   const getInitials = (name: string): string => {
     const displayName = formatMemberName(name);
@@ -3315,7 +3339,7 @@ export default function SplitPayWebApp() {
 
     if (isOwnerRemoving && otherMembers.length === 0) {
       // If owner removes themselves and they're alone, delete trip
-      deleteTrip(currentTrip.id);
+      void deleteTrip(currentTrip.id);
       setInfoMessage(t('onlyMemberTripDeleted'));
       return;
     }
@@ -3350,11 +3374,30 @@ export default function SplitPayWebApp() {
     setInfoMessage(`${formatMemberName(memberName)} ${t('memberRemoved')}`);
   }
 
-  function deleteTrip(tripId: string) {
+  async function deleteTrip(tripId: string) {
     const tripToDelete = trips.find((t) => t.id === tripId);
     if (!tripToDelete) return;
     const isOwner = isSelfName(tripToDelete.owner);
     if (!isOwner) return;
+
+    if (supabase && canSyncWithDb && tripToDelete.inviteCode) {
+      const deletedPayload: Trip = {
+        ...tripToDelete,
+        archived: true,
+        deletedAt: new Date().toISOString(),
+        deletedBy: appSession?.userId || null,
+      };
+
+      const { error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
+        p_invite_code: tripToDelete.inviteCode,
+        p_trip: deletedPayload,
+      });
+
+      if (syncError?.code === 'PGRST202' && !syncRpcMissingWarnedRef.current) {
+        syncRpcMissingWarnedRef.current = true;
+        setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
+      }
+    }
 
     setTrips((prev) => prev.filter((trip) => trip.id !== tripId));
     goToTripsHome();
@@ -4944,7 +4987,7 @@ export default function SplitPayWebApp() {
                         type="button"
                         className="ghost danger-btn"
                         onClick={() => {
-                          deleteTrip(currentTrip.id);
+                          void deleteTrip(currentTrip.id);
                           setShowTripSettingsModal(false);
                         }}
                       >
