@@ -249,3 +249,64 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION sync_trip_state_by_invite_code TO authenticated;
+
+
+-- 4. Remove a trip by invite code from all participants (requires auth)
+--    - Caller must be able to see this invite code in their own state
+--    - Removes the trip from every user's trip_states copy
+CREATE OR REPLACE FUNCTION remove_trip_by_invite_code(p_invite_code TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_updated_rows INTEGER := 0;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN json_build_object('error', 'not_authenticated');
+  END IF;
+
+  IF COALESCE(trim(p_invite_code), '') = '' THEN
+    RETURN json_build_object('error', 'invalid_payload');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   trip_states ts,
+           jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) trip_elem
+    WHERE  ts.user_id = auth.uid()
+      AND  trip_elem.value->>'inviteCode' = p_invite_code
+  ) THEN
+    RETURN json_build_object('error', 'forbidden');
+  END IF;
+
+  UPDATE trip_states ts
+  SET    state_json = jsonb_set(
+           ts.state_json, '{trips}',
+           COALESCE(
+             (
+               SELECT jsonb_agg(t)
+               FROM jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t
+               WHERE t->>'inviteCode' <> p_invite_code
+             ),
+             '[]'::jsonb
+           )
+          ),
+          updated_at = now()
+  WHERE EXISTS (
+    SELECT 1
+    FROM   jsonb_array_elements(COALESCE(ts.state_json->'trips','[]'::jsonb)) t
+    WHERE  t->>'inviteCode' = p_invite_code
+  );
+
+  GET DIAGNOSTICS v_updated_rows = ROW_COUNT;
+
+  RETURN json_build_object(
+    'success', true,
+    'updatedRows', v_updated_rows
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION remove_trip_by_invite_code TO authenticated;

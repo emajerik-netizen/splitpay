@@ -1214,6 +1214,7 @@ export default function SplitPayWebApp() {
   const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
   const inviteStatusSnapshotRef = useRef<Record<string, Record<string, Invite['status']>>>({});
+  const tripMetaSnapshotRef = useRef<Record<string, { name: string; owner: string }>>({});
   const notificationsPrimedForUserRef = useRef<string | null>(null);
   const syncRpcMissingWarnedRef = useRef(false);
   const tempSessionWarnedRef = useRef(false);
@@ -3413,21 +3414,34 @@ export default function SplitPayWebApp() {
     if (!isOwner) return;
 
     if (supabase && canSyncWithDb && tripToDelete.inviteCode) {
-      const deletedPayload: Trip = {
-        ...tripToDelete,
-        archived: true,
-        deletedAt: new Date().toISOString(),
-        deletedBy: appSession?.userId || null,
-      };
+      let removedEverywhere = false;
 
-      const { error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
+      const { data: removeData, error: removeError } = (await supabase.rpc('remove_trip_by_invite_code', {
         p_invite_code: tripToDelete.inviteCode,
-        p_trip: deletedPayload,
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      })) as unknown as { data: Record<string, any> | null; error: { code?: string } | null };
 
-      if (syncError?.code === 'PGRST202' && !syncRpcMissingWarnedRef.current) {
-        syncRpcMissingWarnedRef.current = true;
-        setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
+      if (!removeError && removeData?.success) {
+        removedEverywhere = true;
+      }
+
+      if (!removedEverywhere) {
+        const deletedPayload: Trip = {
+          ...tripToDelete,
+          archived: true,
+          deletedAt: new Date().toISOString(),
+          deletedBy: appSession?.userId || null,
+        };
+
+        const { error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
+          p_invite_code: tripToDelete.inviteCode,
+          p_trip: deletedPayload,
+        });
+
+        if ((syncError?.code === 'PGRST202' || removeError?.code === 'PGRST202') && !syncRpcMissingWarnedRef.current) {
+          syncRpcMissingWarnedRef.current = true;
+          setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
+        }
       }
     }
 
@@ -4048,6 +4062,8 @@ export default function SplitPayWebApp() {
     if (notificationsPrimedForUserRef.current !== appSession.userId) {
       expenseSnapshotRef.current = {};
       memberSnapshotRef.current = {};
+      inviteStatusSnapshotRef.current = {};
+      tripMetaSnapshotRef.current = {};
     }
 
     const selfName = appSession.name;
@@ -4085,11 +4101,36 @@ export default function SplitPayWebApp() {
         expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
         memberSnapshotRef.current[trip.id] = [...trip.members];
         inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
+        tripMetaSnapshotRef.current[trip.id] = { name: trip.name, owner: trip.owner };
       });
 
       notificationsPrimedForUserRef.current = appSession.userId;
       return;
     }
+
+    const previousTripIds = Object.keys(tripMetaSnapshotRef.current);
+    const currentTripIds = new Set(trips.map((trip) => trip.id));
+    const removedTripIds = previousTripIds.filter((tripId) => !currentTripIds.has(tripId));
+
+    removedTripIds.forEach((tripId) => {
+      const meta = tripMetaSnapshotRef.current[tripId];
+      if (!meta) return;
+
+      const ownerNormalized = meta.owner.trim().toLowerCase();
+      const selfIsOwner = ownerNormalized === 'ty' || ownerNormalized === normalizedSelfName;
+      if (!selfIsOwner) {
+        sendNotification(`${meta.name} - ${langPack.tripDeleted}`, {
+          body: langPack.tripDeletedByOwner,
+          icon: '/icon.png',
+        });
+        setInfoMessage(`${meta.name}: ${langPack.tripDeletedByOwner}`);
+      }
+
+      delete expenseSnapshotRef.current[tripId];
+      delete memberSnapshotRef.current[tripId];
+      delete inviteStatusSnapshotRef.current[tripId];
+      delete tripMetaSnapshotRef.current[tripId];
+    });
 
     trips.forEach((trip) => {
       const previousExpenseSnapshot = expenseSnapshotRef.current[trip.id] || {};
@@ -4207,6 +4248,7 @@ export default function SplitPayWebApp() {
       }
 
       inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
+      tripMetaSnapshotRef.current[trip.id] = { name: trip.name, owner: trip.owner };
     });
   }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
 
