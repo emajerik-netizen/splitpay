@@ -2850,6 +2850,8 @@ button:disabled {
   padding: 0.4rem 0.8rem;
   border-radius: 0.6rem;
   transition: all 120ms ease;
+  text-align: center;
+  word-break: break-all;
 }
 
 .support-link:hover {
