@@ -2531,7 +2531,35 @@ export default function SplitPayWebApp() {
         p_invite_code: currentTrip.inviteCode,
       })) as unknown as { data: Record<string, any> | null };
 
-      if (cancelled || !data?.found || !data.trip) return;
+      if (cancelled) return;
+
+      if (!data?.found || !data.trip) {
+        const removedTripId = currentTrip.id;
+        const removedTripName = currentTrip.name;
+        const removedInviteCode = currentTrip.inviteCode;
+
+        setTrips((prev) =>
+          prev.filter(
+            (trip) => trip.id !== removedTripId && (removedInviteCode ? trip.inviteCode !== removedInviteCode : true)
+          )
+        );
+
+        if (selectedTripId === removedTripId) {
+          goToTripsHome();
+        }
+
+        setShowExpenseModal(false);
+        setEditingExpenseId(null);
+
+        if (!isSelfName(currentTrip.owner)) {
+          setInfoMessage(`${removedTripName}: ${t('tripDeletedByOwner')}`);
+          sendNotification(`${removedTripName} - ${t('tripDeleted')}`, {
+            body: t('tripDeletedByOwner'),
+            icon: '/icon.png',
+          });
+        }
+        return;
+      }
 
       const sharedTrip = normalizeTrip(data.trip as Trip);
 
@@ -2891,6 +2919,7 @@ export default function SplitPayWebApp() {
 
   const canAddExpense =
     !currentTrip?.archived &&
+    !currentTrip?.deletedAt &&
     (isTransferDraft || draft.title.trim().length > 0) &&
     amountNumber > 0 &&
     safePayer.trim().length > 0 &&
@@ -3886,9 +3915,33 @@ export default function SplitPayWebApp() {
     setExpenseHistoryLoading(false);
   }
 
-  function handleAddExpense(event: FormEvent<HTMLFormElement>) {
+  async function handleAddExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentTrip || !canAddExpense) return;
+
+    if (supabase && canSyncWithDb && appSession?.userId) {
+      const tripIdAtSubmit = currentTrip.id;
+      const tripNameAtSubmit = currentTrip.name;
+
+      const { data: canAccessTrip, error: accessError } = await supabase.rpc('can_access_trip', {
+        target_trip_id: tripIdAtSubmit,
+      });
+
+      if (accessError || canAccessTrip === false) {
+        setTrips((prev) => prev.filter((trip) => trip.id !== tripIdAtSubmit));
+        if (selectedTripId === tripIdAtSubmit) {
+          goToTripsHome();
+        }
+        setShowExpenseModal(false);
+        setEditingExpenseId(null);
+        setInfoMessage(`${tripNameAtSubmit}: ${t('tripDeletedByOwner')}`);
+        sendNotification(`${tripNameAtSubmit} - ${t('tripDeleted')}`, {
+          body: t('tripDeletedByOwner'),
+          icon: '/icon.png',
+        });
+        return;
+      }
+    }
 
     const amount = Number(draft.amount);
     const expense: TripExpense =
