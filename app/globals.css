@@ -2661,24 +2661,51 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .admin-textarea {
-    min-height: 8rem;
-    padding: 0.9rem 1rem;
+  .admin-panel {
+    gap: 0.8rem;
+    padding: 0.72rem;
+  }
+
+  .admin-panel .section-head h2 {
+    font-size: 1.2rem;
+  }
+
+  .admin-panel .section-head .muted {
+    font-size: 0.85rem;
+  }
+
+  .admin-panel .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .admin-panel .stat-card {
+    padding: 0.55rem 0.62rem;
+    border-radius: 0.75rem;
+  }
+
+  .admin-panel .stat-card span {
+    font-size: 0.74rem;
+  }
+
+  .admin-panel .stat-card strong {
     font-size: 1rem;
   }
 
+  .admin-textarea {
+    min-height: 5.6rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
   .admin-actions {
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .admin-actions button {
-    min-height: 3rem;
-    padding: 0.8rem 1rem;
-    font-size: 0.95rem;
-  }
-
-  .admin-panel {
-    gap: 1.2rem;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.86rem;
   }
 }
 

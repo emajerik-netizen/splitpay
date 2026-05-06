@@ -1220,6 +1220,7 @@ export default function SplitPayWebApp() {
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
   const latestLocalStateRef = useRef('');
   const seenMemberAddNotificationIdsRef = useRef<string[]>([]);
+  const seenDeletedTripNoticeIdsRef = useRef<Record<string, true>>({});
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
   const canSyncWithDb = Boolean(appSession?.userId && isUuid(appSession.userId));
@@ -2875,16 +2876,25 @@ export default function SplitPayWebApp() {
     const deletedTrips = trips.filter((trip) => Boolean(trip.deletedAt));
     if (!deletedTrips.length) return;
 
-    const deletedByOwner = deletedTrips.find((trip) => !isSelfName(trip.owner));
-    if (deletedByOwner) {
-      setInfoMessage(`${deletedByOwner.name}: ${t('tripDeletedByOwner')}`);
+    const unseenDeletedTrips = deletedTrips.filter((trip) => !seenDeletedTripNoticeIdsRef.current[trip.id]);
+    if (unseenDeletedTrips.length) {
+      const deletedByOwner = unseenDeletedTrips.find((trip) => !isSelfName(trip.owner));
+      if (deletedByOwner) {
+        setInfoMessage(`${deletedByOwner.name}: ${t('tripDeletedByOwner')}`);
+      }
+      unseenDeletedTrips.forEach((trip) => {
+        seenDeletedTripNoticeIdsRef.current[trip.id] = true;
+      });
     }
 
     if (deletedTrips.some((trip) => trip.id === selectedTripId)) {
       goToTripsHome();
     }
 
-    setTrips((prev) => prev.filter((trip) => !trip.deletedAt));
+    setTrips((prev) => {
+      const next = prev.filter((trip) => !trip.deletedAt);
+      return next.length === prev.length ? prev : next;
+    });
   }, [selectedTripId, trips]);
 
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
