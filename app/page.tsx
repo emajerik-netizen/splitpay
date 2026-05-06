@@ -863,14 +863,34 @@ function createTrip(name: string, date: string, inviteCode: string, owner: strin
 }
 
 function normalizeTrip(trip: Trip): Trip {
+  const owner = trip.owner || 'Ty';
+  const rawMembers = Array.isArray(trip.members) ? trip.members : [];
+  const dedupedMembers: string[] = [];
+  const seen = new Set<string>();
+
+  for (const member of rawMembers) {
+    const cleaned = (member || '').trim();
+    if (!cleaned) continue;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dedupedMembers.push(cleaned);
+  }
+
+  const ownerKey = owner.trim().toLowerCase();
+  if (ownerKey && !seen.has(ownerKey)) {
+    dedupedMembers.unshift(owner);
+  }
+
   return {
     ...trip,
     date: trip.date || '',
-    owner: trip.owner || 'Ty',
+    owner,
     currency: trip.currency || 'EUR',
     color: trip.color || '#2c79f6',
     inviteCode: (trip.inviteCode || makeInviteCode()).toUpperCase(),
     archived: Boolean(trip.archived),
+    members: dedupedMembers,
   };
 }
 
