@@ -3639,24 +3639,24 @@ export default function SplitPayWebApp() {
                       !realNameAlreadyMember &&
                       currentTrip.members.filter((m) => !isSelfName(m)).length > 0;
                     if (!shouldShow) return null;
+                    // Show only ONE suggestion — the first non-self, non-owner member
+                    const suggestion = currentTrip.members.find(
+                      (m) => !isSelfName(m) && m !== currentTrip.owner
+                    ) || currentTrip.members.find((m) => !isSelfName(m));
+                    if (!suggestion) return null;
                     return (
                       <div className="mini-panel" style={{ background: '#f0f4ff', borderColor: '#667eea' }}>
                         <h3 style={{ marginBottom: '0.3rem' }}>{t('mergeIdentityTitle')}</h3>
                         <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>{t('mergeIdentityDesc')}</p>
                         <div className="stack-list">
-                          {currentTrip.members
-                            .filter((m) => !isSelfName(m))
-                            .map((m) => (
-                              <button
-                                key={m}
-                                type="button"
-                                className="row guest-claim-btn"
-                                onClick={() => mergeFictionalMember(m)}
-                              >
-                                <span>{m}</span>
-                                <strong>{t('thatsAlsoMe')}</strong>
-                              </button>
-                            ))}
+                          <button
+                            type="button"
+                            className="row guest-claim-btn"
+                            onClick={() => mergeFictionalMember(suggestion)}
+                          >
+                            <span>{suggestion}</span>
+                            <strong>{t('thatsAlsoMe')}</strong>
+                          </button>
                         </div>
                       </div>
                     );
