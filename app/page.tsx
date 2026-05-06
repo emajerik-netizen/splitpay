@@ -1222,6 +1222,7 @@ export default function SplitPayWebApp() {
   const lastPropagatedTripSnapshotRef = useRef<Record<string, string>>({});
   const lastPersistedExpenseSnapshotRef = useRef<Record<string, string>>({});
   const skipExpenseDbWriteRef = useRef(false);
+  const lastErrorMessageTimeRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -1633,7 +1634,12 @@ export default function SplitPayWebApp() {
       if (cancelled) return;
 
       if (error) {
-        setInfoMessage('Cloud sync zlyhal pri nacitani vyletov. Skontrolujte prihlasenie alebo RLS politky.');
+        const errorKey = 'trip-load';
+        const now = Date.now();
+        if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
+          setInfoMessage('Cloud sync zlyhal pri nacitani vyletov. Skontrolujte prihlasenie alebo RLS politky.');
+          lastErrorMessageTimeRef.current[errorKey] = now;
+        }
         dbLoadedRef.current = true;
         setDbLoadTick((prev) => prev + 1);
         return;
@@ -1680,7 +1686,12 @@ export default function SplitPayWebApp() {
       });
 
       if (error) {
-        setInfoMessage('Cloud sync zlyhal pri ulozeni vyletu.');
+        const errorKey = 'trip-save';
+        const now = Date.now();
+        if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
+          setInfoMessage('Cloud sync zlyhal pri ulozeni vyletu.');
+          lastErrorMessageTimeRef.current[errorKey] = now;
+        }
         return;
       }
 
@@ -2646,7 +2657,14 @@ export default function SplitPayWebApp() {
         });
 
         if (cancelled || upsertError) {
-          if (upsertError) setInfoMessage('Cloud sync zlyhal pri ulozeni vydavkov.');
+          if (upsertError) {
+            const errorKey = 'expense-upsert';
+            const now = Date.now();
+            if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
+              setInfoMessage('Cloud sync zlyhal pri ulozeni vydavkov.');
+              lastErrorMessageTimeRef.current[errorKey] = now;
+            }
+          }
           return;
         }
       }
@@ -2657,7 +2675,14 @@ export default function SplitPayWebApp() {
         .eq('trip_id', tripId);
 
       if (cancelled || existingError) {
-        if (existingError) setInfoMessage('Cloud sync zlyhal pri kontrole vydavkov.');
+        if (existingError) {
+          const errorKey = 'expense-check';
+          const now = Date.now();
+          if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
+            setInfoMessage('Cloud sync zlyhal pri kontrole vydavkov.');
+            lastErrorMessageTimeRef.current[errorKey] = now;
+          }
+        }
         return;
       }
 
@@ -2673,7 +2698,14 @@ export default function SplitPayWebApp() {
           .in('expense_id', toDelete);
 
         if (cancelled || deleteError) {
-          if (deleteError) setInfoMessage('Cloud sync zlyhal pri mazani vydavkov.');
+          if (deleteError) {
+            const errorKey = 'expense-delete';
+            const now = Date.now();
+            if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
+              setInfoMessage('Cloud sync zlyhal pri mazani vydavkov.');
+              lastErrorMessageTimeRef.current[errorKey] = now;
+            }
+          }
           return;
         }
       }
@@ -4907,7 +4939,7 @@ export default function SplitPayWebApp() {
                   </div>
                 </div>
                 <div className="hero-actions">
-                    <p className="muted">{t('loggedInEmail')} {appSession?.email}</p>
+                    <p className="muted">{t('loggedInEmail')} {appSession?.name || appSession?.email}</p>
                   <label className="muted archived-toggle">
                     <input
                       type="checkbox"
