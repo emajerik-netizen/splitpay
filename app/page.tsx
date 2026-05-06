@@ -1775,28 +1775,52 @@ export default function SplitPayWebApp() {
     if (data.trip) {
       let normalized = normalizeTrip(data.trip as Trip);
 
-      // Replace invite/fictional name with user's registration name to avoid duplicates.
-      // If registration name already existed as a separate member, remove it first.
+      // Always strip "Ty" (owner placeholder from owner's copy) and rename the chosen slot
+      // to the user's real registration name. Handles both cases:
+      // - memberName !== registrationName (e.g. slot "Janco", registered as "Ján Džurindák")
+      // - memberName === registrationName (e.g. slot "Janco", registered as "Janco") — "Ty" still removed
       const registrationName = (appSession?.name || '').trim();
-      if (registrationName && memberName !== registrationName) {
-        normalized = {
-          ...normalized,
-          members: normalized.members
-            .filter((m) => m !== registrationName)
-            .map((m) => (m === memberName ? registrationName : m)),
-          expenses: normalized.expenses.map((exp) => ({
-            ...exp,
-            payer: exp.payer === memberName ? registrationName : exp.payer,
-            participants: exp.participants
-              .filter((p) => p !== registrationName)
-              .map((p) => (p === memberName ? registrationName : p)),
-          })),
-          pendingInvites: normalized.pendingInvites.map((inv) => ({
-            ...inv,
-            name: inv.name === memberName ? registrationName : inv.name,
-          })),
-        };
-      }
+      const effectiveName = registrationName || memberName;
+
+      const remapName = (n: string) => {
+        if (n === memberName) return effectiveName;
+        if (n.toLowerCase() === 'ty') return null; // remove owner's "Ty" placeholder
+        if (n === effectiveName) return null; // remove pre-existing duplicate
+        return n;
+      };
+
+      const remapMembers = (members: string[]) => {
+        const result: string[] = [];
+        let addedSelf = false;
+        for (const m of members) {
+          const mapped = remapName(m);
+          if (mapped === null) {
+            if (!addedSelf && m === memberName) { result.push(effectiveName); addedSelf = true; }
+            continue;
+          }
+          if (mapped === effectiveName) { if (!addedSelf) { result.push(effectiveName); addedSelf = true; } continue; }
+          result.push(mapped);
+        }
+        if (!addedSelf) result.push(effectiveName);
+        return result;
+      };
+
+      normalized = {
+        ...normalized,
+        members: remapMembers(normalized.members),
+        expenses: normalized.expenses.map((exp) => ({
+          ...exp,
+          payer: remapName(exp.payer) ?? effectiveName,
+          participants: exp.participants
+            .map((p) => remapName(p))
+            .filter((p): p is string => p !== null)
+            .filter((p, i, arr) => arr.indexOf(p) === i),
+        })),
+        pendingInvites: normalized.pendingInvites.map((inv) => ({
+          ...inv,
+          name: inv.name === memberName ? effectiveName : inv.name,
+        })),
+      };
 
       setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
     }
