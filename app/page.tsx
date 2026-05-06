@@ -1158,6 +1158,8 @@ export default function SplitPayWebApp() {
   const [inviteError, setInviteError] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
   const [visits24hCount, setVisits24hCount] = useState(0);
+  const [showAllMembersOverflow, setShowAllMembersOverflow] = useState(false);
+  const memberAvatarListRef = useRef<HTMLDivElement>(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
   const [totalUsersSeen, setTotalUsersSeen] = useState(0);
   const [totalTripsStored, setTotalTripsStored] = useState(0);
@@ -2785,6 +2787,25 @@ export default function SplitPayWebApp() {
   const settlements = useMemo(() => settleDebts(balances), [balances]);
 
   useEffect(() => {
+    if (!memberAvatarListRef.current) return;
+
+    const detectOverflow = () => {
+      const container = memberAvatarListRef.current;
+      if (!container) return;
+
+      const containerHeight = container.clientHeight;
+      const hasOverflow = containerHeight > 50; // More than one line (avatar ~32px + gap)
+      setShowAllMembersOverflow(hasOverflow && members.length > 0);
+    };
+
+    detectOverflow();
+    const resizeObserver = new ResizeObserver(detectOverflow);
+    resizeObserver.observe(memberAvatarListRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [members]);
+
+  useEffect(() => {
     if (!currentTrip) {
       setMemberIbanByName({});
       return;
@@ -2839,6 +2860,14 @@ export default function SplitPayWebApp() {
     return isSelfName(left) && isSelfName(right);
   };
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
+  const getInitials = (name: string): string => {
+    const displayName = formatMemberName(name);
+    return displayName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join('');
+  };
   const currentTripOwnerIsSelf = currentTrip ? isSelfName(currentTrip.owner) : false;
   const memberHistorySuggestions = useMemo(() => {
     if (!currentTrip) return [] as string[];
@@ -4982,18 +5011,28 @@ export default function SplitPayWebApp() {
                   <div className="screen-grid compact-grid overview-compact-grid">
                     <div className="mini-panel overview-mini-panel">
                         <h3>{t('tripMembers')}</h3>
-                      <div className="pill-list">
+                      <div className="member-avatar-list" ref={memberAvatarListRef}>
                         {members.map((name) => (
-                          <div key={name} className="pill">
-                            <button
-                              type="button"
-                              className="member-link-inline"
-                              onClick={() => openMemberProfile(name)}
-                            >
-                              {formatMemberName(name)}
-                            </button>
-                          </div>
+                          <button
+                            key={name}
+                            type="button"
+                            className="member-avatar-bubble"
+                            onClick={() => openMemberProfile(name)}
+                            title={formatMemberName(name)}
+                          >
+                            {getInitials(name)}
+                          </button>
                         ))}
+                        {showAllMembersOverflow && (
+                          <button
+                            type="button"
+                            className="member-show-all-btn"
+                            onClick={() => openTrip(currentTrip.id, 'members')}
+                            title={t('showMoreExpenses')}
+                          >
+                            {t('showMoreExpenses')}
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="mini-panel overview-mini-panel">
