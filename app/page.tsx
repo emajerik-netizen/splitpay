@@ -5707,9 +5707,32 @@ export default function SplitPayWebApp() {
                   <details className="support-details">
                     <summary className="support-summary">💙 Support author</summary>
                     <div className="support-details-content">
-                      <img src="/support-qr.png" alt="Support QR code" className="support-qr-image" />
-                      <p className="support-description">Scan to get paid by anyone, even if they are not on Revolut</p>
-                      <a href="#" className="support-link">Share link</a>
+                      <a 
+                        href="https://revolut.me/eugen4w4e" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="support-qr-link"
+                        title="Open Revolut profile"
+                      >
+                        <svg className="support-qr-image" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="200" height="200" fill="white"/>
+                          <text x="100" y="100" textAnchor="middle" dy=".3em" fontSize="24" fontWeight="bold" fill="#2c79f6">
+                            @eugen4w4e
+                          </text>
+                          <text x="100" y="130" textAnchor="middle" fontSize="12" fill="#5d7098">
+                            Tap to open Revolut
+                          </text>
+                        </svg>
+                      </a>
+                      <p className="support-description">Scan or tap to get paid by anyone, even if they are not on Revolut</p>
+                      <a 
+                        href="https://revolut.me/eugen4w4e" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="support-link"
+                      >
+                        Open link
+                      </a>
                     </div>
                   </details>
                 </div>

@@ -425,12 +425,30 @@ body {
 .modal-card {
   width: min(34rem, 100%);
   max-height: min(85vh, 44rem);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #fdfefe;
   border-color: #d4e2fb;
   box-shadow: 0 26px 50px rgba(27, 47, 89, 0.27);
   border-radius: 1.2rem;
   padding: 1.5rem;
+}
+
+.modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-card::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--stroke) 80%, transparent);
+  border-radius: 3px;
+}
+
+.modal-card::-webkit-scrollbar-thumb:hover {
+  background: var(--stroke);
 }
 
 .expense-modal-card {
@@ -582,9 +600,9 @@ body {
 @media (max-width: 640px) {
   .modal-card {
     width: min(100%, calc(100vw - 1.5rem));
-    max-height: min(90vh, 36rem);
+    max-height: min(90vh, 32rem);
     border-radius: 1rem;
-    padding: 1.2rem;
+    padding: 1rem;
   }
 
   .modal-overlay-top-right {
@@ -2789,11 +2807,28 @@ button:disabled {
 
 .support-qr-image {
   width: 100%;
-  max-width: 180px;
+  max-width: 140px;
   height: auto;
   border-radius: 0.8rem;
   background: #f5f5f5;
   margin-bottom: 0.3rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.support-qr-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(44, 121, 246, 0.15);
+}
+
+.support-qr-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .support-description {
