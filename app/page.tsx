@@ -1095,6 +1095,8 @@ export default function SplitPayWebApp() {
   const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
   const notificationsPrimedForUserRef = useRef<string | null>(null);
+  const syncRpcMissingWarnedRef = useRef(false);
+  const tempSessionWarnedRef = useRef(false);
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -1421,7 +1423,18 @@ export default function SplitPayWebApp() {
     dbLoadedRef.current = false;
     skipFirstSaveRef.current = true;
     skipNextSaveRef.current = false;
+    syncRpcMissingWarnedRef.current = false;
+    tempSessionWarnedRef.current = false;
   }, [appSession?.userId]);
+
+  useEffect(() => {
+    if (!appSession?.userId) return;
+    if (canSyncWithDb) return;
+    if (tempSessionWarnedRef.current) return;
+
+    tempSessionWarnedRef.current = true;
+    setInfoMessage('Ste v dočasnom režime účtu. Zmeny sa nesynchronizujú medzi zariadeniami, kým nebude účet plne overený/prihlásený.');
+  }, [appSession?.userId, canSyncWithDb]);
 
   useEffect(() => {
     if (!pendingVerification || !supabase) return;
@@ -1530,8 +1543,15 @@ export default function SplitPayWebApp() {
             p_trip: trip,
           });
 
-          // If RPC is not deployed yet, skip silently to keep local save working.
-          if (syncError && syncError.code !== 'PGRST202') {
+          if (syncError?.code === 'PGRST202') {
+            if (!syncRpcMissingWarnedRef.current) {
+              syncRpcMissingWarnedRef.current = true;
+              setInfoMessage('Aktívna synchronizácia nie je zapnutá v databáze. Spusťte SQL súbor supabase/invite_functions.sql.');
+            }
+            return;
+          }
+
+          if (syncError) {
             console.error('Trip propagation sync failed:', syncError.message);
           }
         })
