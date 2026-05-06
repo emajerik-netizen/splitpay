@@ -1480,9 +1480,11 @@ export default function SplitPayWebApp() {
       )
       .subscribe();
 
+    void refreshFromDb();
+
     const interval = window.setInterval(() => {
       void refreshFromDb();
-    }, 5000);
+    }, 2000);
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
@@ -2052,16 +2054,19 @@ export default function SplitPayWebApp() {
     if (data.trip) {
       let normalized = normalizeTrip(data.trip as Trip);
 
-      // Always strip "Ty" (owner placeholder from owner's copy) and rename the chosen slot
+      // Keep owner visible (map legacy "Ty" owner placeholder to owner name when possible)
+      // and rename the chosen slot to the user's real registration name.
       // to the user's real registration name. Handles both cases:
       // - memberName !== registrationName (e.g. slot "Janco", registered as "Ján Džurindák")
       // - memberName === registrationName (e.g. slot "Janco", registered as "Janco") — "Ty" still removed
       const registrationName = (appSession?.name || '').trim();
       const effectiveName = registrationName || memberName;
+      const ownerName = (normalized.owner || '').trim();
+      const ownerLabel = ownerName && ownerName.toLowerCase() !== 'ty' ? ownerName : 'Ty';
 
       const remapName = (n: string) => {
         if (n === memberName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return null; // remove owner's "Ty" placeholder
+        if (n.toLowerCase() === 'ty') return ownerLabel;
         if (n === effectiveName) return null; // remove pre-existing duplicate
         return n;
       };
@@ -2952,10 +2957,12 @@ export default function SplitPayWebApp() {
       let normalized = normalizeTrip(data.trip as Trip);
       const registrationName = (appSession.name || '').trim();
       const effectiveName = registrationName || cleanedName;
+      const ownerName = (normalized.owner || '').trim();
+      const ownerLabel = ownerName && ownerName.toLowerCase() !== 'ty' ? ownerName : 'Ty';
 
       const remapName = (n: string) => {
         if (n === cleanedName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return null;
+        if (n.toLowerCase() === 'ty') return ownerLabel;
         if (n === effectiveName) return null;
         return n;
       };
