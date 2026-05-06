@@ -363,6 +363,8 @@ const T = {
     addedExpense: 'pridal(a) výdavok',
     transactionUpdatedInTrip: 'Upravená transakcia v',
     updatedExpense: 'upravil(a) výdavok',
+    transactionDeletedInTrip: 'Vymazaná transakcia v',
+    deletedExpense: 'vymazal(a) výdavok',
     noDate: 'Bez dátumu',
     member1: '1 člen',
     membersPlural: 'členov',
@@ -653,6 +655,8 @@ const T = {
     addedExpense: 'added expense',
     transactionUpdatedInTrip: 'Updated transaction in',
     updatedExpense: 'updated expense',
+    transactionDeletedInTrip: 'Deleted transaction in',
+    deletedExpense: 'deleted expense',
     noDate: 'No date',
     member1: '1 member',
     membersPlural: 'members',
@@ -987,6 +991,7 @@ export default function SplitPayWebApp() {
   const skipNextSaveRef = useRef(false);
   const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
+  const notificationsPrimedForUserRef = useRef<string | null>(null);
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -2900,6 +2905,11 @@ export default function SplitPayWebApp() {
   useEffect(() => {
     if (!notificationsEnabled || !appSession) return;
 
+    if (notificationsPrimedForUserRef.current !== appSession.userId) {
+      expenseSnapshotRef.current = {};
+      memberSnapshotRef.current = {};
+    }
+
     const selfName = appSession.name;
     const normalizedSelfName = selfName.trim().toLowerCase();
     const langPack = T[lang];
@@ -2909,6 +2919,30 @@ export default function SplitPayWebApp() {
       if (normalizedName === 'ty') return true;
       return Boolean(normalizedSelfName) && normalizedName === normalizedSelfName;
     };
+
+    if (notificationsPrimedForUserRef.current !== appSession.userId) {
+      trips.forEach((trip) => {
+        const currentExpenseSnapshot: Record<string, string> = {};
+        trip.expenses.forEach((expense) => {
+          currentExpenseSnapshot[expense.id] = JSON.stringify({
+            title: expense.title,
+            amount: expense.amount,
+            payer: expense.payer,
+            participants: expense.participants,
+            expenseType: expense.expenseType,
+            transferTo: expense.transferTo,
+            splitType: expense.splitType,
+          });
+        });
+
+        expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
+        memberSnapshotRef.current[trip.id] = [...trip.members];
+      });
+
+      notificationsPrimedForUserRef.current = appSession.userId;
+      return;
+    }
+
     trips.forEach((trip) => {
       const previousExpenseSnapshot = expenseSnapshotRef.current[trip.id] || {};
       const currentExpenseSnapshot: Record<string, string> = {};
@@ -2932,6 +2966,23 @@ export default function SplitPayWebApp() {
           Object.prototype.hasOwnProperty.call(previousExpenseSnapshot, expense.id) &&
           previousExpenseSnapshot[expense.id] !== currentExpenseSnapshot[expense.id]
       );
+      const deletedExpenseId = Object.keys(previousExpenseSnapshot).find(
+        (expenseId) => !Object.prototype.hasOwnProperty.call(currentExpenseSnapshot, expenseId)
+      );
+
+      const deletedExpense = deletedExpenseId
+        ? (() => {
+            try {
+              return JSON.parse(previousExpenseSnapshot[deletedExpenseId]) as {
+                title?: string;
+                amount?: number;
+                payer?: string;
+              };
+            } catch {
+              return null;
+            }
+          })()
+        : null;
 
       if (
         addedExpense &&
@@ -2939,7 +2990,7 @@ export default function SplitPayWebApp() {
         typeof Notification !== 'undefined' &&
         Notification.permission === 'granted'
       ) {
-        new Notification(`${langPack.newTransactionInTrip} ${trip.name}`, {
+        sendNotification(`${langPack.newTransactionInTrip} ${trip.name}`, {
           body: `${addedExpense.payer} ${langPack.addedExpense} ${addedExpense.title} (${eur(addedExpense.amount)})`,
         });
       } else if (
@@ -2948,8 +2999,18 @@ export default function SplitPayWebApp() {
         typeof Notification !== 'undefined' &&
         Notification.permission === 'granted'
       ) {
-        new Notification(`${langPack.transactionUpdatedInTrip} ${trip.name}`, {
+        sendNotification(`${langPack.transactionUpdatedInTrip} ${trip.name}`, {
           body: `${updatedExpense.payer} ${langPack.updatedExpense} ${updatedExpense.title} (${eur(updatedExpense.amount)})`,
+        });
+      } else if (
+        deletedExpense &&
+        deletedExpense.payer &&
+        !isSelf(deletedExpense.payer) &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        sendNotification(`${langPack.transactionDeletedInTrip} ${trip.name}`, {
+          body: `${deletedExpense.payer} ${langPack.deletedExpense} ${deletedExpense.title || ''}`.trim(),
         });
       }
 
@@ -2969,7 +3030,7 @@ export default function SplitPayWebApp() {
           typeof Notification !== 'undefined' &&
           Notification.permission === 'granted'
         ) {
-          new Notification(`${trip.name} - ${langPack.ownerNewMemberTitleSuffix}`, {
+          sendNotification(`${trip.name} - ${langPack.ownerNewMemberTitleSuffix}`, {
             body: `${newestMember} ${langPack.ownerNewMemberBody}`,
             icon: '/icon.png',
           });
