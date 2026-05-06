@@ -2904,6 +2904,7 @@ export default function SplitPayWebApp() {
 
   useEffect(() => {
     if (!notificationsEnabled || !appSession) return;
+    if (supabase && !dbLoadedRef.current) return;
 
     if (notificationsPrimedForUserRef.current !== appSession.userId) {
       expenseSnapshotRef.current = {};
@@ -3039,7 +3040,7 @@ export default function SplitPayWebApp() {
 
       memberSnapshotRef.current[trip.id] = [...trip.members];
     });
-  }, [appSession, lang, notificationsEnabled, trips]);
+  }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
 
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
