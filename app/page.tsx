@@ -5284,7 +5284,10 @@ export default function SplitPayWebApp() {
                                     <button
                                       type="button"
                                       className="member-link-inline expense-member-link"
-                                      onClick={() => openMemberProfile(expense.payer)}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMemberProfile(expense.payer);
+                                      }}
                                     >
                                       {formatMemberName(expense.payer)}
                                     </button>
@@ -5292,7 +5295,10 @@ export default function SplitPayWebApp() {
                                     <button
                                       type="button"
                                       className="member-link-inline expense-member-link"
-                                      onClick={() => openMemberProfile(expense.transferTo || expense.participants[0] || '')}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMemberProfile(expense.transferTo || expense.participants[0] || '');
+                                      }}
                                     >
                                       {formatMemberName(expense.transferTo || expense.participants[0] || '-')}
                                     </button>
@@ -5304,7 +5310,10 @@ export default function SplitPayWebApp() {
                                     <button
                                       type="button"
                                       className="member-link-inline expense-member-link"
-                                      onClick={() => openMemberProfile(expense.payer)}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMemberProfile(expense.payer);
+                                      }}
                                     >
                                       {formatMemberName(expense.payer)}
                                     </button>
@@ -5316,15 +5325,17 @@ export default function SplitPayWebApp() {
                                 <span className="muted">{t('participantsLabel')}</span>
                                 <div className="expense-member-list">
                                   {expense.participants.map((participant, idx) => (
-                                    <span className="expense-member-chip" key={`${expense.id}-${participant}-${idx}`}>
-                                      <button
-                                        type="button"
-                                        className="member-link-inline expense-member-link"
-                                        onClick={() => openMemberProfile(participant)}
-                                      >
-                                        {formatMemberName(participant)}
-                                      </button>
-                                    </span>
+                                    <button
+                                      key={`${expense.id}-${participant}-${idx}`}
+                                      type="button"
+                                      className="member-link-inline expense-member-link"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMemberProfile(participant);
+                                      }}
+                                    >
+                                      {formatMemberName(participant)}
+                                    </button>
                                   ))}
                                 </div>
                               </div>
