@@ -1143,8 +1143,14 @@ button:disabled {
   padding: 0.5rem 0.65rem;
 }
 
-.member-row > div:last-child {
+.member-row > div:nth-child(2) {
+  flex: 1;
   min-width: 0;
+}
+
+.member-row .danger-btn {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .member-row strong {
