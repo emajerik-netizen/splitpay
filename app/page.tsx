@@ -4130,8 +4130,16 @@ export default function SplitPayWebApp() {
                 </div>
 
                   <button type="button" className="google-btn auth-google" onClick={handleGoogleLogin} disabled={authLoading}>
-                    {t('continueWithGoogle')}
-                </button>
+                    <span className="google-mark" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.24 1.26-.96 2.33-2.04 3.05l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.49 0-.72-.06-1.42-.19-2.09H12z"/>
+                        <path fill="#34A853" d="M12 21.8c2.73 0 5.02-.9 6.7-2.44l-3.3-2.56c-.91.61-2.08.98-3.4.98-2.62 0-4.84-1.77-5.64-4.14l-3.41 2.63C4.63 19.6 8.04 21.8 12 21.8z"/>
+                        <path fill="#4A90E2" d="M6.36 13.64A5.96 5.96 0 0 1 6.04 12c0-.57.1-1.12.32-1.64L2.95 7.73A9.95 9.95 0 0 0 2 12c0 1.6.38 3.11 1.05 4.45l3.31-2.81z"/>
+                        <path fill="#FBBC05" d="M12 6.22c1.49 0 2.83.51 3.88 1.5l2.91-2.91C17 3.16 14.71 2.2 12 2.2c-3.96 0-7.37 2.2-9.05 5.55l3.41 2.63C7.16 7.99 9.38 6.22 12 6.22z"/>
+                      </svg>
+                    </span>
+                    <span>{t('continueWithGoogle')}</span>
+                  </button>
               </>
             ) : null}
 
