@@ -2583,10 +2583,10 @@ export default function SplitPayWebApp() {
     if (!supabase) return;
 
     const normalized = memberName.trim().toLowerCase();
-    if (!normalized || normalized === 'ty') return;
+    if (!normalized) return;
 
     // Show own profile immediately
-    if (appSession && normalized === appSession.name.trim().toLowerCase()) {
+    if (appSession && (normalized === appSession.name.trim().toLowerCase() || isSelfName(memberName))) {
       setMemberProfile({
         userId: appSession.userId,
         name: appSession.name,
@@ -2596,13 +2596,16 @@ export default function SplitPayWebApp() {
       return;
     }
 
-    const { data: memberPresence } = await supabase
+    const { data: presences } = await supabase
       .from('user_presence')
       .select('user_id, user_name, user_email, last_seen')
       .ilike('user_name', memberName)
       .order('last_seen', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(5);
+
+    const memberPresence = (presences || []).find((row) =>
+      row.user_name?.trim().toLowerCase() === normalized
+    ) || (presences || [])[0];
 
     if (!memberPresence?.user_id) {
       setInfoMessage(t('profileNotFound'));
