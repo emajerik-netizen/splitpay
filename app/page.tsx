@@ -2,7 +2,7 @@
 
 import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Clipboard,
@@ -886,8 +886,8 @@ function makeUserSession(userId: string, email: string, fullName?: string | null
 }
 
 export default function SplitPayWebApp() {
-  const router = useRouter();
   const pathname = usePathname();
+  const [virtualPathname, setVirtualPathname] = useState(pathname || '/');
   const [showStartup, setShowStartup] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.sessionStorage.getItem(STARTUP_SEEN_KEY) !== '1';
@@ -982,6 +982,30 @@ export default function SplitPayWebApp() {
   const profileMenuWrapRef = useRef<HTMLDivElement | null>(null);
 
   const t = (key: keyof typeof T.sk) => T[lang][key];
+
+  useEffect(() => {
+    setVirtualPathname(pathname || '/');
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPopState = () => setVirtualPathname(window.location.pathname || '/');
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function navigateInApp(nextPath: string, mode: 'push' | 'replace' = 'push') {
+    if (typeof window === 'undefined') return;
+    if (window.location.pathname === nextPath) return;
+
+    if (mode === 'replace') {
+      window.history.replaceState(null, '', nextPath);
+    } else {
+      window.history.pushState(null, '', nextPath);
+    }
+    setVirtualPathname(nextPath);
+  }
 
   useEffect(() => {
     window.localStorage.setItem(LANG_KEY, lang);
@@ -1608,7 +1632,7 @@ export default function SplitPayWebApp() {
     setPendingVerification(null);
     setShowRegistrationNotice(false);
     window.localStorage.removeItem(SESSION_CACHE_KEY);
-    router.push('/');
+    navigateInApp('/');
 
     if (supabase) {
       await supabase.auth.signOut();
@@ -1889,7 +1913,7 @@ export default function SplitPayWebApp() {
     setInfoMessage(`${t('welcomeAdded')} ${inviteTrip.tripName}.`);
   }
 
-  const pathSegments = pathname.split('/').filter(Boolean);
+  const pathSegments = virtualPathname.split('/').filter(Boolean);
   const routeTripKey =
     pathSegments[0] === 'trip' && pathSegments[1]
       ? decodeURIComponent(pathSegments[1])
@@ -1903,7 +1927,7 @@ export default function SplitPayWebApp() {
     [routeTripKey, trips]
   );
   const activeAppScreen: AppScreen =
-    pathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : 'trips';
+    virtualPathname === '/admin' ? 'admin' : routeTripKey ? 'trip-detail' : 'trips';
   const activeDetailScreen = routeTripKey
     ? detailScreenFromPath(pathSegments[2])
     : 'overview';
@@ -1926,7 +1950,7 @@ export default function SplitPayWebApp() {
     if (!authResolved) return;
     if (shouldWaitForDbLoad) return;
     if (routeTrip) return;
-    router.replace('/');
+    navigateInApp('/', 'replace');
   }, [
     appSession?.userId,
     authResolved,
@@ -1934,8 +1958,8 @@ export default function SplitPayWebApp() {
     localStateHydrated,
     routeTrip,
     routeTripKey,
-    router,
     supabase,
+    virtualPathname,
     trips,
   ]);
 
@@ -1951,7 +1975,7 @@ export default function SplitPayWebApp() {
     window.localStorage.setItem(INVITE_PENDING_KEY, JSON.stringify({ code: codeFromUrl }));
     setInvitePendingCode(codeFromUrl);
     inviteProcessedRef.current = false;
-  }, [pathname]);
+  }, [virtualPathname]);
 
   // After auth + DB load, process pending invite
   useEffect(() => {
@@ -2135,15 +2159,15 @@ export default function SplitPayWebApp() {
     if (!tripKey) return;
 
     setSelectedTripId(tripId);
-    router.push(tripPath(tripKey, nextScreen));
+    navigateInApp(tripPath(tripKey, nextScreen));
   }
 
   function goToTripsHome() {
-    router.push('/');
+    navigateInApp('/');
   }
 
   function goToAdmin() {
-    router.push('/admin');
+    navigateInApp('/admin');
   }
 
   async function saveAdminAnnouncement() {
