@@ -119,6 +119,15 @@ const T = {
     deleteAccount: 'Vymazať účet',
     signOut: 'Odhlásiť sa',
     language: 'Jazyk',
+    ibanLabel: 'IBAN',
+    ibanPlaceholder: 'SKxx xxxx xxxx xxxx xxxx xxxx',
+    saveIbanBtn: 'Uložiť IBAN',
+    ibanSaved: 'IBAN bol uložený.',
+    memberProfileTitle: 'Profil člena',
+    profileNotFound: 'Profil člena zatiaľ neexistuje.',
+    copyIbanBtn: 'Kopírovať IBAN',
+    ibanNotSet: 'IBAN nie je zadaný.',
+    ibanCopied: 'IBAN bol skopírovaný.',
     contactSupport: 'Kontaktovať podporu',
     supportSubject: 'Predmet',
     supportMessage: 'Správa',
@@ -411,6 +420,15 @@ const T = {
     deleteAccount: 'Delete Account',
     signOut: 'Sign Out',
     language: 'Language',
+    ibanLabel: 'IBAN',
+    ibanPlaceholder: 'SKxx xxxx xxxx xxxx xxxx xxxx',
+    saveIbanBtn: 'Save IBAN',
+    ibanSaved: 'IBAN was saved.',
+    memberProfileTitle: 'Member profile',
+    profileNotFound: 'Member profile does not exist yet.',
+    copyIbanBtn: 'Copy IBAN',
+    ibanNotSet: 'IBAN is not set.',
+    ibanCopied: 'IBAN copied.',
     contactSupport: 'Contact Support',
     supportSubject: 'Subject',
     supportMessage: 'Message',
@@ -766,6 +784,13 @@ type MemberAddNotification = {
   acknowledged_at: string | null;
 };
 
+type MemberProfileView = {
+  userId: string;
+  name: string;
+  email: string;
+  iban: string;
+};
+
 type PendingVerification = {
   email: string;
   password: string;
@@ -934,6 +959,9 @@ export default function SplitPayWebApp() {
   const [joinCode, setJoinCode] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [selfIban, setSelfIban] = useState('');
+  const [savingIban, setSavingIban] = useState(false);
+  const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody] = useState('');
@@ -1088,6 +1116,32 @@ export default function SplitPayWebApp() {
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+    };
+  }, [appSession?.userId, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !appSession?.userId) {
+      setSelfIban('');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSelfProfile = async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('iban')
+        .eq('user_id', appSession.userId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setSelfIban((data?.iban as string | undefined) || '');
+    };
+
+    loadSelfProfile();
+
+    return () => {
+      cancelled = true;
     };
   }, [appSession?.userId, supabase]);
 
@@ -2472,6 +2526,75 @@ export default function SplitPayWebApp() {
     setInfoMessage(t('leftTripInfo'));
   }
 
+  async function saveSelfIban() {
+    if (!supabase || !appSession?.userId) return;
+
+    setSavingIban(true);
+    try {
+      await supabase.from('user_profiles').upsert({
+        user_id: appSession.userId,
+        user_name: appSession.name,
+        user_email: appSession.email,
+        iban: selfIban.trim(),
+        updated_at: new Date().toISOString(),
+      });
+      setInfoMessage(t('ibanSaved'));
+    } finally {
+      setSavingIban(false);
+    }
+  }
+
+  async function openMemberProfile(memberName: string) {
+    if (!supabase) return;
+
+    const normalized = memberName.trim().toLowerCase();
+    if (!normalized || normalized === 'ty') return;
+
+    // Show own profile immediately
+    if (appSession && normalized === appSession.name.trim().toLowerCase()) {
+      setMemberProfile({
+        userId: appSession.userId,
+        name: appSession.name,
+        email: appSession.email,
+        iban: selfIban.trim(),
+      });
+      return;
+    }
+
+    const { data: memberPresence } = await supabase
+      .from('user_presence')
+      .select('user_id, user_name, user_email, last_seen')
+      .ilike('user_name', memberName)
+      .order('last_seen', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!memberPresence?.user_id) {
+      setInfoMessage(t('profileNotFound'));
+      return;
+    }
+
+    const { data: profileData } = await supabase
+      .from('user_profiles')
+      .select('iban')
+      .eq('user_id', memberPresence.user_id)
+      .maybeSingle();
+
+    setMemberProfile({
+      userId: memberPresence.user_id,
+      name: memberPresence.user_name || memberName,
+      email: memberPresence.user_email || '',
+      iban: (profileData?.iban as string | undefined) || '',
+    });
+  }
+
+  function copyIban(value: string) {
+    if (!value.trim()) return;
+    navigator.clipboard.writeText(value.trim()).then(() => {
+      setInfoMessage(t('ibanCopied'));
+    });
+  }
+
   function removeMember(memberName: string) {
     if (!currentTrip) return;
     const isOwner = isSelfName(currentTrip.owner);
@@ -3288,6 +3411,19 @@ export default function SplitPayWebApp() {
                   <h3>{t('myProfile')}</h3>
                 <p className="muted">{appSession?.name}</p>
                 <p className="muted">{appSession?.email}</p>
+                <div className="profile-iban-editor">
+                  <label className="field-block">
+                    <span>{t('ibanLabel')}</span>
+                    <input
+                      value={selfIban}
+                      onChange={(event) => setSelfIban(event.target.value)}
+                      placeholder={t('ibanPlaceholder')}
+                    />
+                  </label>
+                  <button type="button" className="ghost" disabled={savingIban} onClick={saveSelfIban}>
+                    {t('saveIbanBtn')}
+                  </button>
+                </div>
                   <button type="button" className="ghost" onClick={goToTripsHome}>{t('myTrips')}</button>
                   {isAdmin ? <button type="button" className="ghost" onClick={goToAdmin}>{t('adminSection')}</button> : null}
                 <button type="button" className="ghost" onClick={toggleNotifications}>
@@ -3987,14 +4123,18 @@ export default function SplitPayWebApp() {
                     {members.map((name) => (
                       <div key={name} className="member-row">
                         <div className="member-avatar">{formatMemberName(name).slice(0, 1)}</div>
-                        <div>
+                        <button
+                          type="button"
+                          className="member-profile-open"
+                          onClick={() => openMemberProfile(name)}
+                        >
                           <strong>{formatMemberName(name)}</strong>
                           {(isSelfName(name) || currentTrip.owner === name) && (
                             <p>
                               {currentTrip.owner === name ? t('ownerLabel') : displayCurrentUserName}
                             </p>
                           )}
-                        </div>
+                        </button>
                         {currentTripOwnerIsSelf ? (
                           <button
                             type="button"
@@ -4465,6 +4605,49 @@ export default function SplitPayWebApp() {
             <p className="muted">{t('registrationCreatedAction')}</p>
 
             <button type="button" onClick={handleRegistrationNoticeConfirm}>OK</button>
+          </section>
+        </div>
+      ) : null}
+
+      {memberProfile ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setMemberProfile(null)}>
+          <section
+            className="section-card modal-card support-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('memberProfileTitle')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">{t('memberProfileTitle')}</p>
+                <h2>{memberProfile.name}</h2>
+              </div>
+              <button type="button" className="ghost" onClick={() => setMemberProfile(null)}>{t('close')}</button>
+            </div>
+
+            <div className="support-form">
+              <label className="field-block">
+                <span>{t('name')}</span>
+                <input value={memberProfile.name} readOnly />
+              </label>
+              <label className="field-block">
+                <span>{t('email')}</span>
+                <input value={memberProfile.email || ''} readOnly />
+              </label>
+              <label className="field-block">
+                <span>{t('ibanLabel')}</span>
+                <input value={memberProfile.iban || ''} placeholder={t('ibanNotSet')} readOnly />
+              </label>
+              <button
+                type="button"
+                className="ghost"
+                disabled={!memberProfile.iban}
+                onClick={() => copyIban(memberProfile.iban)}
+              >
+                {t('copyIbanBtn')}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

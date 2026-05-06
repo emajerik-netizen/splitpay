@@ -1148,6 +1148,23 @@ button:disabled {
   min-width: 0;
 }
 
+.member-profile-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.member-profile-open:hover strong {
+  text-decoration: underline;
+}
+
 .member-row .danger-btn {
   margin-left: auto;
   flex-shrink: 0;
@@ -2367,6 +2384,16 @@ button:disabled {
   gap: 0.55rem;
   z-index: 51;
   position: relative;
+}
+
+.profile-iban-editor {
+  border: 1px solid var(--stroke);
+  border-radius: 0.8rem;
+  padding: 0.5rem;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .support-form {
