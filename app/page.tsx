@@ -282,6 +282,10 @@ const T = {
     openBtn: 'Otvoriť',
     slovak: 'Slovenčina',
     english: 'English',
+    mergeIdentityTitle: 'Zobrazujem sa dvakrát?',
+    mergeIdentityDesc: 'Ak sa vidíš vo výlete pod starým fiktívnym menom, klikni na neho a zlúčime ho s tvojim skutočným menom.',
+    thatsAlsoMe: 'To som ja',
+    mergedFictionalMember: 'Zlúčené. Tvoje meno je teraz',
     exportVisitsCsv: 'Export návštev do CSV',
     purgePresence: 'Vyčistiť prítomnosť staršiu ako 7 dní',
     backToTripsAdmin: 'Späť do výletov',
@@ -560,6 +564,10 @@ const T = {
     openBtn: 'Open',
     slovak: 'Slovak',
     english: 'English',
+    mergeIdentityTitle: 'Listed twice?',
+    mergeIdentityDesc: 'If you see yourself under an old fictional name, click it to merge with your real name.',
+    thatsAlsoMe: "That's also me",
+    mergedFictionalMember: 'Merged. Your name is now',
     exportVisitsCsv: 'Export visits to CSV',
     purgePresence: 'Clean presence older than 7 days',
     backToTripsAdmin: 'Back to trips',
@@ -2239,6 +2247,31 @@ export default function SplitPayWebApp() {
     setInfoMessage(`${t('identityNow')} ${invitedName}.`);
   }
 
+  function mergeFictionalMember(fictionalName: string) {
+    if (!currentTrip || !appSession?.name) return;
+    const realName = appSession.name;
+
+    // Rename fictionalName → realName everywhere, remove duplicate realName entry if exists
+    updateCurrentTrip((trip) => ({
+      ...trip,
+      members: trip.members
+        .filter((m) => m !== realName || m === fictionalName) // remove existing realName duplicate
+        .map((m) => (m === fictionalName ? realName : m)),
+      expenses: trip.expenses.map((expense) => ({
+        ...expense,
+        payer: expense.payer === fictionalName ? realName : expense.payer,
+        participants: expense.participants
+          .filter((p) => p !== realName || p === fictionalName)
+          .map((p) => (p === fictionalName ? realName : p)),
+      })),
+      pendingInvites: trip.pendingInvites.map((invite) =>
+        invite.name === fictionalName ? { ...invite, name: realName, status: 'Prijate' } : invite
+      ),
+    }));
+
+    setInfoMessage(`${t('mergedFictionalMember')} ${realName}.`);
+  }
+
   function handleAddInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentTrip) return;
@@ -3585,6 +3618,28 @@ export default function SplitPayWebApp() {
                             >
                               <span>{invite.name}</span>
                                 <strong>{t('thatsMe')}</strong>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {isAuthenticated && appSession?.name && currentTrip.members.filter((m) => !isSelfName(m)).length > 0 ? (
+                    <div className="mini-panel" style={{ background: '#f0f4ff', borderColor: '#667eea' }}>
+                      <h3 style={{ marginBottom: '0.3rem' }}>{t('mergeIdentityTitle')}</h3>
+                      <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>{t('mergeIdentityDesc')}</p>
+                      <div className="stack-list">
+                        {currentTrip.members
+                          .filter((m) => !isSelfName(m))
+                          .map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              className="row guest-claim-btn"
+                              onClick={() => mergeFictionalMember(m)}
+                            >
+                              <span>{m}</span>
+                              <strong>{t('thatsAlsoMe')}</strong>
                             </button>
                           ))}
                       </div>
