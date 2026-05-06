@@ -5701,6 +5701,19 @@ export default function SplitPayWebApp() {
               >
                 {t('copyIbanBtn')}
               </button>
+
+              {isSelfName(memberProfile.name) ? (
+                <div className="support-author-section">
+                  <details className="support-details">
+                    <summary className="support-summary">💙 Support author</summary>
+                    <div className="support-details-content">
+                      <img src="/support-qr.png" alt="Support QR code" className="support-qr-image" />
+                      <p className="support-description">Scan to get paid by anyone, even if they are not on Revolut</p>
+                      <a href="#" className="support-link">Share link</a>
+                    </div>
+                  </details>
+                </div>
+              ) : null}
             </div>
           </section>
         </div>
