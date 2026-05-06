@@ -403,6 +403,8 @@ const T = {
     welcomeAdded: 'Vitaj! Bol si pridaný do výletu',
     ownerNewMemberTitleSuffix: 'nový člen',
     ownerNewMemberBody: 'sa pridal(a) do výletu.',
+    inviteAcceptedTitleSuffix: 'prijatá pozvánka',
+    inviteAcceptedBody: 'prijal(a) pozvánku do výletu.',
     adminAnnouncementSaveFailed: 'Uloženie admin oznamu zlyhalo.',
     adminAnnouncementSaved: 'Admin oznam bol uložený.',
     addAdminRoleFailed: 'Nepodarilo sa pridať admin rolu.',
@@ -738,6 +740,8 @@ const T = {
     welcomeAdded: 'Welcome! You were added to trip',
     ownerNewMemberTitleSuffix: 'new member',
     ownerNewMemberBody: 'joined the trip.',
+    inviteAcceptedTitleSuffix: 'invite accepted',
+    inviteAcceptedBody: 'accepted the trip invitation.',
     adminAnnouncementSaveFailed: 'Saving admin announcement failed.',
     adminAnnouncementSaved: 'Admin announcement was saved.',
     addAdminRoleFailed: 'Failed to add admin role.',
@@ -1209,6 +1213,7 @@ export default function SplitPayWebApp() {
   const skipNextSaveRef = useRef(false);
   const expenseSnapshotRef = useRef<Record<string, Record<string, string>>>({});
   const memberSnapshotRef = useRef<Record<string, string[]>>({});
+  const inviteStatusSnapshotRef = useRef<Record<string, Record<string, Invite['status']>>>({});
   const notificationsPrimedForUserRef = useRef<string | null>(null);
   const syncRpcMissingWarnedRef = useRef(false);
   const tempSessionWarnedRef = useRef(false);
@@ -3594,7 +3599,7 @@ export default function SplitPayWebApp() {
       })
     );
 
-    if (!foundTripId) {
+    if (!foundTripId || (supabase && appSession && canSyncWithDb)) {
       if (!supabase || !appSession) {
         setInfoMessage(t('invalidCode'));
         return;
@@ -4061,6 +4066,7 @@ export default function SplitPayWebApp() {
     if (notificationsPrimedForUserRef.current !== appSession.userId) {
       trips.forEach((trip) => {
         const currentExpenseSnapshot: Record<string, string> = {};
+        const currentInviteSnapshot: Record<string, Invite['status']> = {};
         trip.expenses.forEach((expense) => {
           currentExpenseSnapshot[expense.id] = JSON.stringify({
             title: expense.title,
@@ -4072,9 +4078,13 @@ export default function SplitPayWebApp() {
             splitType: expense.splitType,
           });
         });
+        trip.pendingInvites.forEach((invite) => {
+          currentInviteSnapshot[invite.name.trim().toLowerCase()] = invite.status;
+        });
 
         expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
         memberSnapshotRef.current[trip.id] = [...trip.members];
+        inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
       });
 
       notificationsPrimedForUserRef.current = appSession.userId;
@@ -4083,7 +4093,9 @@ export default function SplitPayWebApp() {
 
     trips.forEach((trip) => {
       const previousExpenseSnapshot = expenseSnapshotRef.current[trip.id] || {};
+      const previousInviteSnapshot = inviteStatusSnapshotRef.current[trip.id] || {};
       const currentExpenseSnapshot: Record<string, string> = {};
+      const currentInviteSnapshot: Record<string, Invite['status']> = {};
       trip.expenses.forEach((expense) => {
         currentExpenseSnapshot[expense.id] = JSON.stringify({
           title: expense.title,
@@ -4094,6 +4106,9 @@ export default function SplitPayWebApp() {
           transferTo: expense.transferTo,
           splitType: expense.splitType,
         });
+      });
+      trip.pendingInvites.forEach((invite) => {
+        currentInviteSnapshot[invite.name.trim().toLowerCase()] = invite.status;
       });
 
       const addedExpense = trip.expenses.find(
@@ -4176,6 +4191,22 @@ export default function SplitPayWebApp() {
       }
 
       memberSnapshotRef.current[trip.id] = [...trip.members];
+
+      if (isSelf(trip.owner, trip)) {
+        const acceptedInvite = trip.pendingInvites.find((invite) => {
+          const key = invite.name.trim().toLowerCase();
+          return previousInviteSnapshot[key] === 'Pozvany' && invite.status === 'Prijate';
+        });
+
+        if (acceptedInvite) {
+          sendNotification(`${trip.name} - ${langPack.inviteAcceptedTitleSuffix}`, {
+            body: `${acceptedInvite.name} ${langPack.inviteAcceptedBody}`,
+            icon: '/icon.png',
+          });
+        }
+      }
+
+      inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
     });
   }, [appSession, dbLoadTick, lang, notificationsEnabled, supabase, trips]);
 
