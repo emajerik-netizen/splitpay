@@ -385,6 +385,15 @@ const T = {
     adminSpamLogClose: 'Zavrieť',
     adminSpamLogClearAll: 'Vymazať všetky',
     adminSpamLogClearConfirm: 'Naozaj vymazať všetky spam záznamy?',
+    adminSpamLogMessage: 'Správa',
+    spamReasonInvalidFormat: 'Neplatný email',
+    spamReasonNoMx: 'Neplatná doména',
+    emailVerified: 'Overený',
+    emailUnverified: 'Neoverený',
+    adminUnverifiedTitle: 'Neoverené registrácie',
+    adminUnverifiedEmpty: 'Všetci používatelia majú overený email.',
+    adminUnverifiedRegistered: 'Registrovaný:',
+    adminUnverifiedLastLogin: 'Posledné prihlásenie:',
     removeSelfWarningLead: '⚠️ Ak sa odstránite:',
     removeSelfWarningSolo: 'Si jediný člen, výlet bude vymazaný.',
     removeSelfInfoLead: 'ℹ️ Ak sa odstránite:',
@@ -733,6 +742,15 @@ const T = {
     adminSpamLogClose: 'Close',
     adminSpamLogClearAll: 'Clear all',
     adminSpamLogClearConfirm: 'Really delete all spam log entries?',
+    adminSpamLogMessage: 'Message',
+    spamReasonInvalidFormat: 'Invalid email',
+    spamReasonNoMx: 'Invalid domain',
+    emailVerified: 'Verified',
+    emailUnverified: 'Unverified',
+    adminUnverifiedTitle: 'Unverified registrations',
+    adminUnverifiedEmpty: 'All users have verified their email.',
+    adminUnverifiedRegistered: 'Registered:',
+    adminUnverifiedLastLogin: 'Last login:',
     removeSelfWarningLead: '⚠️ If you remove yourself:',
     removeSelfWarningSolo: 'You are the only member, the trip will be deleted.',
     removeSelfInfoLead: 'ℹ️ If you remove yourself:',
@@ -956,6 +974,14 @@ type SpamLogEntry = {
   message: string;
   reason: string;
   created_at: string;
+};
+
+type AdminAuthUser = {
+  id: string;
+  email: string;
+  email_confirmed_at: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
 };
 
 type MemberProfileView = {
@@ -1218,6 +1244,7 @@ export default function SplitPayWebApp() {
   const [adminTrips, setAdminTrips] = useState<AdminTripSummary[]>([]);
   const [spamLog, setSpamLog] = useState<SpamLogEntry[]>([]);
   const [spamLogModal, setSpamLogModal] = useState<SpamLogEntry | null>(null);
+  const [adminAuthUsers, setAdminAuthUsers] = useState<AdminAuthUser[]>([]);
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
@@ -2045,6 +2072,23 @@ export default function SplitPayWebApp() {
       setTopUsers(top);
 
       if (!cancelled) setSpamLog((spamLogRes.data || []) as SpamLogEntry[]);
+
+      // Fetch auth users (verified status) via service-role API
+      try {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (token && !cancelled) {
+          const authUsersRes = await fetch('/api/admin/users', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (authUsersRes.ok) {
+            const authUsersBody = await authUsersRes.json();
+            if (!cancelled) setAdminAuthUsers(authUsersBody.users || []);
+          }
+        }
+      } catch {
+        // non-critical
+      }
 
       setAdminLoading(false);
     }
@@ -4990,14 +5034,22 @@ export default function SplitPayWebApp() {
                   <h3>{t('activeUsersRoles')}</h3>
                   <div className="stack-list">
                     {adminPresence.length === 0 ? <p className="muted">{t('noUsersYet')}</p> : null}
-                    {adminPresence.map((user) => (
+                    {adminPresence.map((user) => {
+                      const authUser = adminAuthUsers.find((u) => u.id === user.user_id);
+                      const isVerified = authUser ? !!authUser.email_confirmed_at : null;
+                      return (
                       <div className="row" key={user.user_id}>
                         <div>
                           <strong>{user.user_name}</strong>
                           <p>{user.user_email}</p>
-                          <p>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>
+                          <p className="muted" style={{ fontSize: '0.78rem' }}>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>
                         </div>
                         <div className="expense-actions">
+                          {isVerified === true ? (
+                            <span className="pill" style={{ background: 'var(--success-bg, #d4edda)', color: 'var(--success, #155724)', fontSize: '0.75rem' }}>✓ {t('emailVerified')}</span>
+                          ) : isVerified === false ? (
+                            <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem' }}>⚠ {t('emailUnverified')}</span>
+                          ) : null}
                           <span className="pill">{user.role === 'admin' ? t('roleAdmin') : t('roleUser')}</span>
                           {user.user_id !== appSession?.userId ? (
                             <button
@@ -5010,7 +5062,8 @@ export default function SplitPayWebApp() {
                           ) : null}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -5082,6 +5135,43 @@ export default function SplitPayWebApp() {
                 </div>
               </div>
 
+              {/* Unverified registrations */}
+              {(() => {
+                const unverified = adminAuthUsers
+                  .filter((u) => !u.email_confirmed_at)
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                return (
+                  <div className="admin-card" style={{ marginTop: '1.5rem' }}>
+                    <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h3 style={{ margin: 0 }}>
+                        {t('adminUnverifiedTitle')}
+                        {unverified.length > 0 ? <span className="badge" style={{ marginLeft: '8px', background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)' }}>{unverified.length}</span> : null}
+                      </h3>
+                    </div>
+                    {unverified.length === 0 ? (
+                      <p className="muted" style={{ marginTop: '0.5rem' }}>{t('adminUnverifiedEmpty')}</p>
+                    ) : (
+                      <div className="stack-list" style={{ marginTop: '0.5rem' }}>
+                        {unverified.map((u) => (
+                          <div className="row" key={u.id} style={{ padding: '6px 0' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '0.88rem' }}>{u.email}</span>
+                              <p className="muted" style={{ fontSize: '0.75rem', margin: '2px 0 0' }}>
+                                {t('adminUnverifiedRegistered')} {new Date(u.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+                                {u.last_sign_in_at ? ` · ${t('adminUnverifiedLastLogin')} ${new Date(u.last_sign_in_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}` : ''}
+                              </p>
+                            </div>
+                            <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                              ⚠ {t('emailUnverified')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="admin-card" style={{ marginTop: '1.5rem' }}>
                 <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <h3 style={{ margin: 0 }}>{t('adminSpamLog')} {spamLog.length > 0 ? <span className="badge">{spamLog.length}</span> : null}</h3>
@@ -5099,17 +5189,30 @@ export default function SplitPayWebApp() {
                       <button
                         key={entry.id}
                         type="button"
-                        className="row row-clickable"
-                        style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}
+                        className="row"
+                        style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 8px', borderRadius: '8px', transition: 'background 0.15s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2, #f5f5f5)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                         onClick={() => setSpamLogModal(entry)}
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span className="muted" style={{ fontSize: '0.78rem' }}>{entry.email}</span>
-                          <span style={{ margin: '0 6px', color: '#888' }}>·</span>
-                          <span style={{ fontSize: '0.9rem' }}>{entry.subject || '—'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{entry.email}</span>
+                            <span className="pill" style={{
+                              fontSize: '0.7rem',
+                              padding: '1px 7px',
+                              background: entry.reason === 'invalid_format' ? 'var(--danger-bg, #f8d7da)' : 'var(--warn-bg, #fff3cd)',
+                              color: entry.reason === 'invalid_format' ? 'var(--danger, #842029)' : 'var(--warn, #856404)',
+                            }}>
+                              {entry.reason === 'invalid_format' ? t('spamReasonInvalidFormat') : t('spamReasonNoMx')}
+                            </span>
+                          </div>
+                          <p className="muted" style={{ fontSize: '0.78rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.subject || '—'}
+                          </p>
                         </div>
-                        <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                          {new Date(entry.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                          {new Date(entry.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </button>
                     ))}
@@ -5127,28 +5230,38 @@ export default function SplitPayWebApp() {
 
               {spamLogModal ? (
                 <div className="modal-backdrop" onClick={() => setSpamLogModal(null)}>
-                  <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
-                    <h3 style={{ marginTop: 0 }}>{t('adminSpamLog')}</h3>
-                    <p style={{ marginBottom: '4px' }}>
-                      <span className="muted">{t('adminSpamLogEmail')}:</span>{' '}
-                      <strong>{spamLogModal.email}</strong>
-                    </p>
-                    <p style={{ marginBottom: '4px' }}>
-                      <span className="muted">{t('adminSpamLogReason')}:</span>{' '}
-                      <code style={{ fontSize: '0.85rem' }}>{spamLogModal.reason}</code>
-                    </p>
-                    <p style={{ marginBottom: '4px' }}>
-                      <span className="muted">Subject:</span>{' '}
-                      {spamLogModal.subject || '—'}
-                    </p>
-                    <p style={{ marginBottom: '8px' }}>
-                      <span className="muted">{new Date(spamLogModal.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}</span>
-                    </p>
+                  <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                      <h3 style={{ margin: 0 }}>{t('adminSpamLog')}</h3>
+                      <span className="pill" style={{
+                        fontSize: '0.75rem',
+                        background: spamLogModal.reason === 'invalid_format' ? 'var(--danger-bg, #f8d7da)' : 'var(--warn-bg, #fff3cd)',
+                        color: spamLogModal.reason === 'invalid_format' ? 'var(--danger, #842029)' : 'var(--warn, #856404)',
+                      }}>
+                        {spamLogModal.reason === 'invalid_format' ? t('spamReasonInvalidFormat') : t('spamReasonNoMx')}
+                      </span>
+                    </div>
+                    <div style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
+                      <p style={{ margin: '0 0 4px' }}>
+                        <span className="muted" style={{ fontSize: '0.8rem' }}>{t('adminSpamLogEmail')}</span><br />
+                        <strong style={{ wordBreak: 'break-all' }}>{spamLogModal.email}</strong>
+                      </p>
+                      <p style={{ margin: '8px 0 0' }}>
+                        <span className="muted" style={{ fontSize: '0.8rem' }}>Subject</span><br />
+                        <span>{spamLogModal.subject || '—'}</span>
+                      </p>
+                    </div>
                     {spamLogModal.message ? (
-                      <pre style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '6px', padding: '10px 12px', fontSize: '0.82rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '240px', overflowY: 'auto', marginBottom: '1rem' }}>
-                        {spamLogModal.message}
-                      </pre>
+                      <>
+                        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>{t('adminSpamLogMessage')}</p>
+                        <pre style={{ background: 'var(--surface-2, #f5f5f5)', borderRadius: '8px', padding: '10px 14px', fontSize: '0.82rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '220px', overflowY: 'auto', marginBottom: '12px' }}>
+                          {spamLogModal.message}
+                        </pre>
+                      </>
                     ) : null}
+                    <p className="muted" style={{ fontSize: '0.75rem', marginBottom: '1rem' }}>
+                      {new Date(spamLogModal.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+                    </p>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button type="button" className="ghost" onClick={() => setSpamLogModal(null)}>
                         {t('adminSpamLogClose')}
