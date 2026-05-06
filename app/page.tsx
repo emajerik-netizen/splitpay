@@ -2217,6 +2217,12 @@ export default function SplitPayWebApp() {
         const cleaned = member.trim();
         const key = cleaned.toLowerCase();
         if (!cleaned || key === 'ty' || key === normalizedCurrentUser) continue;
+
+        const isFictional = trip.pendingInvites.some(
+          (invite) => invite.status === 'Pozvany' && invite.name.trim().toLowerCase() === key
+        );
+        if (isFictional) continue;
+
         if (currentMembers.has(key) || seen.has(key)) continue;
         seen.add(key);
         suggestions.push(cleaned);
