@@ -982,6 +982,8 @@ type AdminAuthUser = {
   email_confirmed_at: string | null;
   created_at: string;
   last_sign_in_at: string | null;
+  provider?: string;
+  is_oauth?: boolean;
 };
 
 type MemberProfileView = {
@@ -5036,7 +5038,7 @@ export default function SplitPayWebApp() {
                     {adminPresence.length === 0 ? <p className="muted">{t('noUsersYet')}</p> : null}
                     {adminPresence.map((user) => {
                       const authUser = adminAuthUsers.find((u) => u.id === user.user_id);
-                      const isVerified = authUser ? !!authUser.email_confirmed_at : null;
+                      const isVerified = authUser ? (!!authUser.email_confirmed_at || !!authUser.is_oauth) : null;
                       return (
                       <div className="row" key={user.user_id}>
                         <div>
@@ -5138,7 +5140,7 @@ export default function SplitPayWebApp() {
               {/* Unverified registrations */}
               {(() => {
                 const unverified = adminAuthUsers
-                  .filter((u) => !u.email_confirmed_at)
+                  .filter((u) => !u.email_confirmed_at && !u.is_oauth)
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
                 return (
                   <div className="admin-card" style={{ marginTop: '1.5rem' }}>

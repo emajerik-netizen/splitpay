@@ -50,13 +50,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: listError.message }, { status: 500 });
     }
 
-    const users = (listData?.users || []).map((u) => ({
-      id: u.id,
-      email: u.email ?? '',
-      email_confirmed_at: u.email_confirmed_at ?? null,
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at ?? null,
-    }));
+    const users = (listData?.users || []).map((u) => {
+      // Google/OAuth users have provider set in app_metadata or identities
+      const provider: string = (u.app_metadata?.provider as string) ?? 'email';
+      const hasOAuthIdentity = Array.isArray(u.identities) && u.identities.some(
+        (id) => id.provider !== 'email'
+      );
+      return {
+        id: u.id,
+        email: u.email ?? '',
+        email_confirmed_at: u.email_confirmed_at ?? null,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+        provider,
+        is_oauth: hasOAuthIdentity || provider !== 'email',
+      };
+    });
 
     return NextResponse.json({ users });
   } catch (err) {
