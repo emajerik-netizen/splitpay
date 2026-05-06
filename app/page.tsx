@@ -1765,7 +1765,31 @@ export default function SplitPayWebApp() {
 
     // Add trip to local state
     if (data.trip) {
-      const normalized = normalizeTrip(data.trip as Trip);
+      let normalized = normalizeTrip(data.trip as Trip);
+
+      // Replace invite/fictional name with user's registration name to avoid duplicates.
+      // If registration name already existed as a separate member, remove it first.
+      const registrationName = (appSession?.name || '').trim();
+      if (registrationName && memberName !== registrationName) {
+        normalized = {
+          ...normalized,
+          members: normalized.members
+            .filter((m) => m !== registrationName)
+            .map((m) => (m === memberName ? registrationName : m)),
+          expenses: normalized.expenses.map((exp) => ({
+            ...exp,
+            payer: exp.payer === memberName ? registrationName : exp.payer,
+            participants: exp.participants
+              .filter((p) => p !== registrationName)
+              .map((p) => (p === memberName ? registrationName : p)),
+          })),
+          pendingInvites: normalized.pendingInvites.map((inv) => ({
+            ...inv,
+            name: inv.name === memberName ? registrationName : inv.name,
+          })),
+        };
+      }
+
       setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
     }
 
@@ -1866,12 +1890,22 @@ export default function SplitPayWebApp() {
       .then(({ data }) => {
         setInviteLoading(false);
         if (data?.found) {
+          const pendingSlots = (data.pendingSlots as string[]) || [];
           setInviteTrip({
             tripId: data.tripId,
             tripName: data.tripName,
-            slots: (data.pendingSlots as string[]) || [],
+            slots: pendingSlots,
           });
           setInviteCustomName(appSession.name || '');
+
+          // Auto-select a slot that matches the user's registration name
+          const matchingSlot = pendingSlots.find(
+            (slot) => slot.toLowerCase() === (appSession.name || '').toLowerCase()
+          );
+          if (matchingSlot) {
+            setInviteChosenSlot(matchingSlot);
+            setInviteUseCustom(false);
+          }
         } else {
           window.localStorage.removeItem(INVITE_PENDING_KEY);
           setInvitePendingCode(null);
