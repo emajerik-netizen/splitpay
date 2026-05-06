@@ -1429,7 +1429,7 @@ export default function SplitPayWebApp() {
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [canSyncWithDb, appSession?.userId, selectedTripId, supabase, trips]);
+  }, [canSyncWithDb, appSession?.userId, dbLoadTick, selectedTripId, supabase, trips]);
 
   useEffect(() => {
     if (!supabase || !authResolved || !canSyncWithDb || !dbLoadedRef.current) return;
