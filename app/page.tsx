@@ -5215,12 +5215,6 @@ export default function SplitPayWebApp() {
                             ) : null}
                           </div>
                           <div className="expense-actions">
-                              <button type="button" className="ghost" onClick={(event) => { event.stopPropagation(); editExpense(expense.id); }}>
-                                {t('editBtn')}
-                            </button>
-                              <button type="button" className="ghost danger-btn" onClick={(event) => { event.stopPropagation(); removeExpense(expense.id); }}>
-                                {t('deleteBtn')}
-                            </button>
                             <strong>{money(expense.amount)}</strong>
                           </div>
                         </div>

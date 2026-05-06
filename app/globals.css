@@ -468,12 +468,22 @@ body {
 .expenses-list-panel {
   border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 22%, var(--stroke));
   background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 18%, #ffffff);
+  padding: 0.9rem;
+}
+
+.expenses-list-panel h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .expense-row {
-  align-items: flex-start;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.9rem;
   cursor: pointer;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.9rem;
+  background: #ffffff;
 }
 
 .expense-row:hover {
@@ -488,14 +498,20 @@ body {
 .expense-main {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.expense-main strong {
+  font-size: 1rem;
 }
 
 .expense-meta-line {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .expense-member-link {
@@ -511,7 +527,7 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .expense-member-list {
@@ -558,6 +574,21 @@ body {
     min-height: 2.45rem;
     padding: 0.5rem 0.78rem;
     font-size: 0.82rem;
+  }
+
+  .expense-row {
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.62rem 0.68rem;
+  }
+
+  .expense-actions {
+    min-width: 4.3rem;
+    align-items: flex-end;
+  }
+
+  .expense-actions strong {
+    font-size: 1rem;
   }
 }
 
@@ -2588,11 +2619,16 @@ button:disabled {
 }
 
 .expense-actions {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
+  min-width: 5.25rem;
+}
+
+.expense-actions strong {
+  font-size: 1.08rem;
+  color: color-mix(in srgb, var(--trip-accent, var(--accent)) 85%, #16325e);
 }
 
 .admin-panel {
