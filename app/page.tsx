@@ -2906,6 +2906,11 @@ export default function SplitPayWebApp() {
       const next = prev.filter((trip) => !trip.deletedAt);
       return next.length === prev.length ? prev : next;
     });
+
+    // Redirect home if selectedTripId is completely removed from array (e.g., via remove_trip_by_invite_code RPC)
+    if (selectedTripId && !trips.some((trip) => trip.id === selectedTripId)) {
+      goToTripsHome();
+    }
   }, [selectedTripId, trips]);
 
   const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
