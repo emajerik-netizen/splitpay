@@ -651,6 +651,20 @@ body {
   .expense-actions strong {
     font-size: 1rem;
   }
+
+  .registration-notice-modal {
+    padding: 1.2rem;
+  }
+
+  .registration-notice-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .registration-notice-icon {
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 1rem;
+  }
 }
 
 .modal-head {
@@ -2926,6 +2940,100 @@ button:disabled {
 
 .support-modal-card {
   width: min(34rem, 100%);
+}
+
+.registration-notice-modal {
+  width: min(36rem, 100%);
+  padding: 1.75rem;
+  background:
+    radial-gradient(circle at top right, rgba(131, 214, 156, 0.28), transparent 34%),
+    radial-gradient(circle at top left, rgba(44, 121, 246, 0.15), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.98));
+}
+
+.registration-notice-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.registration-notice-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #ffffff;
+  box-shadow: 0 16px 28px rgba(44, 121, 246, 0.22);
+}
+
+.registration-notice-icon span {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.registration-notice-copy h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+}
+
+.registration-notice-copy p:last-child {
+  margin: 0.55rem 0 0;
+  color: #28406f;
+  line-height: 1.5;
+}
+
+.registration-notice-summary {
+  margin-top: 1.25rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--stroke));
+  background: color-mix(in srgb, var(--accent-soft) 10%, #ffffff);
+}
+
+.registration-notice-summary p {
+  margin: 0;
+  color: #38507e;
+  line-height: 1.45;
+}
+
+.registration-notice-summary p + p {
+  margin-top: 0.45rem;
+}
+
+.registration-notice-highlight {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent-soft) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--stroke));
+}
+
+.registration-notice-highlight strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #12366f;
+}
+
+.registration-notice-highlight p {
+  margin: 0.35rem 0 0;
+  color: #315184;
+  line-height: 1.45;
+}
+
+.registration-notice-hint {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.registration-notice-button {
+  width: 100%;
+  margin-top: 1.15rem;
 }
 
 .guide-platform-switch {

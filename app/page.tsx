@@ -414,6 +414,11 @@ const T = {
     registrationPendingLocalAccess: 'Konto bolo vytvorené. Potvrzovací email bol odoslaný znova a do appky si vpustený dočasne. Po potvrdení emailu sa prihláš bez obmedzení.',
     registrationCreatedNotice: 'Užívateľ je vytvorený. Potvrzovací email príde do pár minút.',
     registrationCreatedAction: 'Po kliknutí na OK ťa pustíme do appky.',
+    registrationNoticeLead: 'Môžeš pokračovať hneď teraz. Overenie emailu si dokončíš popri používaní aplikácie.',
+    registrationNoticeEmailHint: 'Potvrdzovací email si nechaj otvorený. Ak ho nevidíš, skontroluj aj spam alebo promo priečinok.',
+    registrationNoticeAccessTitle: 'Čo sa stane po kliknutí',
+    registrationNoticeAccessBody: 'Otvorí sa tvoj pracovný priestor a môžeš hneď vytvárať alebo otvárať výlety.',
+    registrationNoticeButton: 'Pokračovať do aplikácie',
     emailVerificationCompleted: 'Email bol overený. Prihlásenie je dokončené.',
     verificationEmailResent: 'Email ešte nie je potvrdený. Poslali sme nový verifikačný email.',
     verificationEmailResendFailed: 'Email ešte nie je potvrdený a nepodarilo sa poslať nový verifikačný email.',
@@ -773,6 +778,11 @@ const T = {
     registrationPendingLocalAccess: 'Account was created. Verification email was resent and temporary app access is enabled. After email confirmation, sign in for full access.',
     registrationCreatedNotice: 'User account has been created. Verification email should arrive in a few minutes.',
     registrationCreatedAction: 'After clicking OK, you can enter the app.',
+    registrationNoticeLead: 'You can continue right away. Email verification can be finished while you already use the app.',
+    registrationNoticeEmailHint: 'Keep the verification email nearby. If you do not see it, check spam or promotions as well.',
+    registrationNoticeAccessTitle: 'What happens next',
+    registrationNoticeAccessBody: 'Your workspace opens immediately and you can start creating or joining trips.',
+    registrationNoticeButton: 'Continue to the app',
     emailVerificationCompleted: 'Email has been verified. Sign-in is now complete.',
     verificationEmailResent: 'Email is not confirmed yet. We sent a new verification email.',
     verificationEmailResendFailed: 'Email is not confirmed and resending verification email failed.',
@@ -6299,23 +6309,38 @@ export default function SplitPayWebApp() {
       {showRegistrationNotice ? (
         <div className="modal-overlay" role="presentation" onClick={handleRegistrationNoticeConfirm}>
           <section
-            className="section-card modal-card support-modal-card"
+            className="section-card modal-card registration-notice-modal"
             role="dialog"
             aria-modal="true"
             aria-label={t('registrationSuccess')}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="modal-head">
-              <div>
+            <div className="registration-notice-hero">
+              <div className="registration-notice-icon" aria-hidden="true">
+                <span>✓</span>
+              </div>
+              <div className="registration-notice-copy">
                 <p className="eyebrow">{t('createAccount')}</p>
                 <h2>{t('registrationSuccess')}</h2>
+                <p>{t('registrationNoticeLead')}</p>
               </div>
             </div>
 
-            <p className="muted">{t('registrationCreatedNotice')}</p>
-            <p className="muted">{t('registrationCreatedAction')}</p>
+            <div className="registration-notice-summary">
+              <p>{t('registrationCreatedNotice')}</p>
+              <p>{t('registrationCreatedAction')}</p>
+            </div>
 
-            <button type="button" onClick={handleRegistrationNoticeConfirm}>OK</button>
+            <div className="registration-notice-highlight">
+              <strong>{t('registrationNoticeAccessTitle')}</strong>
+              <p>{t('registrationNoticeAccessBody')}</p>
+            </div>
+
+            <p className="registration-notice-hint">{t('registrationNoticeEmailHint')}</p>
+
+            <button className="primary-cta registration-notice-button" type="button" onClick={handleRegistrationNoticeConfirm}>
+              {t('registrationNoticeButton')}
+            </button>
           </section>
         </div>
       ) : null}
