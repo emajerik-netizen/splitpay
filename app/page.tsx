@@ -2058,7 +2058,7 @@ export default function SplitPayWebApp() {
 
       setVisitsCount(visitsRes.count || 0);
       setVisits24hCount(visits24Res.count || 0);
-      setVisitsDayCount(visitsDayRes?.count || 0);
+      setVisitsDayCount(visits24Res?.count || 0);
       setVisitsWeekCount(visitsWeekRes?.count || 0);
       setVisitsMonthCount(visitsMonthRes?.count || 0);
       setVisitsYearCount(visitsYearRes?.count || 0);
