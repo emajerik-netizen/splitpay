@@ -341,6 +341,12 @@ const T = {
     adminTitle: 'Administrácia',
     adminCenterTitle: 'Riadiace centrum aplikácie',
     adminCenterDesc: 'Rozšírený prehľad používania a správa oprávnení.',
+    visitsBtn: 'Návštevy',
+    visitsModalTitle: 'Prehľad návštev',
+    visitsDay: 'Dnes',
+    visitsWeek: 'Týždeň',
+    visitsMonth: 'Mesiac',
+    visitsYear: 'Rok',
     totalVisits: 'Počet návštev celkom',
     visits24h: 'Návštevy za 24h',
     activeUsers5m: 'Aktívni používatelia (5 min)',
@@ -705,6 +711,12 @@ const T = {
     adminTitle: 'Administration',
     adminCenterTitle: 'Application Control Center',
     adminCenterDesc: 'Extended usage overview and permission management.',
+    visitsBtn: 'Visits',
+    visitsModalTitle: 'Visits overview',
+    visitsDay: 'Today',
+    visitsWeek: 'Week',
+    visitsMonth: 'Month',
+    visitsYear: 'Year',
     totalVisits: 'Total visits',
     visits24h: 'Visits in 24h',
     activeUsers5m: 'Active users (5 min)',
@@ -1234,6 +1246,7 @@ export default function SplitPayWebApp() {
   const [staleTripWarning, setStaleTripWarning] = useState<StaleTripWarning | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showVisitsModal, setShowVisitsModal] = useState(false);
   const [guidePlatform, setGuidePlatform] = useState<'ios' | 'android'>('ios');
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody] = useState('');
@@ -1255,6 +1268,10 @@ export default function SplitPayWebApp() {
   const [inviteError, setInviteError] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
   const [visits24hCount, setVisits24hCount] = useState(0);
+  const [visitsDayCount, setVisitsDayCount] = useState(0);
+  const [visitsWeekCount, setVisitsWeekCount] = useState(0);
+  const [visitsMonthCount, setVisitsMonthCount] = useState(0);
+  const [visitsYearCount, setVisitsYearCount] = useState(0);
   const [showAllMembersOverflow, setShowAllMembersOverflow] = useState(false);
   const memberAvatarListRef = useRef<HTMLDivElement>(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
@@ -2006,9 +2023,15 @@ export default function SplitPayWebApp() {
       setAdminLoading(true);
 
       const nowIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const weekIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const monthIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const yearIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
       const [
         visitsRes,
         visits24Res,
+        visitsWeekRes,
+        visitsMonthRes,
+        visitsYearRes,
         presenceRes,
         rolesRes,
         tripsRes,
@@ -2019,6 +2042,9 @@ export default function SplitPayWebApp() {
       ] = await Promise.all([
         supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }),
         supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', nowIso),
+        supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', weekIso),
+        supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', monthIso),
+        supabaseClient.from('app_visits').select('id', { count: 'exact', head: true }).gte('visited_at', yearIso),
         supabaseClient.from('user_presence').select('user_id, user_email, user_name, last_seen').order('last_seen', { ascending: false }).limit(100),
         supabaseClient.from('user_roles').select('user_id, role'),
         supabaseClient.from('trip_states').select('user_id', { count: 'exact', head: true }),
@@ -2032,6 +2058,10 @@ export default function SplitPayWebApp() {
 
       setVisitsCount(visitsRes.count || 0);
       setVisits24hCount(visits24Res.count || 0);
+      setVisitsDayCount(visitsDayRes?.count || 0);
+      setVisitsWeekCount(visitsWeekRes?.count || 0);
+      setVisitsMonthCount(visitsMonthRes?.count || 0);
+      setVisitsYearCount(visitsYearRes?.count || 0);
       setTotalTripsStored(tripsRes.count || 0);
 
       const dedupedTrips = new Map<string, AdminTripSummary>();
@@ -5298,6 +5328,8 @@ export default function SplitPayWebApp() {
               </div>
 
               <div className="admin-actions">
+                <button type="button" className="ghost" onClick={() => setShowVisitsModal(true)}>{t('visitsBtn')}</button>
+                
                 <button type="button" className="ghost" onClick={exportVisitsCsv}>{t('exportVisitsCsv')}</button>
                 <button type="button" className="ghost danger-btn" onClick={purgeStalePresence}>
                   {t('purgePresence')}
@@ -6383,6 +6415,41 @@ export default function SplitPayWebApp() {
               >
                 {t('copyIbanBtn')}
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {showVisitsModal ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setShowVisitsModal(false)}>
+          <section className="section-card modal-card support-modal-card" role="dialog" aria-modal="true" aria-label={t('visitsModalTitle')} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <h2>{t('visitsModalTitle')}</h2>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: '0.6rem', marginTop: '0.6rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="muted">{t('visitsDay')}</span>
+                <strong>{visits24hCount || visitsDayCount}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="muted">{t('visitsWeek')}</span>
+                <strong>{visitsWeekCount}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="muted">{t('visitsMonth')}</span>
+                <strong>{visitsMonthCount}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="muted">{t('visitsYear')}</span>
+                <strong>{visitsYearCount}</strong>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.6rem' }}>
+              <button type="button" className="ghost" onClick={() => setShowVisitsModal(false)}>{t('close')}</button>
             </div>
           </section>
         </div>
