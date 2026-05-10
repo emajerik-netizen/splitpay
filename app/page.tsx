@@ -2903,7 +2903,11 @@ export default function SplitPayWebApp() {
 
       const existingIds = ((existingRows || []) as Array<{ expense_id: string }>).map((row) => row.expense_id);
       const localIds = new Set(expenses.map((expense) => expense.id));
-      const toDelete = existingIds.filter((id) => !localIds.has(id));
+      const upsertedIds = rows.map((r) => r.expense_id);
+      const upsertedSet = new Set(upsertedIds);
+      // Avoid deleting rows that we just upserted in this sync run — prevents race where
+      // local state hasn't propagated yet and an immediately-following delete would remove the new expense.
+      const toDelete = existingIds.filter((id) => !localIds.has(id) && !upsertedSet.has(id));
 
       if (toDelete.length > 0) {
         const { error: deleteError } = await supabase
