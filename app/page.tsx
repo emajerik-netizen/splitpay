@@ -906,12 +906,14 @@ type TripExpenseRow = {
   updated_at: string;
 };
 
+type ExpenseHistoryPayload = TripExpense | { old?: TripExpense | null; new?: TripExpense | null } | null;
+
 type ExpenseHistoryEvent = {
   id: number;
   trip_id: string;
   expense_id: string;
   event_type: 'created' | 'updated' | 'deleted';
-  payload: TripExpense | null;
+  payload: ExpenseHistoryPayload;
   created_at: string;
 };
 
@@ -4098,7 +4100,7 @@ export default function SplitPayWebApp() {
     });
   }
 
-  async function logExpenseEvent(expenseId: string, eventType: ExpenseHistoryEvent['event_type'], payload: TripExpense | null) {
+  async function logExpenseEvent(expenseId: string, eventType: ExpenseHistoryEvent['event_type'], payload: ExpenseHistoryPayload) {
     if (!supabase || !canSyncWithDb || !currentTrip) return;
 
     const { error } = await supabase.from('trip_expense_events').insert({
@@ -4239,7 +4241,7 @@ export default function SplitPayWebApp() {
         expenses: trip.expenses.map((item) => (item.id === editingExpenseId ? { ...expense, id: editingExpenseId } : item)),
       }));
       // store both old and new in payload so UI can render a small before/after
-      void logExpenseEvent(editingExpenseId, 'updated', { old: previous, new: { ...expense, id: editingExpenseId } } as unknown as TripExpense);
+      void logExpenseEvent(editingExpenseId, 'updated', { old: previous, new: { ...expense, id: editingExpenseId } });
       setEditingExpenseId(null);
       setInfoMessage(t('transactionUpdatedInfo'));
       sendNotification(`${currentTrip?.name || t('tripLabel')} - ${t('transactionUpdatedTitle')}`, {
