@@ -3070,11 +3070,11 @@ export default function SplitPayWebApp() {
     '';
   const safeParticipantsRaw = draft.participants.filter((name) => members.includes(name));
   const safeParticipants = safeParticipantsRaw.length ? safeParticipantsRaw : safePayer ? [safePayer] : [];
-  const amountNumber = draft.splitType === 'individual' ? individualTotal : parseMoneyInput(draft.amount);
   const individualTotal = safeParticipants.reduce((sum, name) => {
     const value = parseMoneyInput(draft.participantAmounts[name] || 0);
     return sum + (Number.isFinite(value) && value > 0 ? value : 0);
   }, 0);
+  const amountNumber = draft.splitType === 'individual' ? individualTotal : parseMoneyInput(draft.amount);
   // For individual split, accept when participant amounts sum to > 0
   const validIndividualSplit = draft.splitType !== 'individual' || individualTotal > 0;
 
