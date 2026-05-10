@@ -5525,7 +5525,10 @@ export default function SplitPayWebApp() {
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
                     const tripBalances = computeBalances(trip.members, trip.expenses);
-                    const tripTotal = trip.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                    const tripTotal = trip.expenses.reduce(
+                      (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
+                      0
+                    );
                     const userBalance = appSession?.name
                       ? (tripBalances[appSession.name] ?? tripBalances.Ty ?? 0)
                       : (tripBalances.Ty ?? 0);
