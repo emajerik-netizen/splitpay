@@ -30,6 +30,15 @@ function memberCountLabel(count: number, l: Lang = 'sk') {
   return `${count} ${T[l].membersPlural}`;
 }
 
+function expenseCountLabel(count: number, l: Lang = 'sk') {
+  if (l === 'sk') {
+    if (count === 1) return `${count} výdavok`;
+    if (count >= 2 && count <= 4) return `${count} výdavky`;
+    return `${count} výdavkov`;
+  }
+  return `${count} ${count === 1 ? 'expense' : 'expenses'}`;
+}
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -5562,7 +5571,7 @@ export default function SplitPayWebApp() {
                           </div>
                           <div className="trip-card-meta">
                             <span>{memberCountLabel(trip.members.length, lang)}</span>
-                             <span>{trip.expenses.length} {t('expenses')}</span>
+                             <span>{expenseCountLabel(trip.expenses.length, lang)}</span>
                              <span>{t('totalMeta')} {money(tripTotal)}</span>
                             <span>{trip.currency}</span>
                              {trip.archived ? <span>{t('archived')}</span> : null}
