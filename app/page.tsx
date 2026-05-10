@@ -6366,14 +6366,14 @@ export default function SplitPayWebApp() {
                                       <input
                                         className="weight"
                                         inputMode="decimal"
-                                        value={String(draft.participantAmounts[name] || 0)}
+                                        value={String(draft.participantAmounts[name] ?? '')}
                                         onChange={(event) => {
-                                          const next = parseMoneyInput(event.target.value);
+                                          const raw = event.target.value;
                                           setDraft((prev) => ({
                                             ...prev,
                                             participantAmounts: {
                                               ...prev.participantAmounts,
-                                              [name]: Number.isFinite(next) && next >= 0 ? next : 0,
+                                              [name]: raw,
                                             },
                                           }));
                                         }}
