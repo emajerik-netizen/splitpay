@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SplitPay Web",
+  title: "SplitPay",
   description: "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
   manifest: "/manifest.json",
   icons: {
@@ -38,8 +38,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "sk_SK",
-    url: "https://splitpay.web",
-    title: "SplitPay Web",
+    url: "https://www.splitpay.sk",
+    title: "SplitPay",
     description: "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
     images: [
       {
