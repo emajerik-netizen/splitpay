@@ -4645,7 +4645,7 @@ export default function SplitPayWebApp() {
 
       if (deletedExpense && deletedExpense.payer && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         (async () => {
-          let actorName = deletedExpense.payer;
+          let actorName = deletedExpense.payer || '';
           if (supabase && canSyncWithDb && deletedExpenseId) {
             try {
               const { data: ev } = await supabase
