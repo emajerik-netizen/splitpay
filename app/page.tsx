@@ -3058,8 +3058,8 @@ export default function SplitPayWebApp() {
     const value = Number(draft.participantAmounts[name] || 0);
     return sum + (Number.isFinite(value) && value > 0 ? value : 0);
   }, 0);
-  const validIndividualSplit =
-    draft.splitType !== 'individual' || Math.abs(individualTotal - amountNumber) < 0.01;
+  // For individual split, accept when participant amounts sum to > 0
+  const validIndividualSplit = draft.splitType !== 'individual' || individualTotal > 0;
 
   const normalizedExpenses = useMemo(() => {
     if (!currentTrip) return [];
@@ -3117,7 +3117,7 @@ export default function SplitPayWebApp() {
     !currentTrip?.archived &&
     !currentTrip?.deletedAt &&
     (isTransferDraft || draft.title.trim().length > 0) &&
-    amountNumber > 0 &&
+    (amountNumber > 0 || (draft.splitType === 'individual' && individualTotal > 0)) &&
     safePayer.trim().length > 0 &&
     (isTransferDraft
       ? safeTransferTo.trim().length > 0 && safeTransferTo !== safePayer
@@ -4185,7 +4185,14 @@ export default function SplitPayWebApp() {
       }
     }
 
-    const amount = Number(draft.amount);
+    // For 'individual' split, compute total from participantAmounts instead of relying on draft.amount
+    let amount = Number(draft.amount);
+    if (draft.splitType === 'individual') {
+      amount = safeParticipants.reduce((sum, name) => {
+        const raw = Number(draft.participantAmounts?.[name] || 0);
+        return sum + (Number.isFinite(raw) && raw > 0 ? raw : 0);
+      }, 0);
+    }
     const expense: TripExpense =
       draft.expenseType === 'transfer'
         ? {
