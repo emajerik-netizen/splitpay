@@ -27,8 +27,13 @@ export function computeBalances(
       if (!(expense.payer in balance) || !(expense.transferTo in balance)) return;
       if (!Number.isFinite(expense.amount) || expense.amount <= 0) return;
 
-      balance[expense.payer] -= expense.amount;
-      balance[expense.transferTo] += expense.amount;
+      // A transfer is a settlement: payer paid `amount` to transferTo.
+      // That reduces the receiver's receivable and reduces the payer's payable.
+      // In the balance map positive means the person should receive money.
+      // Before transfer: receiver has positive balance, payer negative. After transfer,
+      // receiver should decrease by amount, payer should increase by amount.
+      balance[expense.payer] += expense.amount;
+      balance[expense.transferTo] -= expense.amount;
       return;
     }
 
