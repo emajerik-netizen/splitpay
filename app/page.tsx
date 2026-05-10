@@ -229,6 +229,7 @@ const T = {
     joinBtn: 'Pripojiť sa',
     joinHint: 'Ak si otvoril QR link, kód sa vyplní automaticky. Môžeš sa pripojiť ako nový člen alebo ako existujúci člen, ak si bol pozvaný.',
     tripDetail: 'Detail výletu',
+    tripSettled: 'Výlet je vyrovnaný',
     backToTrips: '← Späť na moje výlety',
     tripCode: 'Kód výletu:',
     settings: 'Nastavenie',
@@ -601,6 +602,7 @@ const T = {
     joinBtn: 'Join',
     joinHint: 'If you opened a QR link, the code is filled in automatically. You can join as a new member or as an existing member if you were invited.',
     tripDetail: 'Trip Detail',
+    tripSettled: 'Trip is settled',
     backToTrips: '← Back to my trips',
     tripCode: 'Trip code:',
     settings: 'Settings',
@@ -5844,6 +5846,11 @@ export default function SplitPayWebApp() {
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
+                  {settlements.length === 0 && normalizedExpenses.length > 0 ? (
+                    <div className="mini-panel success-panel" role="status">
+                      <strong>{t('tripSettled')}</strong>
+                    </div>
+                  ) : null}
                   <div className="screen-grid compact-grid overview-compact-grid">
                     <div className="mini-panel overview-mini-panel">
                         <h3>{t('recentExpenses')}</h3>
