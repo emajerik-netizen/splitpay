@@ -4631,6 +4631,33 @@ export default function SplitPayWebApp() {
         }
       }
 
+      // If we're the owner and we've just added pending invites with an email contact,
+      // try to copy the trip to that registered user via RPC so the trip appears in their list.
+      if (isSelf(trip.owner, trip) && supabase) {
+        const addedInviteNames = Object.keys(currentInviteSnapshot).filter(
+          (key) => !previousInviteSnapshot[key] && currentInviteSnapshot[key] === 'Pozvany'
+        );
+
+        for (const nameKey of addedInviteNames) {
+          const inviteObj = trip.pendingInvites.find(
+            (inv) => inv.name.trim().toLowerCase() === nameKey
+          );
+          if (inviteObj?.contact && inviteObj.contact.includes('@')) {
+            void (async () => {
+              try {
+                await supabase.rpc('invite_user_by_email', {
+                  p_invite_code: trip.inviteCode,
+                  p_member_name: inviteObj.name,
+                  p_target_email: inviteObj.contact,
+                });
+              } catch (err) {
+                console.error('invite_user_by_email RPC error', err);
+              }
+            })();
+          }
+        }
+      }
+
       inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
       tripMetaSnapshotRef.current[trip.id] = { name: trip.name, owner: trip.owner };
     });
