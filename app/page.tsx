@@ -957,7 +957,7 @@ type ExpenseDraft = {
   participants: string[];
   splitType: 'equal' | 'individual' | 'shares';
   participantWeights: Record<string, number>;
-  participantAmounts: Record<string, number>;
+  participantAmounts: Record<string, string | number>;
 };
 
 type AppSession = {
