@@ -6449,14 +6449,23 @@ export default function SplitPayWebApp() {
                                 <strong>{expenseEventLabel(entry.event_type)}</strong>
                                 <p>{formatDateTime(entry.created_at)}</p>
                                 {entry.payload ? (
-                                  // If updated event contains old/new, show small diff
-                                  entry.event_type === 'updated' && entry.payload.old && entry.payload.new ? (
+                                  // If updated event contains old/new, show small diff (narrow safely)
+                                  entry.event_type === 'updated' &&
+                                  typeof entry.payload === 'object' &&
+                                  entry.payload !== null &&
+                                  'old' in entry.payload &&
+                                  'new' in entry.payload &&
+                                  entry.payload.old &&
+                                  entry.payload.new ? (
                                     <div>
                                       <p className="muted">{t('old')}: {entry.payload.old.title} • {money(entry.payload.old.amount)}</p>
                                       <p className="muted">{t('new')}: {entry.payload.new.title} • {money(entry.payload.new.amount)}</p>
                                     </div>
                                   ) : (
-                                    <p className="muted">{entry.payload.title} • {money(entry.payload.amount)}</p>
+                                    // Fallback: if payload looks like a TripExpense, render title/amount
+                                    typeof entry.payload === 'object' && entry.payload !== null && 'title' in entry.payload ? (
+                                      <p className="muted">{entry.payload.title} • {money((entry.payload as TripExpense).amount)}</p>
+                                    ) : null
                                   )
                                 ) : null}
                               </div>
