@@ -3070,7 +3070,7 @@ export default function SplitPayWebApp() {
     '';
   const safeParticipantsRaw = draft.participants.filter((name) => members.includes(name));
   const safeParticipants = safeParticipantsRaw.length ? safeParticipantsRaw : safePayer ? [safePayer] : [];
-  const amountNumber = parseMoneyInput(draft.amount);
+  const amountNumber = draft.splitType === 'individual' ? individualTotal : parseMoneyInput(draft.amount);
   const individualTotal = safeParticipants.reduce((sum, name) => {
     const value = parseMoneyInput(draft.participantAmounts[name] || 0);
     return sum + (Number.isFinite(value) && value > 0 ? value : 0);
@@ -6324,12 +6324,21 @@ export default function SplitPayWebApp() {
                             : t('expenseNamePlaceholder')
                         }
                       />
-                      <input
-                        value={draft.amount}
-                        onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
-                        inputMode="decimal"
-                        placeholder={t('amountPlaceholder')}
-                      />
+                      {draft.splitType === 'individual' ? (
+                        <input
+                          value={money(individualTotal)}
+                          readOnly
+                          className="amount-calculated"
+                          aria-label={t('amountPlaceholder')}
+                        />
+                      ) : (
+                        <input
+                          value={draft.amount}
+                          onChange={(event) => setDraft((prev) => ({ ...prev, amount: event.target.value }))}
+                          inputMode="decimal"
+                          placeholder={t('amountPlaceholder')}
+                        />
+                      )}
                       <select
                         value={safePayer}
                         onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}
