@@ -3114,7 +3114,7 @@ export default function SplitPayWebApp() {
 
   const totalSpent = useMemo(
     () =>
-      normalizedExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+      normalizedExpenses.reduce((sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount), 0),
     [normalizedExpenses]
   );
   const recentExpenses = useMemo(() => normalizedExpenses.slice(0, 3), [normalizedExpenses]);
