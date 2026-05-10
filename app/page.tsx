@@ -2886,7 +2886,7 @@ export default function SplitPayWebApp() {
 
       const { data: existingRows, error: existingError } = await supabase
         .from('trip_expenses')
-        .select('expense_id')
+        .select('expense_id, updated_at')
         .eq('trip_id', tripId);
 
       if (cancelled || existingError) {
@@ -2901,13 +2901,24 @@ export default function SplitPayWebApp() {
         return;
       }
 
-      const existingIds = ((existingRows || []) as Array<{ expense_id: string }>).map((row) => row.expense_id);
       const localIds = new Set(expenses.map((expense) => expense.id));
       const upsertedIds = rows.map((r) => r.expense_id);
       const upsertedSet = new Set(upsertedIds);
-      // Avoid deleting rows that we just upserted in this sync run — prevents race where
-      // local state hasn't propagated yet and an immediately-following delete would remove the new expense.
-      const toDelete = existingIds.filter((id) => !localIds.has(id) && !upsertedSet.has(id));
+
+      // Only delete DB rows that are not present locally, not just upserted now,
+      // and that are older than a small grace period to avoid race conditions.
+      const nowTs = Date.now();
+      const graceMs = 10000; // 10 seconds
+      const toDelete = ((existingRows || []) as Array<{ expense_id: string; updated_at?: string }>)
+        .filter((row) => {
+          if (!row || !row.expense_id) return false;
+          if (localIds.has(row.expense_id)) return false;
+          if (upsertedSet.has(row.expense_id)) return false;
+          if (!row.updated_at) return true;
+          const updated = new Date(row.updated_at).getTime();
+          return updated < nowTs - graceMs;
+        })
+        .map((r) => r.expense_id);
 
       if (toDelete.length > 0) {
         const { error: deleteError } = await supabase
