@@ -3059,9 +3059,9 @@ export default function SplitPayWebApp() {
     '';
   const safeParticipantsRaw = draft.participants.filter((name) => members.includes(name));
   const safeParticipants = safeParticipantsRaw.length ? safeParticipantsRaw : safePayer ? [safePayer] : [];
-  const amountNumber = Number(draft.amount);
+  const amountNumber = parseMoneyInput(draft.amount);
   const individualTotal = safeParticipants.reduce((sum, name) => {
-    const value = Number(draft.participantAmounts[name] || 0);
+    const value = parseMoneyInput(draft.participantAmounts[name] || 0);
     return sum + (Number.isFinite(value) && value > 0 ? value : 0);
   }, 0);
   // For individual split, accept when participant amounts sum to > 0
@@ -4195,7 +4195,7 @@ export default function SplitPayWebApp() {
     let amount = Number(draft.amount);
     if (draft.splitType === 'individual') {
       amount = safeParticipants.reduce((sum, name) => {
-        const raw = Number(draft.participantAmounts?.[name] || 0);
+        const raw = parseMoneyInput(draft.participantAmounts?.[name] || 0);
         return sum + (Number.isFinite(raw) && raw > 0 ? raw : 0);
       }, 0);
     }
@@ -4229,7 +4229,7 @@ export default function SplitPayWebApp() {
             participantAmounts:
               draft.splitType === 'individual'
                 ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
-                    const raw = Number(draft.participantAmounts[name] || 0);
+                    const raw = parseMoneyInput(draft.participantAmounts[name] || 0);
                     acc[name] = Number.isFinite(raw) && raw > 0 ? raw : 0;
                     return acc;
                   }, {})
@@ -4822,6 +4822,16 @@ export default function SplitPayWebApp() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+  }
+
+  function parseMoneyInput(raw: string | number): number {
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0;
+    const s = (raw || '').toString().trim();
+    if (!s) return 0;
+    // allow comma as decimal separator and strip non-numeric chars except dot/minus
+    const normalized = s.replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+    const n = Number(normalized);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
   }
 
   function expenseEventLabel(eventType: ExpenseHistoryEvent['event_type']) {
@@ -6342,21 +6352,26 @@ export default function SplitPayWebApp() {
                                   />
                                   <span>{name}</span>
                                   {draft.splitType === 'individual' && selected ? (
-                                    <input
-                                      className="weight"
-                                      inputMode="decimal"
-                                      value={String(draft.participantAmounts[name] || 0)}
-                                      onChange={(event) => {
-                                        const next = Number(event.target.value);
-                                        setDraft((prev) => ({
-                                          ...prev,
-                                          participantAmounts: {
-                                            ...prev.participantAmounts,
-                                            [name]: Number.isFinite(next) && next >= 0 ? next : 0,
-                                          },
-                                        }));
-                                      }}
-                                    />
+                                    <>
+                                      <input
+                                        className="weight"
+                                        inputMode="decimal"
+                                        value={String(draft.participantAmounts[name] || 0)}
+                                        onChange={(event) => {
+                                          const next = parseMoneyInput(event.target.value);
+                                          setDraft((prev) => ({
+                                            ...prev,
+                                            participantAmounts: {
+                                              ...prev.participantAmounts,
+                                              [name]: Number.isFinite(next) && next >= 0 ? next : 0,
+                                            },
+                                          }));
+                                        }}
+                                      />
+                                      <span className="participant-amount" aria-hidden>
+                                        {money(parseMoneyInput(draft.participantAmounts[name] || 0))}
+                                      </span>
+                                    </>
                                   ) : null}
                                 </label>
                               );
