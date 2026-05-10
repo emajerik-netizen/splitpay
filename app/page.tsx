@@ -4563,34 +4563,113 @@ export default function SplitPayWebApp() {
           })()
         : null;
 
-      if (
-        addedExpense &&
-        !isSelf(addedExpense.payer, trip) &&
-        typeof Notification !== 'undefined' &&
-        Notification.permission === 'granted'
-      ) {
-        sendNotification(`${langPack.newTransactionInTrip} ${trip.name}`, {
-          body: `${addedExpense.payer} ${langPack.addedExpense} ${addedExpense.title} (${eur(addedExpense.amount)})`,
-        });
-      } else if (
-        updatedExpense &&
-        !isSelf(updatedExpense.payer, trip) &&
-        typeof Notification !== 'undefined' &&
-        Notification.permission === 'granted'
-      ) {
-        sendNotification(`${langPack.transactionUpdatedInTrip} ${trip.name}`, {
-          body: `${updatedExpense.payer} ${langPack.updatedExpense} ${updatedExpense.title} (${eur(updatedExpense.amount)})`,
-        });
-      } else if (
-        deletedExpense &&
-        deletedExpense.payer &&
-        !isSelf(deletedExpense.payer, trip) &&
-        typeof Notification !== 'undefined' &&
-        Notification.permission === 'granted'
-      ) {
-        sendNotification(`${langPack.transactionDeletedInTrip} ${trip.name}`, {
-          body: `${deletedExpense.payer} ${langPack.deletedExpense} ${deletedExpense.title || ''}`.trim(),
-        });
+      // Prefer actor recorded in trip_expense_events; fallback to expense.payer
+      if (addedExpense && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        (async () => {
+          let actorName = addedExpense.payer;
+          if (supabase && canSyncWithDb) {
+            try {
+              const { data: ev } = await supabase
+                .from('trip_expense_events')
+                .select('actor_user_id')
+                .eq('trip_id', trip.id)
+                .eq('expense_id', addedExpense.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (ev?.actor_user_id) {
+                const { data: profile } = await supabase
+                  .from('user_profiles')
+                  .select('user_name, user_email')
+                  .eq('user_id', ev.actor_user_id)
+                  .limit(1)
+                  .maybeSingle();
+                if (profile) actorName = profile.user_name || profile.user_email || actorName;
+              }
+            } catch {
+              /* ignore and fallback */
+            }
+          }
+
+          if (!isSelf(actorName, trip)) {
+            sendNotification(`${langPack.newTransactionInTrip} ${trip.name}`, {
+              body: `${actorName} ${langPack.addedExpense} ${addedExpense.title} (${eur(addedExpense.amount)})`,
+            });
+          }
+        })();
+      }
+
+      if (updatedExpense && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        (async () => {
+          let actorName = updatedExpense.payer;
+          if (supabase && canSyncWithDb) {
+            try {
+              const { data: ev } = await supabase
+                .from('trip_expense_events')
+                .select('actor_user_id')
+                .eq('trip_id', trip.id)
+                .eq('expense_id', updatedExpense.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (ev?.actor_user_id) {
+                const { data: profile } = await supabase
+                  .from('user_profiles')
+                  .select('user_name, user_email')
+                  .eq('user_id', ev.actor_user_id)
+                  .limit(1)
+                  .maybeSingle();
+                if (profile) actorName = profile.user_name || profile.user_email || actorName;
+              }
+            } catch {
+              /* ignore and fallback */
+            }
+          }
+
+          if (!isSelf(actorName, trip)) {
+            sendNotification(`${langPack.transactionUpdatedInTrip} ${trip.name}`, {
+              body: `${actorName} ${langPack.updatedExpense} ${updatedExpense.title} (${eur(updatedExpense.amount)})`,
+            });
+          }
+        })();
+      }
+
+      if (deletedExpense && deletedExpense.payer && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        (async () => {
+          let actorName = deletedExpense.payer;
+          if (supabase && canSyncWithDb && deletedExpenseId) {
+            try {
+              const { data: ev } = await supabase
+                .from('trip_expense_events')
+                .select('actor_user_id')
+                .eq('trip_id', trip.id)
+                .eq('expense_id', deletedExpenseId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (ev?.actor_user_id) {
+                const { data: profile } = await supabase
+                  .from('user_profiles')
+                  .select('user_name, user_email')
+                  .eq('user_id', ev.actor_user_id)
+                  .limit(1)
+                  .maybeSingle();
+                if (profile) actorName = profile.user_name || profile.user_email || actorName;
+              }
+            } catch {
+              /* ignore and fallback */
+            }
+          }
+
+          if (!isSelf(actorName, trip)) {
+            sendNotification(`${langPack.transactionDeletedInTrip} ${trip.name}`, {
+              body: `${actorName} ${langPack.deletedExpense} ${deletedExpense.title || ''}`.trim(),
+            });
+          }
+        })();
       }
 
       expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
