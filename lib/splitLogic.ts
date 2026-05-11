@@ -82,7 +82,15 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
       participantsRaw.forEach((raw) => {
         const key = resolveParticipantKey(raw);
         if (!key) return;
-        const share = safeNumber(expense.participantAmounts?.[raw] ?? expense.participantAmounts?.[key] ?? 0);
+        // participantAmounts may be keyed by name even when participantsRaw are IDs;
+        // fall back to looking up by display name via nameById
+        const displayName = nameById.get(raw) || nameById.get(key);
+        const share = safeNumber(
+          expense.participantAmounts?.[raw] ??
+          expense.participantAmounts?.[key] ??
+          (displayName !== undefined ? expense.participantAmounts?.[displayName] : undefined) ??
+          0
+        );
         if (share === 0) return;
         balance[key] = (balance[key] || 0) - share;
       });

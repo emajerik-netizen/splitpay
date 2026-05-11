@@ -6691,17 +6691,19 @@ export default function SplitPayWebApp() {
 
                         <div className="stack-list balance-transfer-list">
                           {settlements.map((transfer, index) => {
-                            const fromName = formatMemberName(transfer.from);
-                            const toName = formatMemberName(transfer.to);
-                            const recipientIban = memberIbanByName[memberKey(transfer.to)] || '';
-                            const canCopyRecipientIban = isSelfName(transfer.from) && Boolean(recipientIban.trim());
+                            const fromKey = displayNameForKey(transfer.from);
+                            const toKey = displayNameForKey(transfer.to);
+                            const fromName = formatMemberName(fromKey);
+                            const toName = formatMemberName(toKey);
+                            const recipientIban = memberIbanByName[memberKey(toKey)] || '';
+                            const canCopyRecipientIban = isSelfName(fromKey) && Boolean(recipientIban.trim());
 
                             return (
                               <div className="balance-transfer-row" key={`${transfer.from}-${transfer.to}-${index}`}>
                                 <button
                                   type="button"
                                   className="balance-person member-link-inline"
-                                  onClick={() => openMemberProfile(transfer.from)}
+                                  onClick={() => openMemberProfile(fromKey)}
                                 >
                                   {fromName}
                                 </button>
@@ -6712,7 +6714,7 @@ export default function SplitPayWebApp() {
                                   <button
                                     type="button"
                                     className="member-link-inline"
-                                    onClick={() => openMemberProfile(transfer.to)}
+                                    onClick={() => openMemberProfile(toKey)}
                                   >
                                     {toName}
                                   </button>
