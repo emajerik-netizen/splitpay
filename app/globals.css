@@ -1939,6 +1939,17 @@ button:disabled {
   font-size: 1.85rem;
 }
 
+.balance-total-card-overview {
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.balance-total-card-overview:hover {
+  background: color-mix(in srgb, var(--accent-soft) 40%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 40%, #edf2fb);
+}
+
 .balance-current-panel {
   border-style: dashed;
 }

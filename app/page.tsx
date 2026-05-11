@@ -6338,12 +6338,29 @@ export default function SplitPayWebApp() {
                   </div>
                   {normalizedExpenses.length > 0 ? (() => {
                     const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
-                    // Debug logging removed to reduce console noise in production.
                     if (!anyNonZero) {
                       return (
                         <div className="mini-panel success-panel" role="status">
                           <strong>{t('tripSettled')}</strong>
                         </div>
+                      );
+                    }
+                    if (Math.abs(safeSelfBalance) > 0.01) {
+                      return (
+                        <button
+                          type="button"
+                          className="balance-total-card balance-total-card-overview"
+                          onClick={() => openTrip(currentTrip.id, 'balances')}
+                        >
+                          <p>
+                            {safeSelfBalance >= 0
+                              ? `${displayCurrentUserName} ${t('receivesTotal')}`
+                              : `${displayCurrentUserName} ${t('paysTotal')}`}
+                          </p>
+                          <strong className={safeSelfBalance >= 0 ? 'positive' : 'negative'}>
+                            {eur(Math.abs(safeSelfBalance))}
+                          </strong>
+                        </button>
                       );
                     }
                     return null;
