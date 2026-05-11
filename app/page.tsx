@@ -6807,10 +6807,10 @@ export default function SplitPayWebApp() {
                           <span className="expense-detail-amount">{money(selectedExpense.amount)}</span>
                         </div>
                         <p className="muted expense-detail-meta">
-                          {t('paidBy')} {formatMemberName(selectedExpense.payer)}
+                          {t('paidBy')} {formatMemberName(memberNameOf(selectedExpense.payer || ''))}
                         </p>
                         <p className="muted expense-detail-meta">
-                          {t('participantsLabel')} {selectedExpense.participants.map((name) => formatMemberName(name)).join(', ')}
+                          {t('participantsLabel')} {(selectedExpense.participants || []).map((name) => formatMemberName(memberNameOf(name))).join(', ')}
                         </p>
                         <div className="expense-detail-actions">
                           <button type="button" className="ghost" onClick={() => editExpense(selectedExpense.id)}>
