@@ -949,7 +949,7 @@ type Trip = {
   inviteCode: string;
   deletedAt?: string | null;
   deletedBy?: string | null;
-  members: string[];
+  members: (Member | string)[];
   expenses: TripExpense[];
   pendingInvites: Invite[];
 };
