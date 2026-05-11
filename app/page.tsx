@@ -4306,13 +4306,13 @@ export default function SplitPayWebApp() {
       })
     );
 
-    if (!foundTripId || (supabase && appSession && canSyncWithDb)) {
+    if (!foundTripId) {
       if (!supabase || !appSession) {
         setInfoMessage(t('invalidCode'));
         return;
       }
 
-      // Fallback to server-side join for trips owned by other users.
+      // Server-side join for trips owned by other users (not in local state).
       const { data } = (await supabase.rpc('join_trip_by_invite_code', {
         p_invite_code: cleanedCode,
         p_member_name: cleanedName,
