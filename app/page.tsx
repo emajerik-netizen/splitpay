@@ -5612,9 +5612,18 @@ export default function SplitPayWebApp() {
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
                     );
-                    const userBalance = appSession?.name
-                      ? (tripBalances[appSession.name] ?? tripBalances.Ty ?? 0)
-                      : (tripBalances.Ty ?? 0);
+                    const lookupBalanceFor = (name?: string | null) => {
+                      const fallback = tripBalances.Ty ?? 0;
+                      if (!name) return fallback;
+                      if (Object.prototype.hasOwnProperty.call(tripBalances, name)) return tripBalances[name];
+                      const norm = memberKey(name);
+                      for (const m of trip.members) {
+                        if (memberKey(m) === norm && Object.prototype.hasOwnProperty.call(tripBalances, m)) return tripBalances[m];
+                      }
+                      return fallback;
+                    };
+
+                    const userBalance = lookupBalanceFor(appSession?.name ?? null);
 
                     return (
                       <button
