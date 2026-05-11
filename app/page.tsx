@@ -4264,7 +4264,7 @@ export default function SplitPayWebApp() {
     }
 
     // For 'individual' split, compute total from participantAmounts instead of relying on draft.amount
-    let amount = Number(draft.amount);
+    let amount = parseMoneyInput(draft.amount);
     if (draft.splitType === 'individual') {
       amount = safeParticipants.reduce((sum, name) => {
         const raw = parseMoneyInput(draft.participantAmounts?.[name] || 0);
