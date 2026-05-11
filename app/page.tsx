@@ -1432,7 +1432,43 @@ export default function SplitPayWebApp() {
         .limit(8);
 
       if (cancelled || error) return;
-      setMemberAddNotifications((data || []) as MemberAddNotification[]);
+      const notifs = (data || []) as MemberAddNotification[];
+      setMemberAddNotifications(notifs);
+
+      // Try to auto-join trips for any fresh notifications: fetch inviteCode and call join RPC
+      for (const n of notifs) {
+        try {
+          // If the trip is already present locally, skip
+          if (trips.find((t) => t.id === n.trip_id)) continue;
+
+          const res = await fetch(`/api/get-invite-code?tripId=${encodeURIComponent(n.trip_id)}`);
+          if (!res.ok) continue;
+          const body = await res.json();
+          const inviteCode = body?.inviteCode;
+          if (!inviteCode) continue;
+
+          // Attempt to join using RPC
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const rpcRes = (await supabaseClient.rpc('join_trip_by_invite_code', {
+            p_invite_code: inviteCode,
+            p_member_name: n.member_name,
+          })) as any;
+
+          const rpcData = rpcRes?.data || rpcRes;
+          if (rpcData?.trip) {
+            const normalized = normalizeTrip(rpcData.trip as Trip);
+            setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
+            // Acknowledge the notification so we don't retry
+            await supabaseClient
+              .from('member_add_notifications')
+              .update({ acknowledged_at: new Date().toISOString() })
+              .eq('id', n.id)
+              .eq('target_user_id', appSession.userId);
+          }
+        } catch (e) {
+          // ignore individual failures
+        }
+      }
     };
 
     loadNotifications();
