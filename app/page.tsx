@@ -3263,7 +3263,7 @@ export default function SplitPayWebApp() {
     setJoinName(sessionName);
   }, [showJoinTripModal, appSession?.name]);
 
-  const members = useMemo(() => currentTrip?.members ?? [], [currentTrip]);
+  const members = useMemo(() => (currentTrip?.members || []).map(memberNameOf), [currentTrip]);
   const isTransferDraft = draft.expenseType === 'transfer';
   const safePayer = members.includes(draft.payer) ? draft.payer : members[0] || 'Ty';
   const safeTransferTo =
