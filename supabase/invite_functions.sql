@@ -451,3 +451,45 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION invite_user_by_email TO authenticated;
+
+
+-- 6. Look up registered users by display name (requires auth)
+--    SECURITY DEFINER so non-admin users can find other users by name
+--    Returns: array of { user_id, user_name, user_email } excluding the caller
+CREATE OR REPLACE FUNCTION lookup_users_by_name(p_name TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_results JSONB;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN json_build_object('error', 'not_authenticated');
+  END IF;
+
+  IF COALESCE(trim(p_name), '') = '' THEN
+    RETURN json_build_object('error', 'invalid_name');
+  END IF;
+
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'user_id',    up.user_id,
+      'user_name',  up.user_name,
+      'user_email', up.user_email
+    ) ORDER BY up.last_seen DESC
+  )
+  INTO v_results
+  FROM user_presence up
+  WHERE lower(up.user_name) = lower(trim(p_name))
+    AND up.user_id != auth.uid()
+  LIMIT 5;
+
+  RETURN json_build_object(
+    'users', COALESCE(v_results, '[]'::jsonb)
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION lookup_users_by_name TO authenticated;

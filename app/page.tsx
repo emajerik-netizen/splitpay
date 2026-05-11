@@ -1563,24 +1563,41 @@ export default function SplitPayWebApp() {
             if (!memberName || memberName.toLowerCase() === selfKey) return trip;
             const ownerKey = (trip.owner || '').trim().toLowerCase();
             const ownerLabel = ownerKey && ownerKey !== 'ty' ? trip.owner : 'Ty';
-            const remapName = (name: Member | string): string | null => {
-              const nameStr = memberNameOf(name);
-              if (nameStr === memberName) return effectiveName;
+            const selfEntry: Member | string = appSession.userId
+              ? { id: appSession.userId, name: effectiveName }
+              : effectiveName;
+            // For member slots: preserve Member objects, tag the current user's slot with their ID
+            const remapMemberEntry = (m: Member | string): Member | string | null => {
+              const nameStr = memberNameOf(m);
+              if (nameStr === memberName) return selfEntry;
               if (nameStr.toLowerCase() === 'ty') return ownerLabel;
               if (nameStr === effectiveName) return null; // remove pre-existing duplicate
-              return nameStr;
+              return m;
             };
+            // For expense strings: same logic but always returns plain string
+            const remapExpenseName = (name: string): string | null => {
+              if (name === memberName) return effectiveName;
+              if (name.toLowerCase() === 'ty') return ownerLabel;
+              if (name === effectiveName) return null;
+              return name;
+            };
+            const seenNames = new Set<string>();
             return {
               ...trip,
               members: trip.members
-                .map(remapName)
-                .filter((m): m is string => m !== null)
-                .filter((m, i, arr) => arr.indexOf(m) === i),
+                .map(remapMemberEntry)
+                .filter((m): m is Member | string => m !== null)
+                .filter((m) => {
+                  const n = memberNameOf(m).toLowerCase();
+                  if (seenNames.has(n)) return false;
+                  seenNames.add(n);
+                  return true;
+                }),
               expenses: trip.expenses.map((exp) => ({
                 ...exp,
-                payer: remapName(exp.payer || '') ?? effectiveName,
+                payer: remapExpenseName(exp.payer || '') ?? effectiveName,
                 participants: (exp.participants || [])
-                  .map((p) => remapName(p))
+                  .map((p) => remapExpenseName(p))
                   .filter((p): p is string => p !== null)
                   .filter((p, i, arr) => arr.indexOf(p) === i),
               })),
@@ -2808,19 +2825,22 @@ export default function SplitPayWebApp() {
         return nStr;
       };
 
+      const selfEntry: Member | string = appSession?.userId
+        ? { id: appSession.userId, name: effectiveName }
+        : effectiveName;
       const remapMembers = (members: (Member | string)[]) => {
-        const result: string[] = [];
+        const result: (Member | string)[] = [];
         let addedSelf = false;
         for (const m of members) {
           const mapped = remapName(m);
           if (mapped === null) {
-            if (!addedSelf && m === memberName) { result.push(effectiveName); addedSelf = true; }
+            if (!addedSelf && memberNameOf(m) === memberName) { result.push(selfEntry); addedSelf = true; }
             continue;
           }
-          if (mapped === effectiveName) { if (!addedSelf) { result.push(effectiveName); addedSelf = true; } continue; }
+          if (mapped === effectiveName) { if (!addedSelf) { result.push(selfEntry); addedSelf = true; } continue; }
           result.push(mapped);
         }
-        if (!addedSelf) result.push(effectiveName);
+        if (!addedSelf) result.push(selfEntry);
         return result;
       };
 
@@ -3770,17 +3790,29 @@ export default function SplitPayWebApp() {
   async function notifyMemberAdded(memberName: string, trip: Trip) {
     if (!supabase || !appSession?.userId) return;
 
-    const { data: candidates, error } = await supabase
-      .from('user_presence')
-      .select('user_id, user_name, last_seen')
-      .ilike('user_name', memberName)
-      .order('last_seen', { ascending: false })
-      .limit(3);
+    // Use SECURITY DEFINER RPC to bypass user_presence RLS (non-admins can't query other rows directly)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: lookupData } = (await (supabase.rpc as any)('lookup_users_by_name', {
+      p_name: memberName,
+    })) as { data: { users?: Array<{ user_id: string; user_name: string; user_email?: string }> } | null };
 
-    if (error || !candidates?.length) return;
+    const candidates = lookupData?.users || [];
+    if (!candidates.length) return;
 
-    const target = candidates.find((row) => row.user_id !== appSession.userId);
+    const target = candidates[0];
     if (!target?.user_id) return;
+
+    const targetEmail = target.user_email?.trim() || undefined;
+
+    // Upgrade the member slot from { name } to { id, name } now that we have the user's ID
+    updateCurrentTrip((t) => ({
+      ...t,
+      members: t.members.map((m) => {
+        if (memberNameOf(m).trim().toLowerCase() !== memberName.trim().toLowerCase()) return m;
+        if (typeof m !== 'string' && m.id) return m; // already has ID
+        return { id: target.user_id, name: memberNameOf(m), ...(targetEmail ? { email: targetEmail } : {}) };
+      }),
+    }));
 
     await supabase.from('member_add_notifications').insert({
       target_user_id: target.user_id,
@@ -3790,29 +3822,18 @@ export default function SplitPayWebApp() {
       actor_name: appSession.name,
     });
 
-    // If we can resolve the target user's email, ask the DB to copy the trip
-    // into their `trip_states` (invite_user_by_email). This makes the trip
-    // immediately visible in their MyTrips overview.
-    try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('user_email')
-        .eq('user_id', target.user_id)
-        .maybeSingle();
-
-      const targetEmail = profile?.user_email?.trim();
-      if (targetEmail) {
-        // Call security-definer function to copy the trip to the target user
-        // (requires the caller to be the trip owner, which we are here).
+    // Copy the trip to the target user's account so it appears in their overview immediately
+    if (targetEmail) {
+      try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase.rpc as any)('invite_user_by_email', {
           p_invite_code: trip.inviteCode,
           p_member_name: memberName,
           p_target_email: targetEmail,
         });
+      } catch (e) {
+        // ignore - notification still created, user can join manually via invite code
       }
-    } catch (e) {
-      // ignore - notification still created, user can accept manually
     }
   }
 
@@ -4322,28 +4343,31 @@ export default function SplitPayWebApp() {
         return nStr;
       };
 
+      const selfEntry: Member | string = appSession?.userId
+        ? { id: appSession.userId, name: effectiveName }
+        : effectiveName;
       const remapMembers = (members: (Member | string)[]) => {
-        const result: string[] = [];
+        const result: (Member | string)[] = [];
         let addedSelf = false;
         for (const m of members) {
           const mapped = remapName(m);
           if (mapped === null) {
             if (!addedSelf && memberNameOf(m) === cleanedName) {
-              result.push(effectiveName);
+              result.push(selfEntry);
               addedSelf = true;
             }
             continue;
           }
           if (mapped === effectiveName) {
             if (!addedSelf) {
-              result.push(effectiveName);
+              result.push(selfEntry);
               addedSelf = true;
             }
             continue;
           }
           result.push(mapped);
         }
-        if (!addedSelf) result.push(effectiveName);
+        if (!addedSelf) result.push(selfEntry);
         return result;
       };
 
