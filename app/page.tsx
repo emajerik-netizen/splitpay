@@ -4020,12 +4020,17 @@ export default function SplitPayWebApp() {
         owner: newOwner,
         members: otherMembers,
         expenses: trip.expenses.map((expense) => {
-          const payerVal = isSameMember(expense.payer as any, memberName) ? newOwner : (expense.payer || 'Ty');
+          const payerVal = isSameMember(expense.payer as any, memberName)
+            ? (memberNameOf(trip.members[0]) || 'Ty')
+            : (memberNameOf(expense.payer) || 'Ty');
+          const participants = (expense.participants || [])
+            .filter((name) => !isSameMember(name, memberName))
+            .map(memberNameOf);
           return {
             ...expense,
             payer: payerVal,
-            participants: (expense.participants || []).filter((name) => !isSameMember(name, memberName)),
-          };
+            participants,
+          } as TripExpense;
         }),
       }));
       setInfoMessage(`${t('ownershipTransferredAndRemoved')} ${formatMemberName(newOwner)}. ${t('removedFromTrip')}`);
