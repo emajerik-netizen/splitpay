@@ -1158,6 +1158,12 @@ function normalizeTrip(trip: Trip): Trip {
 function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
   if (!selfKey || selfKey === 'ty') return trip;
 
+  // Only remap self→"Ty" when the current user IS the trip owner.
+  // For non-owner members viewing a shared trip, "Ty" already refers to the owner —
+  // converting the viewer's name to "Ty" would collapse both slots into one.
+  const ownerKey = (trip.owner || '').trim().toLowerCase();
+  if (ownerKey !== selfKey) return trip;
+
   const toTy = (name: string) => {
     const k = (name || '').trim().toLowerCase();
     return k === selfKey || k === 'ty' ? 'Ty' : name;
@@ -1182,7 +1188,6 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
     seen.add(key);
     canonicalMembers.push(canonical);
   }
-  const ownerKey = (trip.owner || '').trim().toLowerCase();
   if (ownerKey && ownerKey !== 'ty' && ownerKey !== selfKey && !seen.has(ownerKey)) {
     canonicalMembers.unshift(trip.owner);
     seen.add(ownerKey);
@@ -1588,17 +1593,22 @@ export default function SplitPayWebApp() {
             const existing = prev.find((t) => t.id === n.trip_id);
             if (!existing) return prev;
 
-            // Trip is in state — check if user is already visible
+            // Trip is in state — check if user is already visible.
+            // "Ty" is the canonical placeholder for the current user.
             const userVisible = prev.find((t) => t.id === n.trip_id)
-              ?.members.some((m) => m.trim().toLowerCase() === selfKey);
+              ?.members.some((m) => {
+                const k = m.trim().toLowerCase();
+                return k === selfKey || k === 'ty';
+              });
             if (userVisible) {
               alreadyHandled = true;
               return prev; // visible, no change needed
             }
 
-            // Trip exists but user isn't visible — remap the member name
+            // Trip exists but user isn't visible — remap the member name.
+            // Do NOT re-normalize here; existing was already normalized on load.
             alreadyHandled = true;
-            const remapped = applyMemberRemap(normalizeTrip(existing));
+            const remapped = applyMemberRemap(existing);
             return [...prev.filter((t) => t.id !== remapped.id), remapped];
           });
 
