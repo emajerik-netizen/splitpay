@@ -1156,6 +1156,10 @@ function normalizeTrip(trip: Trip): Trip {
   };
 }
 
+function memberNameOf(m: Member | string) {
+  return typeof m === 'string' ? m : (m?.name || '');
+}
+
 // Rename the current user's real name to "Ty" placeholder in a trip's members and expenses
 // so that balance computation always uses a consistent key.
 function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
