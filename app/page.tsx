@@ -3717,11 +3717,14 @@ export default function SplitPayWebApp() {
     if (!currentTrip) return;
     const cleaned = newMember.trim();
 
-    if (!cleaned || currentTrip.members.includes(cleaned)) {
+    if (
+      !cleaned ||
+      currentTrip.members.some((m) => memberNameOf(m).trim().toLowerCase() === cleaned.toLowerCase())
+    ) {
       return;
     }
 
-    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, cleaned] }));
+    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { id: null, name: cleaned }] }));
     setDraft((prev) => ({
       ...prev,
       participants: [...new Set([...prev.participants, cleaned])],
@@ -3798,7 +3801,7 @@ export default function SplitPayWebApp() {
     );
     if (exists) return;
 
-    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, memberName] }));
+    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { id: null, name: memberName }] }));
     setDraft((prev) => ({
       ...prev,
       participants: [...new Set([...prev.participants, memberName])],
@@ -4203,7 +4206,7 @@ export default function SplitPayWebApp() {
         if (trip.inviteCode !== cleanedCode) return trip;
         foundTripId = trip.id;
 
-        if (trip.members.includes(cleanedName)) {
+        if (trip.members.some((m) => memberNameOf(m).toLowerCase() === cleanedName.toLowerCase())) {
           // Check if there's a pending invite for this name
           const matchingInvite = trip.pendingInvites.find(
             (invite) => invite.name.toLowerCase() === cleanedName.toLowerCase()
@@ -4231,7 +4234,7 @@ export default function SplitPayWebApp() {
 
         const updatedTrip = {
           ...trip,
-          members: [...trip.members, cleanedName],
+          members: [...trip.members, { id: null, name: cleanedName }],
           pendingInvites: trip.pendingInvites.map((invite) =>
             invite.name.toLowerCase() === cleanedName.toLowerCase()
               ? { ...invite, status: 'Prijate' as const }
