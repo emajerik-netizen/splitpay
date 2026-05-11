@@ -119,10 +119,10 @@ BEGIN
                  jsonb_set(
                    jsonb_set(
                      t, '{members}',
-                     CASE WHEN NOT v_member_exists
-                       THEN COALESCE(t->'members','[]'::jsonb) || to_jsonb(p_member_name)
-                       ELSE t->'members'
-                     END
+                    CASE WHEN NOT v_member_exists
+                      THEN COALESCE(t->'members','[]'::jsonb) || jsonb_build_object('id', v_target_user_id::text, 'name', p_member_name, 'email', lower(trim(p_target_email)))
+                      ELSE t->'members'
+                    END
                    ),
                    '{pendingInvites}',
                    COALESCE(
