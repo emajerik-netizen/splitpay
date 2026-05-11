@@ -3731,7 +3731,7 @@ export default function SplitPayWebApp() {
       return;
     }
 
-    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { id: null, name: cleaned }] }));
+    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { name: cleaned }] }));
     setDraft((prev) => ({
       ...prev,
       participants: [...new Set([...prev.participants, cleaned])],
@@ -3808,7 +3808,7 @@ export default function SplitPayWebApp() {
     );
     if (exists) return;
 
-    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { id: null, name: memberName }] }));
+    updateCurrentTrip((trip) => ({ ...trip, members: [...trip.members, { name: memberName }] }));
     setDraft((prev) => ({
       ...prev,
       participants: [...new Set([...prev.participants, memberName])],
@@ -4241,7 +4241,7 @@ export default function SplitPayWebApp() {
 
         const updatedTrip = {
           ...trip,
-          members: [...trip.members, { id: null, name: cleanedName }],
+          members: [...trip.members, { name: cleanedName }],
           pendingInvites: trip.pendingInvites.map((invite) =>
             invite.name.toLowerCase() === cleanedName.toLowerCase()
               ? { ...invite, status: 'Prijate' as const }
