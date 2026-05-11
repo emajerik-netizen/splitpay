@@ -5971,12 +5971,18 @@ export default function SplitPayWebApp() {
                       0
                     );
                     const lookupBalanceFor = (name?: string | null) => {
+                      // Balance map keys are member IDs when the member has one — try userId first
+                      if (appSession?.userId && Object.prototype.hasOwnProperty.call(tripBalances, appSession.userId)) {
+                        return tripBalances[appSession.userId];
+                      }
                       if (!name) return 0;
                       if (Object.prototype.hasOwnProperty.call(tripBalances, name)) return tripBalances[name];
                       const norm = memberKey(name);
                       for (const m of trip.members) {
                         const mName = memberNameOf(m);
                         if (memberKey(mName) === norm && Object.prototype.hasOwnProperty.call(tripBalances, mName)) return tripBalances[mName];
+                        // also match by member id
+                        if (typeof m !== 'string' && m.id && Object.prototype.hasOwnProperty.call(tripBalances, m.id) && memberKey(mName) === norm) return tripBalances[m.id];
                       }
                       return 0;
                     };
