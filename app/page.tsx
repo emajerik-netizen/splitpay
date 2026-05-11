@@ -4999,9 +4999,7 @@ export default function SplitPayWebApp() {
       const previousMembers = memberSnapshotRef.current[trip.id] ?? trip.members;
       if (isSelf(trip.owner, trip) && trip.members.length > previousMembers.length) {
         const previousSet = new Set(previousMembers.map((name) => name.trim().toLowerCase()));
-        const addedMembers = trip.members.filter(
-          (name) => !previousSet.has(name.trim().toLowerCase())
-        );
+          const addedMembers = (trip.members || []).filter((name) => !previousSet.has(memberNameOf(name).trim().toLowerCase()));
         const newestMember = addedMembers[addedMembers.length - 1];
 
         if (
@@ -5011,13 +5009,13 @@ export default function SplitPayWebApp() {
           Notification.permission === 'granted'
         ) {
           sendNotification(`${trip.name} - ${langPack.ownerNewMemberTitleSuffix}`, {
-            body: `${newestMember} ${langPack.ownerNewMemberBody}`,
+            body: `${memberNameOf(newestMember)} ${langPack.ownerNewMemberBody}`,
             icon: '/icon.png',
           });
         }
       }
 
-      memberSnapshotRef.current[trip.id] = [...trip.members];
+      memberSnapshotRef.current[trip.id] = (trip.members || []).map(memberNameOf);
 
       if (isSelf(trip.owner, trip)) {
         const acceptedInvite = trip.pendingInvites.find((invite) => {
