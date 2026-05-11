@@ -4488,9 +4488,19 @@ export default function SplitPayWebApp() {
             title: draft.title.trim(),
             amount,
           payer: safePayer,
-          payerId: appSession?.userId || null,
+          payerId:
+            (currentTrip?.members.find((m) => memberNameOf(m) === safePayer) as Member | undefined)?.id ||
+            appSession?.userId ||
+            null,
           participants: safeParticipants,
-          participantIds: safeParticipants.map((s) => (s === appSession?.name ? appSession?.userId || null : null)).filter(Boolean),
+          participantIds: safeParticipants
+            .map((s) => {
+              const found = currentTrip?.members.find((m) => memberNameOf(m) === s);
+              if (found && typeof found !== 'string' && found.id) return found.id;
+              if (s === appSession?.name) return appSession?.userId || null;
+              return null;
+            })
+            .filter(Boolean),
             splitType: draft.splitType,
             participantWeights:
               draft.splitType === 'shares'
