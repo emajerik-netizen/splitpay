@@ -1563,11 +1563,12 @@ export default function SplitPayWebApp() {
             if (!memberName || memberName.toLowerCase() === selfKey) return trip;
             const ownerKey = (trip.owner || '').trim().toLowerCase();
             const ownerLabel = ownerKey && ownerKey !== 'ty' ? trip.owner : 'Ty';
-            const remapName = (name: string): string | null => {
-              if (name === memberName) return effectiveName;
-              if (name.toLowerCase() === 'ty') return ownerLabel;
-              if (name === effectiveName) return null; // remove pre-existing duplicate
-              return name;
+            const remapName = (name: Member | string): string | null => {
+              const nameStr = memberNameOf(name);
+              if (nameStr === memberName) return effectiveName;
+              if (nameStr.toLowerCase() === 'ty') return ownerLabel;
+              if (nameStr === effectiveName) return null; // remove pre-existing duplicate
+              return nameStr;
             };
             return {
               ...trip,
