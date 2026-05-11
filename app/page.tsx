@@ -4024,7 +4024,7 @@ export default function SplitPayWebApp() {
           return {
             ...expense,
             payer: payerVal,
-            participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
+            participants: (expense.participants || []).filter((name) => !isSameMember(name, memberName)),
           };
         }),
       }));
