@@ -1173,7 +1173,7 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
   };
 
   const needsRemap =
-    trip.members.some((m) => (m || '').trim().toLowerCase() === selfKey) ||
+    trip.members.some((m) => memberNameOf(m).trim().toLowerCase() === selfKey) ||
     (trip.expenses || []).some(
       (exp) =>
         (exp.payer || '').trim().toLowerCase() === selfKey ||
@@ -1185,7 +1185,7 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
   const seen = new Set<string>();
   const canonicalMembers: string[] = [];
   for (const m of trip.members || []) {
-    const canonical = toTy(m.trim());
+    const canonical = toTy(memberNameOf(m).trim());
     const key = canonical.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
