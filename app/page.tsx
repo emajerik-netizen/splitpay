@@ -3372,15 +3372,20 @@ export default function SplitPayWebApp() {
 
   const normalizedCurrentUser = (appSession?.name || '').trim().toLowerCase();
   const displayCurrentUserName = (appSession?.name || '').trim() || 'Používateľ';
-  const isSelfName = (name: string) => {
-    const normalizedName = name.trim().toLowerCase();
+
+  const memberNameOf = (m: Member | string) => (typeof m === 'string' ? m : m?.name || '');
+
+  const isSelfName = (input: Member | string) => {
+    const name = memberNameOf(input).trim();
+    const normalizedName = name.toLowerCase();
     if (!normalizedName) return false;
     if (normalizedName === 'ty') return true;
     return Boolean(normalizedCurrentUser) && normalizedName === normalizedCurrentUser;
   };
-  const isSameMember = (left: string, right: string) => {
-    const leftNormalized = left.trim().toLowerCase();
-    const rightNormalized = right.trim().toLowerCase();
+
+  const isSameMember = (left: Member | string, right: Member | string) => {
+    const leftNormalized = memberNameOf(left).trim().toLowerCase();
+    const rightNormalized = memberNameOf(right).trim().toLowerCase();
     if (!leftNormalized || !rightNormalized) return false;
     if (leftNormalized === rightNormalized) return true;
     return isSelfName(left) && isSelfName(right);
@@ -3419,7 +3424,10 @@ export default function SplitPayWebApp() {
     }
   }, [selectedTripId, trips]);
 
-  const formatMemberName = (name: string) => (isSelfName(name) ? displayCurrentUserName : name);
+  const formatMemberName = (m: Member | string) => {
+    const name = memberNameOf(m);
+    return isSelfName(m) ? displayCurrentUserName : name;
+  };
   
   // Close add/edit expense modal if currentTrip becomes unavailable
   useEffect(() => {
