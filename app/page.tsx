@@ -4806,7 +4806,7 @@ export default function SplitPayWebApp() {
         });
 
         expenseSnapshotRef.current[trip.id] = currentExpenseSnapshot;
-        memberSnapshotRef.current[trip.id] = [...trip.members];
+        memberSnapshotRef.current[trip.id] = (trip.members || []).map(memberNameOf);
         inviteStatusSnapshotRef.current[trip.id] = currentInviteSnapshot;
         tripMetaSnapshotRef.current[trip.id] = { name: trip.name, owner: trip.owner };
       });
