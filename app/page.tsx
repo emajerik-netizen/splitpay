@@ -2800,14 +2800,15 @@ export default function SplitPayWebApp() {
       const effectiveName = registrationName || memberName;
       const ownerKey = (normalized.owner || '').trim().toLowerCase();
       const ownerLabel = ownerKey && ownerKey !== 'ty' ? normalized.owner : 'Ty';
-      const remapName = (n: string) => {
-        if (n === memberName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return ownerLabel;
-        if (n === effectiveName) return null; // remove pre-existing duplicate
-        return n;
+      const remapName = (n: Member | string) => {
+        const nStr = memberNameOf(n);
+        if (nStr === memberName) return effectiveName;
+        if (nStr.toLowerCase() === 'ty') return ownerLabel;
+        if (nStr === effectiveName) return null; // remove pre-existing duplicate
+        return nStr;
       };
 
-      const remapMembers = (members: string[]) => {
+      const remapMembers = (members: (Member | string)[]) => {
         const result: string[] = [];
         let addedSelf = false;
         for (const m of members) {
@@ -4280,20 +4281,21 @@ export default function SplitPayWebApp() {
       const ownerKey = (normalized.owner || '').trim().toLowerCase();
       const ownerLabel = ownerKey && ownerKey !== 'ty' ? normalized.owner : 'Ty';
 
-      const remapName = (n: string) => {
-        if (n === cleanedName) return effectiveName;
-        if (n.toLowerCase() === 'ty') return ownerLabel;
-        if (n === effectiveName) return null;
-        return n;
+      const remapName = (n: Member | string) => {
+        const nStr = memberNameOf(n);
+        if (nStr === cleanedName) return effectiveName;
+        if (nStr.toLowerCase() === 'ty') return ownerLabel;
+        if (nStr === effectiveName) return null;
+        return nStr;
       };
 
-      const remapMembers = (members: string[]) => {
+      const remapMembers = (members: (Member | string)[]) => {
         const result: string[] = [];
         let addedSelf = false;
         for (const m of members) {
           const mapped = remapName(m);
           if (mapped === null) {
-            if (!addedSelf && m === cleanedName) {
+            if (!addedSelf && memberNameOf(m) === cleanedName) {
               result.push(effectiveName);
               addedSelf = true;
             }
@@ -4318,7 +4320,7 @@ export default function SplitPayWebApp() {
         expenses: normalized.expenses.map((exp) => ({
           ...exp,
           payer: remapName(exp.payer) ?? effectiveName,
-          participants: exp.participants
+          participants: (exp.participants || [])
             .map((p) => remapName(p))
             .filter((p): p is string => p !== null)
             .filter((p, i, arr) => arr.indexOf(p) === i),
