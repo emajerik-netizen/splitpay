@@ -6139,13 +6139,10 @@ export default function SplitPayWebApp() {
                   {normalizedExpenses.length > 0 ? (() => {
                     const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
                     // DEBUG: log balance computation inputs/outputs
-                    console.log('[DEBUG balance]', {
-                      members,
-                      rawExpenses: currentTrip?.expenses?.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants })),
-                      normalizedExpenses: normalizedExpenses.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants })),
-                      balances,
-                      anyNonZero,
-                    });
+                    console.log('[DEBUG balance] members=' + JSON.stringify(members));
+                    console.log('[DEBUG balance] rawExpenses=' + JSON.stringify(currentTrip?.expenses?.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants }))));
+                    console.log('[DEBUG balance] normalizedExpenses=' + JSON.stringify(normalizedExpenses.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants }))));
+                    console.log('[DEBUG balance] balances=' + JSON.stringify(balances) + ' anyNonZero=' + anyNonZero);
                     if (!anyNonZero) {
                       return (
                         <div className="mini-panel success-panel" role="status">
