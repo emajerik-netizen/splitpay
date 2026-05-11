@@ -3285,14 +3285,14 @@ export default function SplitPayWebApp() {
     return currentTrip.expenses.map((expense) => {
       // Use stored participants if present, but if only the payer is listed it means
       // the expense was created before others joined — expand to all current members.
-      const rawParticipants = expense.participants && expense.participants.length
-        ? expense.participants
-        : currentTrip.members;
+      const rawParticipantsArr = (
+        (expense.participants && expense.participants.length ? expense.participants : currentTrip.members) as (Member | string)[]
+      ).map(memberNameOf);
       const onlyPayerListed =
-        rawParticipants.length === 1 &&
-        rawParticipants[0] &&
-        (expense.payer || '').trim().toLowerCase() === rawParticipants[0].trim().toLowerCase();
-      const participants = onlyPayerListed ? currentTrip.members : rawParticipants;
+        rawParticipantsArr.length === 1 &&
+        rawParticipantsArr[0] &&
+        (expense.payer || '').trim().toLowerCase() === rawParticipantsArr[0].trim().toLowerCase();
+      const participants = onlyPayerListed ? (currentTrip.members || []).map(memberNameOf) : rawParticipantsArr;
       const amount = parseMoneyInput((expense as any).amount || 0);
       const participantAmounts = (expense.participantAmounts || {}) as Record<string, any>;
       const parsedParticipantAmounts: Record<string, number> = {};
