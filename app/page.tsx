@@ -5951,11 +5951,17 @@ export default function SplitPayWebApp() {
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
-                  {settlements.length === 0 && normalizedExpenses.length > 0 ? (
-                    <div className="mini-panel success-panel" role="status">
-                      <strong>{t('tripSettled')}</strong>
-                    </div>
-                  ) : null}
+                  {normalizedExpenses.length > 0 ? (() => {
+                    const anyNonZero = Object.values(tripBalances).some((v) => Math.abs(Number(v) || 0) > 0.01);
+                    if (!anyNonZero) {
+                      return (
+                        <div className="mini-panel success-panel" role="status">
+                          <strong>{t('tripSettled')}</strong>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })() : null}
                   <div className="screen-grid compact-grid overview-compact-grid">
                     <div className="mini-panel overview-mini-panel">
                         <h3>{t('recentExpenses')}</h3>
