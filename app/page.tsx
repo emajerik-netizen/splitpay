@@ -4825,7 +4825,18 @@ export default function SplitPayWebApp() {
 
   const isAuthenticated = Boolean(appSession);
   const showTripDetail = activeAppScreen === 'trip-detail' && currentTrip;
-  const visibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
+  const baseVisibleTrips = showArchived ? trips : trips.filter((trip) => !trip.archived);
+  const visibleTrips = activeAppScreen === 'admin'
+    ? baseVisibleTrips
+    : baseVisibleTrips.filter((trip) => {
+        // Show only trips where the current user is owner or a member in the regular overview.
+        // `isSelfName` handles the special "Ty" name and normalization.
+        try {
+          return isSelfName(trip.owner) || trip.members.some((m) => isSelfName(m));
+        } catch (e) {
+          return false;
+        }
+      });
   const tripThemeStyle = useMemo(() => {
     if (!currentTrip) return undefined;
 
@@ -5590,9 +5601,24 @@ export default function SplitPayWebApp() {
                               <strong>{trip.name}</strong>
                               <p>{formatTripDate(trip.date, lang)}</p>
                             </div>
-                            <span className={userBalance >= 0 ? 'positive trip-balance' : 'negative trip-balance'}>
-                              {money(userBalance)}
-                            </span>
+                            {
+                              // If trip has a date, show days-until-start instead of balance
+                              trip.date ? (() => {
+                                const start = new Date(trip.date);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const diffMs = start.getTime() - today.getTime();
+                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                const daysLabel = diffDays <= 0 ? 'Dnes' : diffDays === 1 ? 'Za 1 deň' : `Za ${diffDays} dní`;
+                                return <span className="trip-starts-in muted">{daysLabel}</span>;
+                              })() : (() => {
+                                const isSettled = Math.abs(Number(userBalance) || 0) < 0.005;
+                                if (isSettled) {
+                                  return <span className="settled trip-balance">{t('settledLabel') || 'Vyrovnané'}</span>;
+                                }
+                                return <span className={userBalance >= 0 ? 'positive trip-balance' : 'negative trip-balance'}>{money(userBalance)}</span>;
+                              })()
+                            }
                           </div>
                           <div className="trip-card-meta">
                             <span>{memberCountLabel(trip.members.length, lang)}</span>

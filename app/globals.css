@@ -1116,6 +1116,17 @@ button:disabled {
   flex-direction: column;
   gap: 0.6rem;
   padding: 0.9rem 1rem;
+.trip-starts-in {
+  font-size: 0.95rem;
+  color: var(--muted-color, #60707a);
+}
+.settled {
+  background: #ecfdf3;
+  color: #0f5132;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 600;
+}
   text-align: left;
   min-width: 0;
 }
