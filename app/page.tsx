@@ -5614,7 +5614,7 @@ export default function SplitPayWebApp() {
                               })() : (() => {
                                 const isSettled = Math.abs(Number(userBalance) || 0) < 0.005;
                                 if (isSettled) {
-                                  return <span className="settled trip-balance">{t('settledLabel') || 'Vyrovnané'}</span>;
+                                  return <span className="settled trip-balance">{'Vyrovnané'}</span>;
                                 }
                                 return <span className={userBalance >= 0 ? 'positive trip-balance' : 'negative trip-balance'}>{money(userBalance)}</span>;
                               })()
