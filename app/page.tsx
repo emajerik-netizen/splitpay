@@ -4888,7 +4888,7 @@ export default function SplitPayWebApp() {
       // Prefer actor recorded in trip_expense_events; fallback to expense.payer
       if (addedExpense && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         (async () => {
-          let actorName = addedExpense.payer;
+          let actorName = memberNameOf(addedExpense.payer || '');
           if (supabase && canSyncWithDb) {
             try {
               const { data: ev } = await supabase
@@ -4924,7 +4924,7 @@ export default function SplitPayWebApp() {
 
       if (updatedExpense && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         (async () => {
-          let actorName = updatedExpense.payer;
+          let actorName = memberNameOf(updatedExpense.payer || '');
           if (supabase && canSyncWithDb) {
             try {
               const { data: ev } = await supabase
