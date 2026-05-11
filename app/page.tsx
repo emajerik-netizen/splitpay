@@ -909,6 +909,12 @@ type Invite = {
   status: 'Pozvany' | 'Prijate';
 };
 
+type Member = {
+  id?: string | null;
+  name: string;
+  email?: string | null;
+};
+
 type TripExpense = Expense & {
   id: string;
   title: string;
@@ -1096,12 +1102,9 @@ function normalizeTrip(trip: Trip): Trip {
   const seen = new Set<string>();
 
   for (const member of rawMembers) {
-    const cleaned = (member || '').trim();
+    const cleaned = typeof member === 'string' ? (member || '').trim() : (member?.name || '').trim();
     if (!cleaned) continue;
-    const mapped =
-      cleaned.toLowerCase() === 'ty' && ownerKey && ownerKey !== 'ty'
-        ? owner
-        : cleaned;
+    const mapped = cleaned.toLowerCase() === 'ty' && ownerKey && ownerKey !== 'ty' ? owner : cleaned;
     const key = mapped.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
