@@ -2008,6 +2008,8 @@ export default function SplitPayWebApp() {
       }
 
       const remote = data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null;
+      console.log('[LoadDB] loaded trips count:', remote?.trips?.length ?? 0,
+        'names:', (remote?.trips || []).map((t) => t.name));
       if (remote?.trips?.length) {
         const sanitized = sanitizeLoadedState(remote);
         const selfKey = (appSession?.name || '').trim().toLowerCase();
@@ -2052,6 +2054,7 @@ export default function SplitPayWebApp() {
       });
 
       if (error) {
+        console.error('[AutoSave] trip_states upsert failed:', error.message, error.code, error.details);
         const errorKey = 'trip-save';
         const now = Date.now();
         if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
@@ -2960,19 +2963,24 @@ export default function SplitPayWebApp() {
 
     const refreshActiveTripFromShared = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = (await supabaseClient.rpc('lookup_trip_by_invite_code', {
+      const { data, error: rpcError } = (await supabaseClient.rpc('lookup_trip_by_invite_code', {
         p_invite_code: currentTrip.inviteCode,
-      })) as unknown as { data: Record<string, any> | null };
+      })) as unknown as { data: Record<string, any> | null; error: any };
 
       if (cancelled) return;
 
       if (!data?.found || !data.trip) {
+        // If there was a network/DB error (not just "not found"), never remove — could be transient.
+        if (rpcError || data === null) return;
+
         const ownerNormalized = (currentTrip.owner || '').trim().toLowerCase();
         const selfNormalized = (appSession?.name || '').trim().toLowerCase();
         const isCurrentUserOwner =
           ownerNormalized === 'ty' ||
           (Boolean(selfNormalized) && ownerNormalized === selfNormalized) ||
-          Boolean(appSession?.userId && currentTrip.ownerId === appSession.userId);
+          Boolean(appSession?.userId && currentTrip.ownerId === appSession.userId) ||
+          // Also check if current user appears as a member with matching userId (they're effectively owner-level)
+          currentTrip.members.some((m) => typeof m !== 'string' && m.id === appSession?.userId);
 
         // New owner-created trip may not be in DB yet; do not remove it locally.
         if (isCurrentUserOwner) {
