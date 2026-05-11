@@ -3505,9 +3505,10 @@ export default function SplitPayWebApp() {
     return suggestions.slice(0, 8);
   }, [currentTrip, trips]);
   const selfKey = appSession?.userId ?? appSession?.name;
+  const appName = appSession?.name;
   const selfBalance = selfKey
-    ? (balances[selfKey] ?? balances[appSession?.name] ?? balances.Ty ?? 0)
-    : (balances.Ty ?? 0);
+    ? (balances[selfKey] ?? (appName ? balances[appName] : undefined) ?? balances['Ty'] ?? 0)
+    : (balances['Ty'] ?? 0);
   const safeSelfBalance = Number.isFinite(selfBalance) ? selfBalance : 0;
 
   const displayNameForKey = (key: string) => {
