@@ -12,33 +12,21 @@ import {
   MessageSquare,
   Plus,
   QrCode,
-  Receipt,
-  Settings2,
-  Share2,
-  Users,
-} from 'lucide-react';
-import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+  import { Metadata } from 'next';
 
-function eur(value: number) {
-  return `${value.toFixed(2)} EUR`;
-}
+  export const metadata: Metadata = {
+    title: 'SplitPay (minimal test)',
+    description: 'Minimal page to test prerender build',
+  };
 
-function memberCountLabel(count: number, l: Lang = 'sk') {
-  if (count === 1) return T[l].member1;
-  if (l === 'sk' && count >= 2 && count <= 4) return `${count} ${T[l].members2to4suffix}`;
-  return `${count} ${T[l].membersPlural}`;
-}
-
-function expenseCountLabel(count: number, l: Lang = 'sk') {
-  if (l === 'sk') {
-    if (count === 1) return `${count} výdavok`;
-    if (count >= 2 && count <= 4) return `${count} výdavky`;
-    return `${count} výdavkov`;
+  export default function Page() {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>SplitPay — Build Test</h1>
+        <p>If this page renders during build, the previous TDZ/circular import is not in this file.</p>
+      </main>
+    );
   }
-  return `${count} ${count === 1 ? 'expense' : 'expenses'}`;
-}
-
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
