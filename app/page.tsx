@@ -1,18 +1,44 @@
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'SplitPay (minimal test)',
-  description: 'Minimal page to test prerender build',
-};
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  Clipboard,
+  Coins,
+  Link2,
+  Mail,
+  MessageSquare,
+  Plus,
+  QrCode,
+  Receipt,
+  Settings2,
+  Share2,
+  Users,
+} from 'lucide-react';
+import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 
-export default function Page() {
-  return (
-    <main style={{ padding: 24 }}>
-      <h1>SplitPay — Build Test</h1>
-      <p>If this page renders during build, the previous TDZ/circular import is not in this file.</p>
-    </main>
-  );
+function eur(value: number) {
+  return `${value.toFixed(2)} EUR`;
 }
+
+function memberCountLabel(count: number, l: Lang = 'sk') {
+  if (count === 1) return T[l].member1;
+  if (l === 'sk' && count >= 2 && count <= 4) return `${count} ${T[l].members2to4suffix}`;
+  return `${count} ${T[l].membersPlural}`;
+}
+
+function expenseCountLabel(count: number, l: Lang = 'sk') {
+  if (l === 'sk') {
+    if (count === 1) return `${count} výdavok`;
+    if (count >= 2 && count <= 4) return `${count} výdavky`;
+    return `${count} výdavkov`;
+  }
+  return `${count} ${count === 1 ? 'expense' : 'expenses'}`;
+}
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
