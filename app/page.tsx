@@ -4117,8 +4117,8 @@ export default function SplitPayWebApp() {
     updateCurrentTrip((trip) => ({
       ...trip,
       members: trip.members
-        .filter((m) => m !== realName || m === fictionalName) // remove existing realName duplicate
-        .map((m) => (m === fictionalName ? realName : m)),
+        .filter((m) => memberNameOf(m) !== realName || memberNameOf(m) === fictionalName) // remove existing realName duplicate
+        .map((m) => (memberNameOf(m) === fictionalName ? realName : memberNameOf(m))),
       expenses: trip.expenses.map((expense) => ({
         ...expense,
         payer: expense.payer === fictionalName ? realName : expense.payer,
