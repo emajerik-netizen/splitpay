@@ -6227,10 +6227,10 @@ export default function SplitPayWebApp() {
                                   className="member-link-inline"
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    openMemberProfile(expense.payer);
+                                    openMemberProfile(memberNameOf(expense.payer || ''));
                                   }}
                                 >
-                                  {formatMemberName(expense.payer)}
+                                  {formatMemberName(memberNameOf(expense.payer || ''))}
                                 </button>
                               </p>
                             </div>
