@@ -4,7 +4,7 @@ export const metadata = {
 	title: 'SplitPay',
 };
 
-export default function Page(): JSX.Element {
+export default function Page() {
 	return (
 		<main style={{ padding: 24 }}>
 			<h1>SplitPay</h1>
