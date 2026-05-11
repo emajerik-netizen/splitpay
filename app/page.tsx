@@ -4473,8 +4473,10 @@ export default function SplitPayWebApp() {
             id: makeId(),
             title: draft.title.trim(),
             amount,
-            payer: safePayer,
-            participants: safeParticipants,
+          payer: safePayer,
+          payerId: appSession?.userId || null,
+          participants: safeParticipants,
+          participantIds: safeParticipants.map((s) => (s === appSession?.name ? appSession?.userId || null : null)).filter(Boolean),
             splitType: draft.splitType,
             participantWeights:
               draft.splitType === 'shares'
