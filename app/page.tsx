@@ -4144,10 +4144,10 @@ export default function SplitPayWebApp() {
         .map((m) => (memberNameOf(m) === fictionalName ? realName : memberNameOf(m))),
       expenses: trip.expenses.map((expense) => ({
         ...expense,
-        payer: expense.payer === fictionalName ? realName : expense.payer,
-        participants: expense.participants
-          .filter((p) => p !== realName || p === fictionalName)
-          .map((p) => (p === fictionalName ? realName : p)),
+        payer: memberNameOf(expense.payer || '') === fictionalName ? realName : (memberNameOf(expense.payer || '') || 'Ty'),
+        participants: (expense.participants || [])
+          .filter((p) => memberNameOf(p) !== realName || memberNameOf(p) === fictionalName)
+          .map((p) => (memberNameOf(p) === fictionalName ? realName : memberNameOf(p))),
       })),
       pendingInvites: trip.pendingInvites.map((invite) =>
         invite.name === fictionalName ? { ...invite, name: realName, status: 'Prijate' } : invite
