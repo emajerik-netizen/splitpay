@@ -1,14 +1,10 @@
-import React from 'react';
+import { redirect } from 'next/navigation';
 
 export const metadata = {
 	title: 'SplitPay',
 };
 
 export default function Page() {
-	return (
-		<main style={{ padding: 24 }}>
-			<h1>SplitPay</h1>
-			<p>Minimal page to satisfy Next.js app module requirement.</p>
-		</main>
-	);
+	// Redirect root to the dashboard page where the full app UI lives
+	redirect('/dashboard');
 }
