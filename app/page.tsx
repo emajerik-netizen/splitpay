@@ -1098,7 +1098,7 @@ function normalizeTrip(trip: Trip): Trip {
   const owner = trip.owner || 'Ty';
   const ownerKey = owner.trim().toLowerCase();
   const rawMembers = Array.isArray(trip.members) ? trip.members : [];
-  const dedupedMembers: string[] = [];
+  const dedupedMembers: (Member | string)[] = [];
   const seen = new Set<string>();
 
   for (const member of rawMembers) {
@@ -1108,7 +1108,12 @@ function normalizeTrip(trip: Trip): Trip {
     const key = mapped.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    dedupedMembers.push(mapped);
+    // Preserve Member objects (with id/email) when only the name needs remapping
+    if (typeof member === 'string') {
+      dedupedMembers.push(mapped);
+    } else {
+      dedupedMembers.push(mapped !== cleaned ? { ...member, name: mapped } : member);
+    }
   }
 
   if (ownerKey && ownerKey !== 'ty' && !seen.has(ownerKey)) {
@@ -1187,13 +1192,19 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
   if (!needsRemap) return trip;
 
   const seen = new Set<string>();
-  const canonicalMembers: string[] = [];
+  const canonicalMembers: (Member | string)[] = [];
   for (const m of trip.members || []) {
-    const canonical = toTy(memberNameOf(m).trim());
+    const origName = memberNameOf(m).trim();
+    const canonical = toTy(origName);
     const key = canonical.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    canonicalMembers.push(canonical);
+    // Preserve Member objects (with id/email); only remap the name if needed
+    if (typeof m === 'string') {
+      canonicalMembers.push(canonical);
+    } else {
+      canonicalMembers.push(canonical !== origName ? { ...m, name: canonical } : m);
+    }
   }
   if (ownerKey && ownerKey !== 'ty' && ownerKey !== selfKey && !seen.has(ownerKey)) {
     canonicalMembers.unshift(trip.owner);
@@ -5072,7 +5083,7 @@ export default function SplitPayWebApp() {
 
       const previousMembers = memberSnapshotRef.current[trip.id] ?? trip.members;
       if (isSelf(trip.owner, trip) && trip.members.length > previousMembers.length) {
-        const previousSet = new Set(previousMembers.map((name) => name.trim().toLowerCase()));
+        const previousSet = new Set(previousMembers.map((name) => memberNameOf(name).trim().toLowerCase()));
           const addedMembers = (trip.members || []).filter((name) => !previousSet.has(memberNameOf(name).trim().toLowerCase()));
         const newestMember = addedMembers[addedMembers.length - 1];
 
