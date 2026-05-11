@@ -3731,12 +3731,23 @@ export default function SplitPayWebApp() {
       inviteCode,
       appSession?.name || 'Ty'
     );
-    setTrips((prev) => [trip, ...prev]);
+    const newTrips = [trip, ...trips];
+    setTrips(newTrips);
     openTrip(trip.id, 'overview', trip.inviteCode);
     setNewTripName('');
     setNewTripDate('');
     setShowCreateTripModal(false);
     setInfoMessage(`${trip.name}: ${t('tripCreated')}`);
+
+    // Save immediately so the invite code is findable via join RPC right away.
+    // The debounced auto-save fires 500ms later which is too slow for instant sharing.
+    if (supabase && canSyncWithDb && appSession?.userId && dbLoadedRef.current) {
+      void supabase.from('trip_states').upsert({
+        user_id: appSession.userId,
+        state_json: { trips: newTrips, selectedTripId: trip.id },
+        updated_at: new Date().toISOString(),
+      });
+    }
   }
 
   function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'date' | 'currency' | 'color' | 'archived'>>) {
