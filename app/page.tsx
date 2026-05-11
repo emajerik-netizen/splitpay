@@ -3530,6 +3530,31 @@ export default function SplitPayWebApp() {
       member_name: memberName,
       actor_name: appSession.name,
     });
+
+    // If we can resolve the target user's email, ask the DB to copy the trip
+    // into their `trip_states` (invite_user_by_email). This makes the trip
+    // immediately visible in their MyTrips overview.
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('user_email')
+        .eq('user_id', target.user_id)
+        .maybeSingle();
+
+      const targetEmail = profile?.user_email?.trim();
+      if (targetEmail) {
+        // Call security-definer function to copy the trip to the target user
+        // (requires the caller to be the trip owner, which we are here).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.rpc as any)('invite_user_by_email', {
+          p_invite_code: trip.inviteCode,
+          p_member_name: memberName,
+          p_target_email: targetEmail,
+        });
+      }
+    } catch (e) {
+      // ignore - notification still created, user can accept manually
+    }
   }
 
   function handleAddMemberFromHistory(memberName: string) {
