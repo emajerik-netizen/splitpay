@@ -96,8 +96,13 @@ BEGIN
     );
   END IF;
 
-  -- Check name conflicts
-  SELECT (v_trip->'members') @> to_jsonb(p_member_name) INTO v_member_exists;
+  -- Check name conflicts — handle both plain-string and {id,name} object members
+  SELECT EXISTS (
+    SELECT 1
+    FROM   jsonb_array_elements(COALESCE(v_trip->'members', '[]'::jsonb)) m
+    WHERE  m = to_jsonb(p_member_name)
+        OR lower(m->>'name') = lower(p_member_name)
+  ) INTO v_member_exists;
   SELECT EXISTS (
     SELECT 1
     FROM   jsonb_array_elements(COALESCE(v_trip->'pendingInvites','[]'::jsonb)) invite
@@ -109,7 +114,7 @@ BEGIN
     RETURN json_build_object('error', 'name_taken');
   END IF;
 
-  -- Update owner's trip: add member + mark invite accepted
+  -- Update owner's trip: add member (with joining user's ID) + mark invite accepted
   UPDATE trip_states
   SET    state_json = jsonb_set(
            state_json, '{trips}',
@@ -120,7 +125,7 @@ BEGIN
                    jsonb_set(
                      t, '{members}',
                     CASE WHEN NOT v_member_exists
-                      THEN COALESCE(t->'members','[]'::jsonb) || jsonb_build_object('id', v_target_user_id::text, 'name', p_member_name, 'email', lower(trim(p_target_email)))
+                      THEN COALESCE(t->'members','[]'::jsonb) || jsonb_build_object('id', v_joining_user_id::text, 'name', p_member_name)
                       ELSE t->'members'
                     END
                    ),
@@ -360,8 +365,13 @@ BEGIN
     RETURN json_build_object('error', 'target_user_not_found');
   END IF;
 
-  -- Check name conflicts and slot
-  SELECT (v_trip->'members') @> to_jsonb(p_member_name) INTO v_member_exists;
+  -- Check name conflicts and slot — handle both plain-string and {id,name} object members
+  SELECT EXISTS (
+    SELECT 1
+    FROM   jsonb_array_elements(COALESCE(v_trip->'members', '[]'::jsonb)) m
+    WHERE  m = to_jsonb(p_member_name)
+        OR lower(m->>'name') = lower(p_member_name)
+  ) INTO v_member_exists;
   SELECT EXISTS (
     SELECT 1
     FROM   jsonb_array_elements(COALESCE(v_trip->'pendingInvites','[]'::jsonb)) invite
@@ -373,7 +383,7 @@ BEGIN
     RETURN json_build_object('error', 'name_taken');
   END IF;
 
-  -- Update owner's trip: add member + mark invite accepted
+  -- Update owner's trip: add member (with target user's ID) + mark invite accepted
   UPDATE trip_states
   SET    state_json = jsonb_set(
            state_json, '{trips}',
@@ -384,7 +394,7 @@ BEGIN
                    jsonb_set(
                      t, '{members}',
                      CASE WHEN NOT v_member_exists
-                       THEN COALESCE(t->'members','[]'::jsonb) || to_jsonb(p_member_name)
+                       THEN COALESCE(t->'members','[]'::jsonb) || jsonb_build_object('id', v_target_user_id::text, 'name', p_member_name)
                        ELSE t->'members'
                      END
                    ),
