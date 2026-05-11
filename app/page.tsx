@@ -5952,7 +5952,7 @@ export default function SplitPayWebApp() {
                     </div>
                   </div>
                   {normalizedExpenses.length > 0 ? (() => {
-                    const anyNonZero = Object.values(tripBalances).some((v) => Math.abs(Number(v) || 0) > 0.01);
+                    const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
                     if (!anyNonZero) {
                       return (
                         <div className="mini-panel success-panel" role="status">
