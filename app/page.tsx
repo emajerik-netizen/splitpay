@@ -5853,7 +5853,8 @@ export default function SplitPayWebApp() {
                       if (Object.prototype.hasOwnProperty.call(tripBalances, name)) return tripBalances[name];
                       const norm = memberKey(name);
                       for (const m of trip.members) {
-                        if (memberKey(m) === norm && Object.prototype.hasOwnProperty.call(tripBalances, m)) return tripBalances[m];
+                        const mName = memberNameOf(m);
+                        if (memberKey(mName) === norm && Object.prototype.hasOwnProperty.call(tripBalances, mName)) return tripBalances[mName];
                       }
                       return 0;
                     };
