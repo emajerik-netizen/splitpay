@@ -4115,7 +4115,7 @@ export default function SplitPayWebApp() {
       members: trip.members.map((m) => (memberNameOf(m) === userName ? invitedName : memberNameOf(m))),
       expenses: trip.expenses.map((expense) => ({
         ...expense,
-        payer: memberNameOf(expense.payer) === userName ? invitedName : (memberNameOf(expense.payer) || 'Ty'),
+        payer: memberNameOf(expense.payer || '') === userName ? invitedName : (memberNameOf(expense.payer || '') || 'Ty'),
         participants: (expense.participants || []).map((p) => (memberNameOf(p) === userName ? invitedName : memberNameOf(p))),
       })),
       pendingInvites: trip.pendingInvites.map((invite) =>
