@@ -1123,12 +1123,13 @@ function normalizeTrip(trip: Trip): Trip {
   // When "Ty" was renamed to the real owner name, update expenses that still reference "Ty"
   const remapName = (name: string) =>
     ownerKey && ownerKey !== 'ty' && name.trim().toLowerCase() === 'ty' ? owner : name;
+  const remapParticipant = (p: any): string => remapName(memberNameOf(p));
 
   const normalizedExpenses = ownerKey && ownerKey !== 'ty'
     ? (trip.expenses || []).map((expense) => ({
         ...expense,
         payer: remapName(expense.payer || ''),
-        participants: (expense.participants || []).map(remapName),
+        participants: (expense.participants || []).map(remapParticipant),
         ...(expense.participantAmounts
           ? {
               participantAmounts: Object.fromEntries(
@@ -1186,7 +1187,7 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
     (trip.expenses || []).some(
       (exp) =>
         (exp.payer || '').trim().toLowerCase() === selfKey ||
-        (exp.participants || []).some((p) => (p || '').trim().toLowerCase() === selfKey)
+        (exp.participants || []).some((p) => memberNameOf(p).trim().toLowerCase() === selfKey)
     );
 
   if (!needsRemap) return trip;
@@ -1220,7 +1221,7 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
     expenses: trip.expenses.map((exp) => ({
       ...exp,
       payer: toTy(exp.payer || ''),
-      participants: (exp.participants || []).map(toTy),
+      participants: (exp.participants || []).map((p) => toTy(memberNameOf(p as any))),
       ...(exp.participantAmounts
         ? {
             participantAmounts: Object.fromEntries(
@@ -1246,7 +1247,7 @@ function withExpandedParticipants(expenses: TripExpense[], members: string[]): T
     const onlyPayerListed =
       raw.length === 1 &&
       raw[0] &&
-      (expense.payer || '').trim().toLowerCase() === raw[0].trim().toLowerCase();
+      (expense.payer || '').trim().toLowerCase() === memberNameOf(raw[0]).trim().toLowerCase();
     return onlyPayerListed ? { ...expense, participants: members } : expense;
   });
 }
@@ -1608,7 +1609,7 @@ export default function SplitPayWebApp() {
                 ...exp,
                 payer: remapExpenseName(exp.payer || '') ?? effectiveName,
                 participants: (exp.participants || [])
-                  .map((p) => remapExpenseName(p))
+                  .map((p) => remapExpenseName(memberNameOf(p as any)))
                   .filter((p): p is string => p !== null)
                   .filter((p, i, arr) => arr.indexOf(p) === i),
               })),
