@@ -5004,7 +5004,7 @@ export default function SplitPayWebApp() {
 
         if (
           newestMember &&
-          !isSelf(newestMember, trip) &&
+          !isSelf(memberNameOf(newestMember), trip) &&
           typeof Notification !== 'undefined' &&
           Notification.permission === 'granted'
         ) {
