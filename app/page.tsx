@@ -1579,7 +1579,7 @@ export default function SplitPayWebApp() {
               expenses: trip.expenses.map((exp) => ({
                 ...exp,
                 payer: remapName(exp.payer || '') ?? effectiveName,
-                participants: exp.participants
+                participants: (exp.participants || [])
                   .map((p) => remapName(p))
                   .filter((p): p is string => p !== null)
                   .filter((p, i, arr) => arr.indexOf(p) === i),
