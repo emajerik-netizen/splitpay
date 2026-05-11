@@ -6387,7 +6387,7 @@ export default function SplitPayWebApp() {
                             className="row guest-claim-btn"
                             onClick={() => mergeFictionalMember(memberNameOf(suggestion))}
                           >
-                            <span>{suggestion}</span>
+                            <span>{memberNameOf(suggestion)}</span>
                             <strong>{t('thatsAlsoMe')}</strong>
                           </button>
                         </div>
