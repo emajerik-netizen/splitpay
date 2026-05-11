@@ -1088,7 +1088,7 @@ function createTrip(name: string, date: string, inviteCode: string, owner: strin
     inviteCode,
     deletedAt: null,
     deletedBy: null,
-    members: ['Ty'],
+    members: [{ id: null, name: 'Ty' }],
     expenses: [],
     pendingInvites: [],
   };
