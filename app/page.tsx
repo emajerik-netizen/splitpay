@@ -6005,8 +6005,8 @@ export default function SplitPayWebApp() {
                               <p>{formatTripDate(trip.date, lang)}</p>
                             </div>
                             {
-                              // If trip has a date, show days-until-start instead of balance
-                              trip.date ? (() => {
+                              // Show days-until-start only when the trip has no expenses yet
+                              (trip.date && trip.expenses.length === 0) ? (() => {
                                 const start = new Date(trip.date);
                                 const today = new Date();
                                 today.setHours(0, 0, 0, 0);
