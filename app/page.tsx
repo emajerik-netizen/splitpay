@@ -1,32 +1,18 @@
-'use client';
+import { Metadata } from 'next';
 
-import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { QRCodeSVG } from 'qrcode.react';
-import {
-  Clipboard,
-  Coins,
-  Link2,
-  Mail,
-  MessageSquare,
-  Plus,
-  QrCode,
-  import { Metadata } from 'next';
+export const metadata: Metadata = {
+  title: 'SplitPay (minimal test)',
+  description: 'Minimal page to test prerender build',
+};
 
-  export const metadata: Metadata = {
-    title: 'SplitPay (minimal test)',
-    description: 'Minimal page to test prerender build',
-  };
-
-  export default function Page() {
-    return (
-      <main style={{ padding: 24 }}>
-        <h1>SplitPay — Build Test</h1>
-        <p>If this page renders during build, the previous TDZ/circular import is not in this file.</p>
-      </main>
-    );
-  }
+export default function Page() {
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>SplitPay — Build Test</h1>
+      <p>If this page renders during build, the previous TDZ/circular import is not in this file.</p>
+    </main>
+  );
+}
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
