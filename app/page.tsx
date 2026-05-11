@@ -3466,7 +3466,7 @@ export default function SplitPayWebApp() {
     if (!currentTrip) return [] as string[];
     if (!normalizedCurrentUser) return [] as string[];
 
-    const currentMembers = new Set(currentTrip.members.map((name) => name.trim().toLowerCase()));
+    const currentMembers = new Set(currentTrip.members.map((m) => memberNameOf(m).trim().toLowerCase()));
     const seen = new Set<string>();
     const suggestions: string[] = [];
 
@@ -3475,11 +3475,11 @@ export default function SplitPayWebApp() {
 
       const tripHasCurrentUser =
         trip.owner.trim().toLowerCase() === normalizedCurrentUser ||
-        trip.members.some((member) => member.trim().toLowerCase() === normalizedCurrentUser);
+        trip.members.some((member) => memberNameOf(member).trim().toLowerCase() === normalizedCurrentUser);
       if (!tripHasCurrentUser) continue;
 
       for (const member of trip.members) {
-        const cleaned = member.trim();
+        const cleaned = memberNameOf(member).trim();
         const key = cleaned.toLowerCase();
         if (!cleaned || key === 'ty' || key === normalizedCurrentUser) continue;
 
