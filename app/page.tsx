@@ -3707,7 +3707,7 @@ export default function SplitPayWebApp() {
     if (!currentTrip) return;
     if (partial.archived) {
       const tripMembersForCompute = (currentTrip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-      const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(currentTrip.expenses, currentTrip.members));
+      const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(currentTrip.expenses, (currentTrip.members || []).map(memberNameOf)));
       const tripSettlements = settleDebts(tripBalances);
       if (tripSettlements.length > 0) {
         setInfoMessage(t('tripNeedsSettlementBody'));
@@ -4704,7 +4704,7 @@ export default function SplitPayWebApp() {
           if (now - latestExpenseTs < archiveThresholdMs) return trip;
 
           const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-          const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, trip.members));
+          const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, (trip.members || []).map(memberNameOf)));
           const tripSettlements = settleDebts(tripBalances);
           if (tripSettlements.length > 0) {
             staleUnsettled.push({ tripId: trip.id, tripName: trip.name });
@@ -5829,7 +5829,7 @@ export default function SplitPayWebApp() {
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
                     const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-                    const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, trip.members));
+                    const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, (trip.members || []).map(memberNameOf)));
                     const tripTotal = trip.expenses.reduce(
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
