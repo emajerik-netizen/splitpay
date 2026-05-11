@@ -4041,11 +4041,19 @@ export default function SplitPayWebApp() {
     updateCurrentTrip((trip) => ({
       ...trip,
       members: otherMembers,
-      expenses: trip.expenses.map((expense) => ({
-        ...expense,
-        payer: isSameMember(expense.payer, memberName) ? trip.members[0] || 'Ty' : expense.payer,
-        participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
-      })),
+      expenses: trip.expenses.map((expense) => {
+        const payerVal = isSameMember(expense.payer as any, memberName)
+          ? (memberNameOf(trip.members[0]) || 'Ty')
+          : (memberNameOf(expense.payer || '') || 'Ty');
+        const participants = (expense.participants || [])
+          .filter((name) => !isSameMember(name, memberName))
+          .map(memberNameOf);
+        return {
+          ...expense,
+          payer: payerVal,
+          participants,
+        } as TripExpense;
+      }),
     }));
     setInfoMessage(`${formatMemberName(memberName)} ${t('memberRemoved')}`);
   }
