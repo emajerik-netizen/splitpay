@@ -1112,6 +1112,32 @@ function normalizeTrip(trip: Trip): Trip {
     dedupedMembers.unshift(owner);
   }
 
+  // When "Ty" was renamed to the real owner name, update expenses that still reference "Ty"
+  const remapName = (name: string) =>
+    ownerKey && ownerKey !== 'ty' && name.trim().toLowerCase() === 'ty' ? owner : name;
+
+  const normalizedExpenses = ownerKey && ownerKey !== 'ty'
+    ? (trip.expenses || []).map((expense) => ({
+        ...expense,
+        payer: remapName(expense.payer || ''),
+        participants: (expense.participants || []).map(remapName),
+        ...(expense.participantAmounts
+          ? {
+              participantAmounts: Object.fromEntries(
+                Object.entries(expense.participantAmounts).map(([k, v]) => [remapName(k), v])
+              ),
+            }
+          : {}),
+        ...(expense.participantWeights
+          ? {
+              participantWeights: Object.fromEntries(
+                Object.entries(expense.participantWeights).map(([k, v]) => [remapName(k), v])
+              ),
+            }
+          : {}),
+      }))
+    : trip.expenses;
+
   return {
     ...trip,
     date: trip.date || '',
@@ -1123,6 +1149,7 @@ function normalizeTrip(trip: Trip): Trip {
     deletedAt: trip.deletedAt || null,
     deletedBy: trip.deletedBy || null,
     members: dedupedMembers,
+    expenses: normalizedExpenses,
   };
 }
 
@@ -1438,8 +1465,72 @@ export default function SplitPayWebApp() {
       // Try to auto-join trips for any fresh notifications: fetch inviteCode and call join RPC
       for (const n of notifs) {
         try {
-          // If the trip is already present locally, skip
-          if (trips.find((t) => t.id === n.trip_id)) continue;
+          const memberName = n.member_name;
+          const registrationName = appSession.name?.trim() || '';
+          const effectiveName = registrationName || memberName;
+          const selfKey = effectiveName.toLowerCase();
+
+          // Remap the owner-assigned slot name to the user's real registration name,
+          // matching the same logic as the manual invite-code join flow.
+          const applyMemberRemap = (trip: Trip): Trip => {
+            if (!memberName || memberName.toLowerCase() === selfKey) return trip;
+            const ownerKey = (trip.owner || '').trim().toLowerCase();
+            const ownerLabel = ownerKey && ownerKey !== 'ty' ? trip.owner : 'Ty';
+            const remapName = (name: string): string | null => {
+              if (name === memberName) return effectiveName;
+              if (name.toLowerCase() === 'ty') return ownerLabel;
+              if (name === effectiveName) return null; // remove pre-existing duplicate
+              return name;
+            };
+            return {
+              ...trip,
+              members: trip.members
+                .map(remapName)
+                .filter((m): m is string => m !== null)
+                .filter((m, i, arr) => arr.indexOf(m) === i),
+              expenses: trip.expenses.map((exp) => ({
+                ...exp,
+                payer: remapName(exp.payer || '') ?? effectiveName,
+                participants: exp.participants
+                  .map((p) => remapName(p))
+                  .filter((p): p is string => p !== null)
+                  .filter((p, i, arr) => arr.indexOf(p) === i),
+              })),
+            };
+          };
+
+          const acknowledge = async () => {
+            await supabaseClient
+              .from('member_add_notifications')
+              .update({ acknowledged_at: new Date().toISOString() })
+              .eq('id', n.id)
+              .eq('target_user_id', appSession.userId);
+          };
+
+          // Check current trips state (inside setTrips to avoid stale closure)
+          let alreadyHandled = false;
+          setTrips((prev) => {
+            const existing = prev.find((t) => t.id === n.trip_id);
+            if (!existing) return prev;
+
+            // Trip is in state — check if user is already visible
+            const userVisible = prev.find((t) => t.id === n.trip_id)
+              ?.members.some((m) => m.trim().toLowerCase() === selfKey);
+            if (userVisible) {
+              alreadyHandled = true;
+              return prev; // visible, no change needed
+            }
+
+            // Trip exists but user isn't visible — remap the member name
+            alreadyHandled = true;
+            const remapped = applyMemberRemap(normalizeTrip(existing));
+            return [...prev.filter((t) => t.id !== remapped.id), remapped];
+          });
+
+          if (alreadyHandled) {
+            await acknowledge();
+            continue;
+          }
 
           const res = await fetch(`/api/get-invite-code?tripId=${encodeURIComponent(n.trip_id)}`);
           if (!res.ok) continue;
@@ -1451,19 +1542,14 @@ export default function SplitPayWebApp() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rpcRes = (await supabaseClient.rpc('join_trip_by_invite_code', {
             p_invite_code: inviteCode,
-            p_member_name: n.member_name,
+            p_member_name: memberName,
           })) as any;
 
           const rpcData = rpcRes?.data || rpcRes;
           if (rpcData?.trip) {
-            const normalized = normalizeTrip(rpcData.trip as Trip);
+            const normalized = applyMemberRemap(normalizeTrip(rpcData.trip as Trip));
             setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
-            // Acknowledge the notification so we don't retry
-            await supabaseClient
-              .from('member_add_notifications')
-              .update({ acknowledged_at: new Date().toISOString() })
-              .eq('id', n.id)
-              .eq('target_user_id', appSession.userId);
+            await acknowledge();
           }
         } catch (e) {
           // ignore individual failures
@@ -2873,10 +2959,10 @@ export default function SplitPayWebApp() {
         skipExpenseDbWriteRef.current = true;
         lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
         const next = [...prev];
-        next[idx] = {
+        next[idx] = normalizeTrip({
           ...existing,
           expenses: dbExpenses,
-        };
+        });
         return next;
       });
     };
@@ -5633,14 +5719,13 @@ export default function SplitPayWebApp() {
                       0
                     );
                     const lookupBalanceFor = (name?: string | null) => {
-                      const fallback = tripBalances.Ty ?? 0;
-                      if (!name) return fallback;
+                      if (!name) return 0;
                       if (Object.prototype.hasOwnProperty.call(tripBalances, name)) return tripBalances[name];
                       const norm = memberKey(name);
                       for (const m of trip.members) {
                         if (memberKey(m) === norm && Object.prototype.hasOwnProperty.call(tripBalances, m)) return tripBalances[m];
                       }
-                      return fallback;
+                      return 0;
                     };
 
                     const userBalance = lookupBalanceFor(appSession?.name ?? null);

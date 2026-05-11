@@ -24,20 +24,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ inviteCode: rpcRes.data.inviteCode });
     }
 
-    // Best-effort: scan recent trip_states for matching trip id
-    const { data, error } = await svc
-      .from('trip_states')
-      .select('state_json')
-      .order('updated_at', { ascending: false })
-      .limit(20);
+    // Best-effort: scan trip_states in batches to find the matching trip id.
+    // Fetch in pages of 200 to avoid missing the trip in large deployments.
+    let offset = 0;
+    const pageSize = 200;
+    while (true) {
+      const { data, error } = await svc
+        .from('trip_states')
+        .select('state_json')
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
 
-    if (error || !data?.length) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      if (error || !data?.length) break;
 
-    for (const row of data as any[]) {
-      const state = row.state_json as any;
-      if (!state?.trips) continue;
-      const trip = (state.trips as any[]).find((t) => t.id === tripId);
-      if (trip) return NextResponse.json({ inviteCode: trip.inviteCode || null });
+      for (const row of data as any[]) {
+        const state = row.state_json as any;
+        if (!state?.trips) continue;
+        const trip = (state.trips as any[]).find((t) => t.id === tripId);
+        if (trip) return NextResponse.json({ inviteCode: trip.inviteCode || null });
+      }
+
+      if (data.length < pageSize) break;
+      offset += pageSize;
     }
 
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
