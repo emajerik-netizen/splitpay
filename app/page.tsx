@@ -3091,6 +3091,12 @@ export default function SplitPayWebApp() {
           return prev;
         }
 
+        // Never replace local expenses with fewer DB expenses — the write may be in-flight.
+        // Only sync down when DB has equal or more (i.e. another device added something).
+        const localCount = (existing.expenses || []).length;
+        const dbCount = dbExpenses.length;
+        if (dbCount < localCount) return prev;
+
         skipNextSaveRef.current = true;
         skipExpenseDbWriteRef.current = true;
         lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
@@ -3148,6 +3154,7 @@ export default function SplitPayWebApp() {
 
         if (cancelled || upsertError) {
           if (upsertError) {
+            console.error('[ExpenseSave] upsert failed:', upsertError.message, upsertError.code, upsertError.details);
             const errorKey = 'expense-upsert';
             const now = Date.now();
             if (!lastErrorMessageTimeRef.current[errorKey] || now - lastErrorMessageTimeRef.current[errorKey] > 5000) {
