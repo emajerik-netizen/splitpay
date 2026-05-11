@@ -1635,6 +1635,19 @@ export default function SplitPayWebApp() {
             const normalized = applyMemberRemap(normalizeTrip(rpcData.trip as Trip));
             setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
             await acknowledge();
+          } else if (rpcData?.error === 'name_taken' || rpcData?.error === 'already_member') {
+            // Member name is already in the owner's trip — user was added before they joined.
+            // Fall back to lookup to get the current trip state and add it locally.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const lookupRes = (await supabaseClient.rpc('lookup_trip_by_invite_code', {
+              p_invite_code: inviteCode,
+            })) as any;
+            const lookupData = lookupRes?.data || lookupRes;
+            if (lookupData?.trip) {
+              const normalized = applyMemberRemap(normalizeTrip(lookupData.trip as Trip));
+              setTrips((prev) => [...prev.filter((t) => t.id !== normalized.id), normalized]);
+              await acknowledge();
+            }
           }
         } catch (e) {
           // ignore individual failures
@@ -6125,6 +6138,14 @@ export default function SplitPayWebApp() {
                   </div>
                   {normalizedExpenses.length > 0 ? (() => {
                     const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
+                    // DEBUG: log balance computation inputs/outputs
+                    console.log('[DEBUG balance]', {
+                      members,
+                      rawExpenses: currentTrip?.expenses?.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants })),
+                      normalizedExpenses: normalizedExpenses.map(e => ({ payer: e.payer, amount: e.amount, participants: e.participants })),
+                      balances,
+                      anyNonZero,
+                    });
                     if (!anyNonZero) {
                       return (
                         <div className="mini-panel success-panel" role="status">
