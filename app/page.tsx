@@ -2106,16 +2106,21 @@ export default function SplitPayWebApp() {
 
     const applyRemoteState = (remote: { trips?: Trip[]; selectedTripId?: string } | null) => {
       const sanitized = sanitizeLoadedState(remote || {});
-      const remoteSerialized = JSON.stringify({
-        trips: sanitized.trips,
-        selectedTripId: sanitized.selectedTripId,
+
+      // Merge: keep remote trips + any local-only trips not yet synced to DB.
+      // This prevents a racing refreshFromDb from clobbering a just-created trip
+      // whose immediate save hasn't completed yet.
+      setTrips((localTrips) => {
+        const remoteIds = new Set(sanitized.trips.map((t) => t.id));
+        const remoteCodes = new Set(sanitized.trips.map((t) => t.inviteCode));
+        const localOnly = localTrips.filter((t) => !remoteIds.has(t.id) && !remoteCodes.has(t.inviteCode));
+        const merged = [...sanitized.trips, ...localOnly];
+        const mergedSerialized = JSON.stringify({ trips: merged, selectedTripId: sanitized.selectedTripId });
+        if (mergedSerialized === latestLocalStateRef.current) return localTrips;
+        skipNextSaveRef.current = true;
+        return merged;
       });
-
-      if (remoteSerialized === latestLocalStateRef.current) return;
-
-      skipNextSaveRef.current = true;
-      setTrips(sanitized.trips);
-      setSelectedTripId(sanitized.selectedTripId);
+      setSelectedTripId((prev) => prev || sanitized.selectedTripId || '');
     };
 
     const refreshFromDb = async () => {
@@ -2152,7 +2157,7 @@ export default function SplitPayWebApp() {
 
     const interval = window.setInterval(() => {
       void refreshFromDb();
-    }, 1000);
+    }, 30000);
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
