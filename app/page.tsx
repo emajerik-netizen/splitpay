@@ -2010,18 +2010,23 @@ export default function SplitPayWebApp() {
       const remote = data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null;
       console.log('[LoadDB] loaded trips count:', remote?.trips?.length ?? 0,
         'names:', (remote?.trips || []).map((t) => t.name));
-      if (remote?.trips?.length) {
-        const sanitized = sanitizeLoadedState(remote);
-        const selfKey = (appSession?.name || '').trim().toLowerCase();
-        const canonicalTrips = selfKey
-          ? sanitized.trips.map((trip) => canonicalizeSelfName(trip, selfKey))
-          : sanitized.trips;
-        setTrips(canonicalTrips);
-        setSelectedTripId(sanitized.selectedTripId);
+      try {
+        if (remote?.trips?.length) {
+          const sanitized = sanitizeLoadedState(remote);
+          const selfKey = (appSession?.name || '').trim().toLowerCase();
+          const canonicalTrips = selfKey
+            ? sanitized.trips.map((trip) => canonicalizeSelfName(trip, selfKey))
+            : sanitized.trips;
+          setTrips(canonicalTrips);
+          setSelectedTripId(sanitized.selectedTripId);
+        }
+      } catch (processingErr) {
+        console.error('[LoadDB] error processing loaded state:', processingErr);
+        // Fall through — still mark DB as loaded so saves are not permanently blocked
+      } finally {
+        dbLoadedRef.current = true;
+        setDbLoadTick((prev) => prev + 1);
       }
-
-      dbLoadedRef.current = true;
-      setDbLoadTick((prev) => prev + 1);
     }
 
     loadStateFromDb();
