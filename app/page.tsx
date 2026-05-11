@@ -3264,6 +3264,12 @@ export default function SplitPayWebApp() {
   }, [showJoinTripModal, appSession?.name]);
 
   const members = useMemo(() => (currentTrip?.members || []).map(memberNameOf), [currentTrip]);
+  // For computation we prefer an id-first representation so compute logic
+  // can resolve participants by id when available.
+  const membersForCompute = useMemo(
+    () => (currentTrip?.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: memberNameOf(m) })),
+    [currentTrip]
+  );
   const isTransferDraft = draft.expenseType === 'transfer';
   const safePayer = members.includes(draft.payer) ? draft.payer : members[0] || 'Ty';
   const safeTransferTo =
@@ -3317,7 +3323,7 @@ export default function SplitPayWebApp() {
     });
   }, [currentTrip]);
 
-  const balances = useMemo(() => computeBalances(members, normalizedExpenses), [members, normalizedExpenses]);
+  const balances = useMemo(() => computeBalances(membersForCompute, normalizedExpenses), [membersForCompute, normalizedExpenses]);
   const settlements = useMemo(() => settleDebts(balances), [balances]);
 
   useEffect(() => {
@@ -3498,10 +3504,17 @@ export default function SplitPayWebApp() {
 
     return suggestions.slice(0, 8);
   }, [currentTrip, trips]);
-  const selfBalance = appSession?.name
-    ? (balances[appSession.name] ?? balances.Ty ?? 0)
+  const selfKey = appSession?.userId ?? appSession?.name;
+  const selfBalance = selfKey
+    ? (balances[selfKey] ?? balances[appSession?.name] ?? balances.Ty ?? 0)
     : (balances.Ty ?? 0);
   const safeSelfBalance = Number.isFinite(selfBalance) ? selfBalance : 0;
+
+  const displayNameForKey = (key: string) => {
+    if (!currentTrip) return key;
+    const found = (currentTrip.members || []).find((m) => typeof m !== 'string' && (m.id === key || (m?.name || '') === key));
+    return found ? memberNameOf(found) : key;
+  };
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
@@ -4497,54 +4510,77 @@ export default function SplitPayWebApp() {
         return sum + (Number.isFinite(raw) && raw > 0 ? raw : 0);
       }, 0);
     }
-    const expense: TripExpense =
-      draft.expenseType === 'transfer'
-        ? {
-            id: makeId(),
-            title: draft.title.trim() || `Transfer ${safePayer} -> ${safeTransferTo}`,
-            amount,
-            payer: safePayer,
-            participants: [safeTransferTo],
-            expenseType: 'transfer',
-            transferTo: safeTransferTo,
-            splitType: 'equal',
-          }
-        : {
-            id: makeId(),
-            title: draft.title.trim(),
-            amount,
-          payer: safePayer,
-          payerId:
-            (currentTrip?.members.find((m) => memberNameOf(m) === safePayer) as Member | undefined)?.id ||
-            appSession?.userId ||
-            null,
-          participants: safeParticipants,
-          participantIds: safeParticipants
-            .map((s) => {
-              const found = currentTrip?.members.find((m) => memberNameOf(m) === s);
-              if (found && typeof found !== 'string' && found.id) return found.id;
-              if (s === appSession?.name) return appSession?.userId || null;
-              return null;
-            })
-            .filter((v): v is string => Boolean(v)),
-            splitType: draft.splitType,
-            participantWeights:
-              draft.splitType === 'shares'
-                ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
-                    const raw = Number(draft.participantWeights[name] || 1);
-                    acc[name] = raw > 0 ? raw : 1;
-                    return acc;
-                  }, {})
-                : undefined,
-            participantAmounts:
-              draft.splitType === 'individual'
-                ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
-                    const raw = parseMoneyInput(draft.participantAmounts[name] || 0);
-                    acc[name] = Number.isFinite(raw) && raw > 0 ? raw : 0;
-                    return acc;
-                  }, {})
-                : undefined,
-          };
+    // Resolve member ids preferring trip member ids, falling back to session id when appropriate
+    const resolveMemberId = (raw?: string | null) => {
+      if (!raw) return null;
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      // treat 'Ty' as current session user
+      if (trimmed.toLowerCase() === 'ty') return appSession?.userId ?? null;
+
+      // first try to match by id in membersForCompute
+      const byId = membersForCompute.find((m) => typeof m !== 'string' && m.id === trimmed);
+      if (byId && typeof byId !== 'string') return byId.id;
+
+      // then match by name
+      const byName = membersForCompute.find((m) => (typeof m === 'string' ? m : m.name) === trimmed);
+      if (byName && typeof byName !== 'string') return byName.id;
+
+      // finally, if raw equals session name, use session id
+      if (trimmed === (appSession?.name || '').trim()) return appSession?.userId ?? null;
+      return null;
+    };
+    const expense: TripExpense = (() => {
+      const base = {
+        id: makeId(),
+        title: draft.title.trim() || (draft.expenseType === 'transfer' ? `Transfer ${safePayer} -> ${safeTransferTo}` : ''),
+        amount,
+        payer: safePayer,
+        participants: draft.expenseType === 'transfer' ? [safeTransferTo] : safeParticipants,
+        expenseType: draft.expenseType,
+        splitType: draft.expenseType === 'transfer' ? 'equal' : draft.splitType,
+      } as Partial<TripExpense>;
+
+      const payerId = resolveMemberId(safePayer) || appSession?.userId || null;
+
+      if (draft.expenseType === 'transfer') {
+        const transferToId = resolveMemberId(safeTransferTo);
+        return {
+          ...base,
+          payerId,
+          transferTo: safeTransferTo,
+          transferToId: transferToId || null,
+        } as TripExpense;
+      }
+
+      const participantIds = safeParticipants
+        .map((s) => resolveMemberId(s))
+        .filter((v): v is string => Boolean(v));
+
+      return {
+        ...base,
+        payerId,
+        participants: safeParticipants,
+        participantIds,
+        splitType: draft.splitType,
+        participantWeights:
+          draft.splitType === 'shares'
+            ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
+                const raw = Number(draft.participantWeights[name] || 1);
+                acc[name] = raw > 0 ? raw : 1;
+                return acc;
+              }, {})
+            : undefined,
+        participantAmounts:
+          draft.splitType === 'individual'
+            ? safeParticipants.reduce<Record<string, number>>((acc, name) => {
+                const raw = parseMoneyInput(draft.participantAmounts[name] || 0);
+                acc[name] = Number.isFinite(raw) && raw > 0 ? raw : 0;
+                return acc;
+              }, {})
+            : undefined,
+      } as TripExpense;
+    })();
 
     if (editingExpenseId) {
       // capture previous expense to include a concise diff in history
@@ -6528,13 +6564,13 @@ export default function SplitPayWebApp() {
                           {Object.entries(balances).map(([name, value]) => {
                             if (!Number.isFinite(value)) return null;
                             if (Math.abs(value) < 0.01) return null;
-                            const displayName = formatMemberName(name);
+                            const displayName = formatMemberName(displayNameForKey(name));
                             return (
                               <div className="balance-transfer-row" key={name}>
                                 <button
                                   type="button"
                                   className="balance-person member-link-inline"
-                                  onClick={() => openMemberProfile(name)}
+                                  onClick={() => openMemberProfile(displayNameForKey(name))}
                                 >
                                   {displayName}
                                 </button>
