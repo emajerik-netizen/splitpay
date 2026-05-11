@@ -3804,7 +3804,7 @@ export default function SplitPayWebApp() {
     if (!currentTripOwnerIsSelf || !currentTrip) return;
 
     const exists = currentTrip.members.some(
-      (name) => name.trim().toLowerCase() === memberName.trim().toLowerCase()
+      (name) => memberNameOf(name).trim().toLowerCase() === memberName.trim().toLowerCase()
     );
     if (exists) return;
 
