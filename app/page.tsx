@@ -943,6 +943,7 @@ type Trip = {
   name: string;
   date: string;
   owner: string;
+  ownerId?: string | null;
   currency: 'EUR' | 'USD' | 'CZK';
   color: string;
   archived: boolean;
@@ -1076,19 +1077,20 @@ function tripPath(tripKey: string, detailScreen: TripDetailScreen = 'overview') 
   return `/trip/${safeTripKey}/${detailScreen}`;
 }
 
-function createTrip(name: string, date: string, inviteCode: string, owner: string = 'Ty'): Trip {
+function createTrip(name: string, date: string, inviteCode: string, owner: string = 'Ty', ownerId?: string | null): Trip {
   return {
     id: makeId(),
     name,
     date,
     owner,
+    ownerId: ownerId || null,
     currency: 'EUR',
     color: '#2c79f6',
     archived: false,
     inviteCode,
     deletedAt: null,
     deletedBy: null,
-    members: [{ name: 'Ty' }],
+    members: [ownerId ? { id: ownerId, name: owner === 'Ty' ? 'Ty' : owner } : { name: owner === 'Ty' ? 'Ty' : owner }],
     expenses: [],
     pendingInvites: [],
   };
@@ -2118,7 +2120,9 @@ export default function SplitPayWebApp() {
         const merged = [...sanitized.trips, ...localOnly];
         const mergedSerialized = JSON.stringify({ trips: merged, selectedTripId: sanitized.selectedTripId });
         if (mergedSerialized === latestLocalStateRef.current) return localTrips;
-        skipNextSaveRef.current = true;
+        // Only suppress the next auto-save when remote fully matches local state
+        // (no local-only trips that still need to be persisted).
+        if (localOnly.length === 0) skipNextSaveRef.current = true;
         return merged;
       });
       setSelectedTripId((prev) => prev || sanitized.selectedTripId || '');
@@ -2966,7 +2970,9 @@ export default function SplitPayWebApp() {
         const ownerNormalized = (currentTrip.owner || '').trim().toLowerCase();
         const selfNormalized = (appSession?.name || '').trim().toLowerCase();
         const isCurrentUserOwner =
-          ownerNormalized === 'ty' || (Boolean(selfNormalized) && ownerNormalized === selfNormalized);
+          ownerNormalized === 'ty' ||
+          (Boolean(selfNormalized) && ownerNormalized === selfNormalized) ||
+          Boolean(appSession?.userId && currentTrip.ownerId === appSession.userId);
 
         // New owner-created trip may not be in DB yet; do not remove it locally.
         if (isCurrentUserOwner) {
@@ -3427,6 +3433,8 @@ export default function SplitPayWebApp() {
   }
 
   const isSelfName = (input: Member | string) => {
+    // Match by userId first (most reliable), then by name
+    if (appSession?.userId && typeof input !== 'string' && input?.id === appSession.userId) return true;
     const name = memberNameOf(input).trim();
     const normalizedName = name.toLowerCase();
     if (!normalizedName) return false;
@@ -3746,7 +3754,8 @@ export default function SplitPayWebApp() {
       cleanedName,
       newTripDate.trim(),
       inviteCode,
-      appSession?.name || 'Ty'
+      appSession?.name || 'Ty',
+      appSession?.userId || null
     );
     const newTrips = [trip, ...trips];
     setTrips(newTrips);
@@ -3759,10 +3768,12 @@ export default function SplitPayWebApp() {
     // Save immediately so the invite code is findable via join RPC right away.
     // The debounced auto-save fires 500ms later which is too slow for instant sharing.
     if (supabase && canSyncWithDb && appSession?.userId && dbLoadedRef.current) {
-      void supabase.from('trip_states').upsert({
+      supabase.from('trip_states').upsert({
         user_id: appSession.userId,
         state_json: { trips: newTrips, selectedTripId: trip.id },
         updated_at: new Date().toISOString(),
+      }).then(({ error }) => {
+        if (error) console.error('Trip create save failed:', error.message, error.code);
       });
     }
   }
