@@ -3379,7 +3379,9 @@ export default function SplitPayWebApp() {
   const normalizedCurrentUser = (appSession?.name || '').trim().toLowerCase();
   const displayCurrentUserName = (appSession?.name || '').trim() || 'Používateľ';
 
-  const memberNameOf = (m: Member | string) => (typeof m === 'string' ? m : m?.name || '');
+  function memberNameOf(m: Member | string) {
+    return typeof m === 'string' ? m : m?.name || '';
+  }
 
   const isSelfName = (input: Member | string) => {
     const name = memberNameOf(input).trim();
