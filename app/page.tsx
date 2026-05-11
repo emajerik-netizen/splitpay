@@ -4014,7 +4014,7 @@ export default function SplitPayWebApp() {
 
     if (isOwnerRemoving && otherMembers.length > 0) {
       // If owner removes themselves, transfer ownership to first remaining member
-      const newOwner = otherMembers[0];
+      const newOwner = memberNameOf(otherMembers[0]);
       updateCurrentTrip((trip) => ({
         ...trip,
         owner: newOwner,
