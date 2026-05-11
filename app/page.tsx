@@ -3116,10 +3116,30 @@ export default function SplitPayWebApp() {
 
   const normalizedExpenses = useMemo(() => {
     if (!currentTrip) return [];
-    return currentTrip.expenses.map((expense) => ({
-      ...expense,
-      participants: expense.participants.length ? expense.participants : currentTrip.members,
-    }));
+    return currentTrip.expenses.map((expense) => {
+      const participants = expense.participants && expense.participants.length ? expense.participants : currentTrip.members;
+      const amount = parseMoneyInput((expense as any).amount || 0);
+      const participantAmounts = (expense.participantAmounts || {}) as Record<string, any>;
+      const parsedParticipantAmounts: Record<string, number> = {};
+      for (const k of Object.keys(participantAmounts)) {
+        parsedParticipantAmounts[k] = parseMoneyInput(participantAmounts[k]);
+      }
+      const participantWeights = (expense.participantWeights || {}) as Record<string, any>;
+      const parsedParticipantWeights: Record<string, number> = {};
+      for (const k of Object.keys(participantWeights)) {
+        parsedParticipantWeights[k] = Number(participantWeights[k]) || 0;
+      }
+
+      return {
+        ...expense,
+        amount,
+        participants,
+        participantAmounts: parsedParticipantAmounts,
+        participantWeights: parsedParticipantWeights,
+        expenseType: expense.expenseType || 'expense',
+        splitType: expense.splitType || 'equal',
+      } as TripExpense;
+    });
   }, [currentTrip]);
 
   const balances = useMemo(() => computeBalances(members, normalizedExpenses), [members, normalizedExpenses]);
