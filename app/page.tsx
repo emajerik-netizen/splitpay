@@ -910,9 +910,9 @@ type Invite = {
 };
 
 type Member = {
-  id?: string | null;
+  id?: string;
   name: string;
-  email?: string | null;
+  email?: string;
 };
 
 type TripExpense = Expense & {
