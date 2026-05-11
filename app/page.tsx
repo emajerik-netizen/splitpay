@@ -918,6 +918,7 @@ type Member = {
 type TripExpense = Expense & {
   id: string;
   title: string;
+  deletedAt?: string | null;
 };
 
 type TripExpenseRow = {
@@ -1469,6 +1470,7 @@ export default function SplitPayWebApp() {
   const lastPropagatedTripSnapshotRef = useRef<Record<string, string>>({});
   const lastPersistedExpenseSnapshotRef = useRef<Record<string, string>>({});
   const skipExpenseDbWriteRef = useRef(false);
+  const deletedExpenseIdsRef = useRef<Set<string>>(new Set());
   const lastErrorMessageTimeRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
@@ -3084,26 +3086,44 @@ export default function SplitPayWebApp() {
         if (idx < 0) return prev;
 
         const existing = prev[idx];
+
+        // Preserve soft-deleted state: if we deleted an expense locally but the DB write
+        // hasn't landed yet, carry our deletedAt forward so the poll doesn't restore it.
+        const locallyDeleted = deletedExpenseIdsRef.current;
+        const mergedDbExpenses = dbExpenses.map((e) => {
+          if (locallyDeleted.has(e.id) && !e.deletedAt) {
+            const localE = (existing.expenses || []).find((le) => le.id === e.id);
+            return { ...e, deletedAt: localE?.deletedAt || new Date().toISOString() };
+          }
+          return e;
+        });
+        // Also keep any locally-deleted expenses that DB no longer returns (already cleaned up)
+        // by including them from local state.
+        (existing.expenses || []).forEach((le) => {
+          if (le.deletedAt && !mergedDbExpenses.find((e) => e.id === le.id)) {
+            mergedDbExpenses.push(le);
+          }
+        });
+
         const existingSerialized = JSON.stringify(sortTripExpensesByNewest(existing.expenses || []));
-        const dbSerialized = JSON.stringify(dbExpenses);
-        if (existingSerialized === dbSerialized) {
-          lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
+        const mergedSerialized = JSON.stringify(sortTripExpensesByNewest(mergedDbExpenses));
+        if (existingSerialized === mergedSerialized) {
+          lastPersistedExpenseSnapshotRef.current[tripId] = mergedSerialized;
           return prev;
         }
 
-        // Never replace local expenses with fewer DB expenses — the write may be in-flight.
-        // Only sync down when DB has equal or more (i.e. another device added something).
-        const localCount = (existing.expenses || []).length;
-        const dbCount = dbExpenses.length;
-        if (dbCount < localCount) return prev;
+        // Never replace local active expenses with fewer DB active expenses — write may be in-flight.
+        const localActiveCount = (existing.expenses || []).filter((e) => !e.deletedAt).length;
+        const dbActiveCount = mergedDbExpenses.filter((e) => !e.deletedAt).length;
+        if (dbActiveCount < localActiveCount) return prev;
 
         skipNextSaveRef.current = true;
         skipExpenseDbWriteRef.current = true;
-        lastPersistedExpenseSnapshotRef.current[tripId] = dbSerialized;
+        lastPersistedExpenseSnapshotRef.current[tripId] = mergedSerialized;
         const next = [...prev];
         next[idx] = normalizeTrip({
           ...existing,
-          expenses: dbExpenses,
+          expenses: mergedDbExpenses,
         });
         return next;
       });
@@ -3351,7 +3371,7 @@ export default function SplitPayWebApp() {
 
   const normalizedExpenses = useMemo(() => {
     if (!currentTrip) return [];
-    return currentTrip.expenses.map((expense) => {
+    return currentTrip.expenses.filter((expense) => !expense.deletedAt).map((expense) => {
       // Use stored participants if present, but if only the payer is listed it means
       // the expense was created before others joined — expand to all current members.
       const rawParticipantsArr = (
@@ -3802,7 +3822,7 @@ export default function SplitPayWebApp() {
     if (!currentTrip) return;
     if (partial.archived) {
       const tripMembersForCompute = (currentTrip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-      const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(currentTrip.expenses, (currentTrip.members || []).map(memberNameOf)));
+      const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(currentTrip.expenses.filter((e) => !e.deletedAt), (currentTrip.members || []).map(memberNameOf)));
       const tripSettlements = settleDebts(tripBalances);
       if (tripSettlements.length > 0) {
         setInfoMessage(t('tripNeedsSettlementBody'));
@@ -4756,12 +4776,12 @@ export default function SplitPayWebApp() {
   function removeExpense(expenseId: string) {
     if (!currentTrip) return;
     const found = currentTrip.expenses.find((expense) => expense.id === expenseId) || null;
-    if (found) {
-      void logExpenseEvent(expenseId, 'deleted', found);
-    }
+    if (found) void logExpenseEvent(expenseId, 'deleted', found);
+    const now = new Date().toISOString();
+    deletedExpenseIdsRef.current.add(expenseId);
     updateCurrentTrip((trip) => ({
       ...trip,
-      expenses: trip.expenses.filter((expense) => expense.id !== expenseId),
+      expenses: trip.expenses.map((e) => e.id === expenseId ? { ...e, deletedAt: now } : e),
     }));
     closeExpenseDetail();
   }
@@ -4842,7 +4862,7 @@ export default function SplitPayWebApp() {
           if (now - latestExpenseTs < archiveThresholdMs) return trip;
 
           const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-          const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, (trip.members || []).map(memberNameOf)));
+          const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses.filter((e) => !e.deletedAt), (trip.members || []).map(memberNameOf)));
           const tripSettlements = settleDebts(tripBalances);
           if (tripSettlements.length > 0) {
             staleUnsettled.push({ tripId: trip.id, tripName: trip.name });
@@ -5965,8 +5985,9 @@ export default function SplitPayWebApp() {
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
                     const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
-                    const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, (trip.members || []).map(memberNameOf)));
-                    const tripTotal = trip.expenses.reduce(
+                    const activeExpenses = trip.expenses.filter((e) => !e.deletedAt);
+                    const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(activeExpenses, (trip.members || []).map(memberNameOf)));
+                    const tripTotal = activeExpenses.reduce(
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
                     );
@@ -6031,7 +6052,7 @@ export default function SplitPayWebApp() {
                           </div>
                           <div className="trip-card-meta">
                             <span>{memberCountLabel(trip.members.length, lang)}</span>
-                             <span>{expenseCountLabel(trip.expenses.length, lang)}</span>
+                             <span>{expenseCountLabel(activeExpenses.length, lang)}</span>
                              <span>{t('totalMeta')} {money(tripTotal)}</span>
                             <span>{trip.currency}</span>
                              {trip.archived ? <span>{t('archived')}</span> : null}
@@ -6587,23 +6608,26 @@ export default function SplitPayWebApp() {
                   <div className="mini-panel expenses-list-panel">
                       <h3>{t('expenseHistory')}</h3>
                     <div className="stack-list">
-                        {currentTrip.expenses.length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
+                        {currentTrip.expenses.filter((e) => !e.deletedAt).length === 0 && currentTrip.expenses.filter((e) => e.deletedAt).length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
                       {currentTrip.expenses.map((expense) => (
                         <div
-                          className="row expense-row expense-row-compact"
+                          className={`row expense-row expense-row-compact${expense.deletedAt ? ' expense-row-deleted' : ''}`}
                           key={expense.id}
                           role="button"
                           tabIndex={0}
-                          onClick={() => openExpenseDetail(expense.id)}
+                          onClick={() => !expense.deletedAt && openExpenseDetail(expense.id)}
                           onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
+                            if (!expense.deletedAt && (event.key === 'Enter' || event.key === ' ')) {
                               event.preventDefault();
                               openExpenseDetail(expense.id);
                             }
                           }}
                         >
-                          <strong>{expense.title}</strong>
-                          <strong>{money(expense.amount)}</strong>
+                          <span className="expense-row-title">
+                            <strong>{expense.title}</strong>
+                            {expense.deletedAt ? <span className="expense-deleted-badge">{lang === 'sk' ? 'zmazaný' : 'deleted'}</span> : null}
+                          </span>
+                          <strong className={expense.deletedAt ? 'muted' : ''}>{money(expense.amount)}</strong>
                         </div>
                       ))}
                     </div>

@@ -541,6 +541,42 @@ body {
   border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 35%, var(--stroke));
 }
 
+.expense-row-deleted {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.expense-row-deleted:hover {
+  background: transparent;
+  border-color: var(--stroke);
+}
+
+.expense-row-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.expense-row-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense-deleted-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--negative, #c0392b);
+  background: color-mix(in srgb, var(--negative, #c0392b) 12%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .expense-row:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 55%, transparent);
   outline-offset: 2px;
