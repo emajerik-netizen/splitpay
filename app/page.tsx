@@ -4089,11 +4089,11 @@ export default function SplitPayWebApp() {
 
     updateCurrentTrip((trip) => ({
       ...trip,
-      members: trip.members.map((name) => (name === userName ? invitedName : name)),
+      members: trip.members.map((m) => (memberNameOf(m) === userName ? invitedName : memberNameOf(m))),
       expenses: trip.expenses.map((expense) => ({
         ...expense,
         payer: expense.payer === userName ? invitedName : expense.payer,
-        participants: expense.participants.map((name) => (name === userName ? invitedName : name)),
+        participants: expense.participants.map((p) => (p === userName ? invitedName : p)),
       })),
       pendingInvites: trip.pendingInvites.map((invite) =>
         invite.name === invitedName ? { ...invite, status: 'Prijate' } : invite
