@@ -1153,6 +1153,81 @@ function normalizeTrip(trip: Trip): Trip {
   };
 }
 
+// Rename the current user's real name to "Ty" placeholder in a trip's members and expenses
+// so that balance computation always uses a consistent key.
+function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
+  if (!selfKey || selfKey === 'ty') return trip;
+
+  const toTy = (name: string) => {
+    const k = (name || '').trim().toLowerCase();
+    return k === selfKey || k === 'ty' ? 'Ty' : name;
+  };
+
+  const needsRemap =
+    trip.members.some((m) => (m || '').trim().toLowerCase() === selfKey) ||
+    (trip.expenses || []).some(
+      (exp) =>
+        (exp.payer || '').trim().toLowerCase() === selfKey ||
+        (exp.participants || []).some((p) => (p || '').trim().toLowerCase() === selfKey)
+    );
+
+  if (!needsRemap) return trip;
+
+  const seen = new Set<string>();
+  const canonicalMembers: string[] = [];
+  for (const m of trip.members || []) {
+    const canonical = toTy(m.trim());
+    const key = canonical.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    canonicalMembers.push(canonical);
+  }
+  const ownerKey = (trip.owner || '').trim().toLowerCase();
+  if (ownerKey && ownerKey !== 'ty' && ownerKey !== selfKey && !seen.has(ownerKey)) {
+    canonicalMembers.unshift(trip.owner);
+    seen.add(ownerKey);
+  }
+  if ((ownerKey === selfKey || ownerKey === 'ty') && !seen.has('ty')) {
+    canonicalMembers.unshift('Ty');
+  }
+
+  return {
+    ...trip,
+    members: canonicalMembers,
+    expenses: trip.expenses.map((exp) => ({
+      ...exp,
+      payer: toTy(exp.payer || ''),
+      participants: (exp.participants || []).map(toTy),
+      ...(exp.participantAmounts
+        ? {
+            participantAmounts: Object.fromEntries(
+              Object.entries(exp.participantAmounts).map(([k, v]) => [toTy(k), v])
+            ),
+          }
+        : {}),
+      ...(exp.participantWeights
+        ? {
+            participantWeights: Object.fromEntries(
+              Object.entries(exp.participantWeights).map(([k, v]) => [toTy(k), v])
+            ),
+          }
+        : {}),
+    })),
+  };
+}
+
+// Expand participants for expenses where only the payer was listed (created before others joined).
+function withExpandedParticipants(expenses: TripExpense[], members: string[]): TripExpense[] {
+  return expenses.map((expense) => {
+    const raw = expense.participants && expense.participants.length ? expense.participants : members;
+    const onlyPayerListed =
+      raw.length === 1 &&
+      raw[0] &&
+      (expense.payer || '').trim().toLowerCase() === raw[0].trim().toLowerCase();
+    return onlyPayerListed ? { ...expense, participants: members } : expense;
+  });
+}
+
 function sortTripExpensesByNewest(expenses: TripExpense[]) {
   return [...expenses].sort((left, right) => {
     const leftTs = expenseIdTimestamp(left.id) || 0;
@@ -1771,44 +1846,12 @@ export default function SplitPayWebApp() {
 
     setTrips((prev) => {
       let changed = false;
-
       const next = prev.map((trip) => {
-        const seen = new Set<string>();
-        const canonicalMembers: string[] = [];
-
-        for (const member of trip.members || []) {
-          const cleaned = (member || '').trim();
-          if (!cleaned) continue;
-
-          const key = cleaned.toLowerCase();
-          const canonical = key === 'ty' || key === selfKey ? 'Ty' : cleaned;
-          const canonicalKey = canonical.toLowerCase();
-          if (seen.has(canonicalKey)) continue;
-          seen.add(canonicalKey);
-          canonicalMembers.push(canonical);
-        }
-
-        const ownerClean = (trip.owner || '').trim();
-        const ownerKey = ownerClean.toLowerCase();
-
-        if (ownerKey && ownerKey !== 'ty' && ownerKey !== selfKey && !seen.has(ownerKey)) {
-          canonicalMembers.unshift(ownerClean);
-          seen.add(ownerKey);
-        }
-
-        if ((ownerKey === selfKey || ownerKey === 'ty') && !seen.has('ty')) {
-          canonicalMembers.unshift('Ty');
-          seen.add('ty');
-        }
-
-        const sameLength = canonicalMembers.length === trip.members.length;
-        const sameValues = sameLength && canonicalMembers.every((value, idx) => value === trip.members[idx]);
-
-        if (sameValues) return trip;
+        const canonical = canonicalizeSelfName(trip, selfKey);
+        if (canonical === trip) return trip;
         changed = true;
-        return { ...trip, members: canonicalMembers };
+        return canonical;
       });
-
       return changed ? next : prev;
     });
   }, [appSession?.name]);
@@ -1905,7 +1948,11 @@ export default function SplitPayWebApp() {
       const remote = data?.state_json as { trips?: Trip[]; selectedTripId?: string } | null;
       if (remote?.trips?.length) {
         const sanitized = sanitizeLoadedState(remote);
-        setTrips(sanitized.trips);
+        const selfKey = (appSession?.name || '').trim().toLowerCase();
+        const canonicalTrips = selfKey
+          ? sanitized.trips.map((trip) => canonicalizeSelfName(trip, selfKey))
+          : sanitized.trips;
+        setTrips(canonicalTrips);
         setSelectedTripId(sanitized.selectedTripId);
       }
 
@@ -2884,7 +2931,8 @@ export default function SplitPayWebApp() {
         return;
       }
 
-      const sharedTrip = normalizeTrip(data.trip as Trip);
+      const selfKey = (appSession?.name || '').trim().toLowerCase();
+      const sharedTrip = canonicalizeSelfName(normalizeTrip(data.trip as Trip), selfKey);
 
       setTrips((prev) => {
         const idx = prev.findIndex((trip) => trip.id === currentTrip.id);
@@ -3203,7 +3251,16 @@ export default function SplitPayWebApp() {
   const normalizedExpenses = useMemo(() => {
     if (!currentTrip) return [];
     return currentTrip.expenses.map((expense) => {
-      const participants = expense.participants && expense.participants.length ? expense.participants : currentTrip.members;
+      // Use stored participants if present, but if only the payer is listed it means
+      // the expense was created before others joined — expand to all current members.
+      const rawParticipants = expense.participants && expense.participants.length
+        ? expense.participants
+        : currentTrip.members;
+      const onlyPayerListed =
+        rawParticipants.length === 1 &&
+        rawParticipants[0] &&
+        (expense.payer || '').trim().toLowerCase() === rawParticipants[0].trim().toLowerCase();
+      const participants = onlyPayerListed ? currentTrip.members : rawParticipants;
       const amount = parseMoneyInput((expense as any).amount || 0);
       const participantAmounts = (expense.participantAmounts || {}) as Record<string, any>;
       const parsedParticipantAmounts: Record<string, number> = {};
@@ -3609,7 +3666,7 @@ export default function SplitPayWebApp() {
   function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'date' | 'currency' | 'color' | 'archived'>>) {
     if (!currentTrip) return;
     if (partial.archived) {
-      const tripBalances = computeBalances(currentTrip.members, currentTrip.expenses);
+      const tripBalances = computeBalances(currentTrip.members, withExpandedParticipants(currentTrip.expenses, currentTrip.members));
       const tripSettlements = settleDebts(tripBalances);
       if (tripSettlements.length > 0) {
         setInfoMessage(t('tripNeedsSettlementBody'));
@@ -4589,7 +4646,7 @@ export default function SplitPayWebApp() {
           if (!latestExpenseTs) return trip;
           if (now - latestExpenseTs < archiveThresholdMs) return trip;
 
-          const tripBalances = computeBalances(trip.members, trip.expenses);
+          const tripBalances = computeBalances(trip.members, withExpandedParticipants(trip.expenses, trip.members));
           const tripSettlements = settleDebts(tripBalances);
           if (tripSettlements.length > 0) {
             staleUnsettled.push({ tripId: trip.id, tripName: trip.name });
@@ -5713,7 +5770,7 @@ export default function SplitPayWebApp() {
                 </div>
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
-                    const tripBalances = computeBalances(trip.members, trip.expenses);
+                    const tripBalances = computeBalances(trip.members, withExpandedParticipants(trip.expenses, trip.members));
                     const tripTotal = trip.expenses.reduce(
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
