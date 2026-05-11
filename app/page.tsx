@@ -4021,7 +4021,7 @@ export default function SplitPayWebApp() {
         members: otherMembers,
         expenses: trip.expenses.map((expense) => ({
           ...expense,
-          payer: isSameMember(expense.payer, memberName) ? newOwner : expense.payer,
+          payer: isSameMember(expense.payer, memberName) ? newOwner : (expense.payer || 'Ty'),
           participants: expense.participants.filter((name) => !isSameMember(name, memberName)),
         })),
       }));
