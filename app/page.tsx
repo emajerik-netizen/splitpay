@@ -1600,7 +1600,7 @@ export default function SplitPayWebApp() {
             // "Ty" is the canonical placeholder for the current user.
             const userVisible = prev.find((t) => t.id === n.trip_id)
               ?.members.some((m) => {
-                const k = m.trim().toLowerCase();
+                const k = memberNameOf(m).trim().toLowerCase();
                 return k === selfKey || k === 'ty';
               });
             if (userVisible) {
@@ -6328,7 +6328,7 @@ export default function SplitPayWebApp() {
                     // 2. User's real name is NOT already a member (they are listed under a different/fictional name)
                     const realName = appSession?.name?.trim().toLowerCase() || '';
                     const realNameAlreadyMember = realName
-                      ? currentTrip.members.some((m) => m.trim().toLowerCase() === realName)
+                      ? currentTrip.members.some((m) => memberNameOf(m).trim().toLowerCase() === realName)
                       : false;
                     const shouldShow =
                       isAuthenticated &&
