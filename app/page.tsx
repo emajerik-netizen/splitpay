@@ -4524,7 +4524,7 @@ export default function SplitPayWebApp() {
               if (s === appSession?.name) return appSession?.userId || null;
               return null;
             })
-            .filter(Boolean),
+            .filter((v): v is string => Boolean(v)),
             splitType: draft.splitType,
             participantWeights:
               draft.splitType === 'shares'
