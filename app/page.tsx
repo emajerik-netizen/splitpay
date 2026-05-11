@@ -3706,7 +3706,8 @@ export default function SplitPayWebApp() {
   function updateTripSettings(partial: Partial<Pick<Trip, 'name' | 'date' | 'currency' | 'color' | 'archived'>>) {
     if (!currentTrip) return;
     if (partial.archived) {
-      const tripBalances = computeBalances(currentTrip.members, withExpandedParticipants(currentTrip.expenses, currentTrip.members));
+      const tripMembersForCompute = (currentTrip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
+      const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(currentTrip.expenses, currentTrip.members));
       const tripSettlements = settleDebts(tripBalances);
       if (tripSettlements.length > 0) {
         setInfoMessage(t('tripNeedsSettlementBody'));
@@ -4702,7 +4703,8 @@ export default function SplitPayWebApp() {
           if (!latestExpenseTs) return trip;
           if (now - latestExpenseTs < archiveThresholdMs) return trip;
 
-          const tripBalances = computeBalances(trip.members, withExpandedParticipants(trip.expenses, trip.members));
+          const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
+          const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, trip.members));
           const tripSettlements = settleDebts(tripBalances);
           if (tripSettlements.length > 0) {
             staleUnsettled.push({ tripId: trip.id, tripName: trip.name });
@@ -5826,7 +5828,8 @@ export default function SplitPayWebApp() {
                 </div>
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
-                    const tripBalances = computeBalances(trip.members, withExpandedParticipants(trip.expenses, trip.members));
+                    const tripMembersForCompute = (trip.members || []).map((m) => (typeof m === 'string' ? m : { id: m.id, name: m.name }));
+                    const tripBalances = computeBalances(tripMembersForCompute, withExpandedParticipants(trip.expenses, trip.members));
                     const tripTotal = trip.expenses.reduce(
                       (sum, expense) => (expense.expenseType === 'transfer' ? sum : sum + expense.amount),
                       0
