@@ -17,58 +17,71 @@ export function computeBalances(
 ): BalanceMap {
   const balance: BalanceMap = {};
 
+  const norm = (s?: string) => (s || '').trim().toLowerCase();
+  const friendMap = new Map<string, string>();
   friends.forEach((name) => {
     balance[name] = 0;
+    friendMap.set(norm(name), name);
   });
 
+  const findFriend = (name?: string) => {
+    if (!name) return null;
+    return friendMap.get(norm(name)) ?? null;
+  };
+
   expenses.forEach((expense) => {
+    const amount = Number(expense.amount) || 0;
+
     if (expense.expenseType === 'transfer') {
       if (!expense.transferTo) return;
-      if (!(expense.payer in balance) || !(expense.transferTo in balance)) return;
-      if (!Number.isFinite(expense.amount) || expense.amount <= 0) return;
+      const payer = findFriend(expense.payer);
+      const transferTo = findFriend(expense.transferTo);
+      if (!payer || !transferTo) return;
+      if (!Number.isFinite(amount) || amount <= 0) return;
 
-      // A transfer is a settlement: payer paid `amount` to transferTo.
-      // That reduces the receiver's receivable and reduces the payer's payable.
-      // In the balance map positive means the person should receive money.
-      // Before transfer: receiver has positive balance, payer negative. After transfer,
-      // receiver should decrease by amount, payer should increase by amount.
-      balance[expense.payer] += expense.amount;
-      balance[expense.transferTo] -= expense.amount;
+      // Treat transfer as settlement: payer increases, transferTo decreases
+      balance[payer] = (balance[payer] || 0) + amount;
+      balance[transferTo] = (balance[transferTo] || 0) - amount;
       return;
     }
 
-    if (!expense.participants.length) return;
+    const participantsRaw = expense.participants && expense.participants.length ? expense.participants : friends;
+    const participants = participantsRaw.map(findFriend).filter(Boolean) as string[];
+    if (!participants.length) return;
 
     if (expense.splitType === 'individual') {
-      expense.participants.forEach((person) => {
-        const share = Number(expense.participantAmounts?.[person] || 0);
-        if (!Number.isFinite(share) || share <= 0) return;
-        balance[person] -= share;
+      participantsRaw.forEach((raw) => {
+        const p = findFriend(raw);
+        if (!p) return;
+        const share = Number(expense.participantAmounts?.[raw] ?? expense.participantAmounts?.[p] ?? 0) || 0;
+        if (!Number.isFinite(share) || share === 0) return;
+        balance[p] = (balance[p] || 0) - share;
       });
-    } else if (expense.splitType === 'shares') {
-      const weights = expense.participants.map(
-        (person) => Number(expense.participantWeights?.[person] || 1)
-      );
-
-      const totalWeight = weights.reduce(
-        (sum, value) => sum + (value > 0 ? value : 1),
-        0
-      );
-
-      expense.participants.forEach((person, index) => {
-        const safeWeight = weights[index] > 0 ? weights[index] : 1;
-        const share = (expense.amount * safeWeight) / totalWeight;
-        balance[person] -= share;
-      });
-    } else {
-      const share = expense.amount / expense.participants.length;
-
-      expense.participants.forEach((person) => {
-        balance[person] -= share;
-      });
+      const payer = findFriend(expense.payer) || friends[0] || null;
+      if (payer) balance[payer] = (balance[payer] || 0) + amount;
+      return;
     }
 
-    balance[expense.payer] += expense.amount;
+    if (expense.splitType === 'shares') {
+      const weights = participants.map((p) => Number(expense.participantWeights?.[p] ?? 1) || 1);
+      const totalWeight = weights.reduce((sum, v) => sum + (v > 0 ? v : 1), 0) || participants.length;
+      participants.forEach((p, i) => {
+        const safeWeight = weights[i] > 0 ? weights[i] : 1;
+        const share = (amount * safeWeight) / totalWeight;
+        balance[p] = (balance[p] || 0) - share;
+      });
+      const payer = findFriend(expense.payer) || friends[0] || null;
+      if (payer) balance[payer] = (balance[payer] || 0) + amount;
+      return;
+    }
+
+    // equal
+    const share = amount / participants.length;
+    participants.forEach((p) => {
+      balance[p] = (balance[p] || 0) - share;
+    });
+    const payer = findFriend(expense.payer) || friends[0] || null;
+    if (payer) balance[payer] = (balance[payer] || 0) + amount;
   });
 
   return balance;
