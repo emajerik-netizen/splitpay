@@ -6670,7 +6670,7 @@ export default function SplitPayWebApp() {
                   if (!anyNonZero) {
                     return (
                       <div className="hero-settled-chip" role="status">
-                        <div className="hero-settled-icon"><CheckCircle2 size={16} strokeWidth={2} /></div>
+                        <div className="hero-settled-icon"><CheckCircle2 size={18} strokeWidth={2.2} /></div>
                         <span>{t('tripSettled')}</span>
                       </div>
                     );

@@ -294,20 +294,21 @@ body {
 .hero-settled-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.65rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  border: 1.5px solid #a8e6b8;
-  background: linear-gradient(135deg, #edfdf3, #d6f5e3);
+  gap: 0.55rem;
+  margin-top: 0.7rem;
   color: #1a5c2a;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 700;
 }
 .hero-settled-icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #34c759, #28a745);
   display: grid;
   place-items: center;
-  color: #34c759;
+  color: #fff;
   animation: settledPulse 2.4s ease-in-out infinite;
 }
 
@@ -4254,7 +4255,7 @@ button:disabled {
 }
 [data-theme="dark"] .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
 [data-theme="dark"] .balance-tip { background: var(--card); color: var(--text); border-color: var(--stroke); }
-[data-theme="dark"] .hero-settled-chip { background: linear-gradient(135deg, #0d2a1a, #0a2216); border-color: #1f5c30; color: #6ee78a; }
+[data-theme="dark"] .hero-settled-chip { color: #6ee78a; }
 [data-theme="dark"] .hero-balance-chip { background: rgba(255,255,255,0.06); }
 [data-theme="dark"] .hero-balance-chip:hover { background: rgba(255,255,255,0.1); }
 [data-theme="dark"] .trip-settled-card { background: linear-gradient(135deg, #0d2a1a 0%, #0a2216 100%); border-color: #1f5c30; }
@@ -4338,7 +4339,7 @@ button:disabled {
   :root:not([data-theme="light"]) .balance-total-card { background: var(--bg-3); }
   :root:not([data-theme="light"]) .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
   :root:not([data-theme="light"]) .balance-tip { background: var(--card); color: var(--text); border-color: var(--stroke); }
-  :root:not([data-theme="light"]) .hero-settled-chip { background: linear-gradient(135deg, #0d2a1a, #0a2216); border-color: #1f5c30; color: #6ee78a; }
+  :root:not([data-theme="light"]) .hero-settled-chip { color: #6ee78a; }
   :root:not([data-theme="light"]) .hero-balance-chip { background: rgba(255,255,255,0.06); }
   :root:not([data-theme="light"]) .hero-balance-chip:hover { background: rgba(255,255,255,0.1); }
   :root:not([data-theme="light"]) .trip-settled-card { background: linear-gradient(135deg, #0d2a1a 0%, #0a2216 100%); border-color: #1f5c30; }
