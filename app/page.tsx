@@ -3656,6 +3656,8 @@ export default function SplitPayWebApp() {
   const isSelfName = (input: Member | string) => {
     // Match by userId first (most reliable), then by name
     if (appSession?.userId && typeof input !== 'string' && input?.id === appSession.userId) return true;
+    // Also match when input is the raw UUID string (e.g. balance-map key after sync overwrites member entry)
+    if (appSession?.userId && typeof input === 'string' && input === appSession.userId) return true;
     const name = memberNameOf(input).trim();
     const normalizedName = name.toLowerCase();
     if (!normalizedName) return false;
@@ -3781,7 +3783,10 @@ export default function SplitPayWebApp() {
   const displayNameForKey = (key: string) => {
     if (!currentTrip) return key;
     const found = (currentTrip.members || []).find((m) => typeof m !== 'string' && (m.id === key || (m?.name || '') === key));
-    return found ? memberNameOf(found) : key;
+    if (found) return memberNameOf(found);
+    // key is a raw UUID — check if it belongs to the current session user
+    if (appSession?.userId && key === appSession.userId) return appSession.name || key;
+    return key;
   };
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
@@ -7262,6 +7267,10 @@ export default function SplitPayWebApp() {
                             if (!Number.isFinite(value)) return null;
                             if (Math.abs(value) < 0.01) return null;
                             const displayName = formatMemberName(displayNameForKey(name));
+                            const isSelfDebtor = value < 0 && isSelfName(name);
+                            const selfSettlement = isSelfDebtor
+                              ? settlements.find((s) => s.from === name)
+                              : null;
                             return (
                               <div className="balance-transfer-row" key={name}>
                                 <button
@@ -7276,9 +7285,20 @@ export default function SplitPayWebApp() {
                                   <span className="balance-avatar">€</span>
                                     {value >= 0 ? t('receives') : t('pays')}
                                 </span>
-                                <strong className={`balance-amount ${value >= 0 ? 'positive' : 'negative'}`}>
-                                  {eur(Math.abs(value))}
-                                </strong>
+                                <div className="settlement-actions">
+                                  {selfSettlement ? (
+                                    <button
+                                      type="button"
+                                      className="mark-paid-btn"
+                                      onClick={() => handleMarkAsPaid(selfSettlement.from, selfSettlement.to, selfSettlement.amount)}
+                                    >
+                                      {t('markAsPaid')}
+                                    </button>
+                                  ) : null}
+                                  <strong className={`balance-amount ${value >= 0 ? 'positive' : 'negative'}`}>
+                                    {eur(Math.abs(value))}
+                                  </strong>
+                                </div>
                               </div>
                             );
                           })}
