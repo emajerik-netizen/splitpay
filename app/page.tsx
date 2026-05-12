@@ -3798,6 +3798,11 @@ export default function SplitPayWebApp() {
     return key;
   };
 
+  const firstNameOf = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? parts[0] : name;
+  };
+
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
     let updatedTripForSync: Trip | null = null;
@@ -6660,6 +6665,36 @@ export default function SplitPayWebApp() {
                     </button>
                   ) : null}
                 </div>
+                {normalizedExpenses.length > 0 ? (() => {
+                  const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
+                  if (!anyNonZero) {
+                    return (
+                      <div className="hero-settled-chip" role="status">
+                        <div className="hero-settled-icon"><CheckCircle2 size={16} strokeWidth={2} /></div>
+                        <span>{t('tripSettled')}</span>
+                      </div>
+                    );
+                  }
+                  if (Math.abs(safeSelfBalance) > 0.01) {
+                    return (
+                      <button
+                        type="button"
+                        className="hero-balance-chip"
+                        onClick={() => openTrip(currentTrip.id, 'balances')}
+                      >
+                        <span className="hero-balance-label">
+                          {safeSelfBalance >= 0
+                            ? `${displayCurrentUserName} ${t('receivesTotal')}`
+                            : `${displayCurrentUserName} ${t('paysTotal')}`}
+                        </span>
+                        <strong className={safeSelfBalance >= 0 ? 'positive' : 'negative'}>
+                          {eur(Math.abs(safeSelfBalance))}
+                        </strong>
+                      </button>
+                    );
+                  }
+                  return null;
+                })() : null}
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
 
@@ -6884,43 +6919,6 @@ export default function SplitPayWebApp() {
                       </div>
                     );
                   })()}
-                  {normalizedExpenses.length > 0 ? (() => {
-                    const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
-                    if (!anyNonZero) {
-                      return (
-                        <div className="trip-settled-card" role="status">
-                          <div className="trip-settled-glow">
-                            <CheckCircle2 size={36} strokeWidth={1.8} />
-                          </div>
-                          <div className="trip-settled-text">
-                            <strong>{t('tripSettled')}</strong>
-                            <span className="trip-settled-sub">
-                              <Sparkles size={12} />{lang === 'sk' ? 'Všetky náklady sú vyrovnané' : 'All expenses are settled'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    if (Math.abs(safeSelfBalance) > 0.01) {
-                      return (
-                        <button
-                          type="button"
-                          className="balance-total-card balance-total-card-overview"
-                          onClick={() => openTrip(currentTrip.id, 'balances')}
-                        >
-                          <p>
-                            {safeSelfBalance >= 0
-                              ? `${displayCurrentUserName} ${t('receivesTotal')}`
-                              : `${displayCurrentUserName} ${t('paysTotal')}`}
-                          </p>
-                          <strong className={safeSelfBalance >= 0 ? 'positive' : 'negative'}>
-                            {eur(Math.abs(safeSelfBalance))}
-                          </strong>
-                        </button>
-                      );
-                    }
-                    return null;
-                  })() : null}
                   <div className="screen-grid compact-grid overview-compact-grid">
                     <div className="mini-panel overview-mini-panel">
                         <h3>{t('recentExpenses')}</h3>
@@ -7306,7 +7304,7 @@ export default function SplitPayWebApp() {
                                   className="balance-person member-link-inline"
                                   onClick={() => openMemberProfile(displayNameForKey(name))}
                                 >
-                                  {displayName}
+                                  {firstNameOf(displayName)}
                                 </button>
                                 <span className="balance-arrow" aria-hidden="true">{value >= 0 ? '←' : '→'}</span>
                                 <span className="balance-target">
