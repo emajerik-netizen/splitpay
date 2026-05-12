@@ -624,7 +624,7 @@ body {
   cursor: pointer;
   padding: 0.7rem 0.8rem;
   border-radius: 0.9rem;
-  background: #ffffff;
+  background: var(--card);
 }
 
 .expense-row-compact {
@@ -1648,8 +1648,8 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  border: 1px solid #ebf0fb;
-  background: #fbfdff;
+  border: 1px solid var(--stroke);
+  background: var(--card);
   border-radius: 0.75rem;
   padding: 0.5rem 0.65rem;
 }
@@ -1909,12 +1909,12 @@ button:disabled {
   border: 1px solid var(--stroke);
   border-radius: 1rem;
   padding: 0.45rem 0.55rem;
-  background: #f8fbff;
+  background: var(--card);
 }
 
 .participant.active {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: #ebf3ff;
+  background: var(--accent-soft);
 }
 
 .participant input[type='checkbox'] {
@@ -1935,7 +1935,7 @@ button:disabled {
 }
 
 .split-switch button {
-  background: #edf3ff;
+  background: var(--accent-soft);
   color: var(--text);
 }
 
@@ -1955,8 +1955,8 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  border: 1px solid #ebf0fb;
-  background: #fbfdff;
+  border: 1px solid var(--stroke);
+  background: var(--card);
   border-radius: 0.75rem;
   padding: 0.5rem 0.65rem;
 }
@@ -2017,7 +2017,7 @@ button:disabled {
 .balance-main-card {
   border-radius: 1.1rem;
   border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 22%, var(--stroke));
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--card);
   box-shadow: 0 12px 24px color-mix(in srgb, var(--trip-accent, var(--accent)) 14%, transparent);
   padding: 1rem;
 }
@@ -2042,7 +2042,7 @@ button:disabled {
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.2rem;
-  border-bottom: 1px solid #edf2fb;
+  border-bottom: 1px solid var(--stroke);
 }
 
 .balance-transfer-row:last-child {
@@ -2111,8 +2111,8 @@ button:disabled {
 .balance-total-card {
   margin-top: 0.7rem;
   border-radius: 0.95rem;
-  border: 1px solid #edf2fb;
-  background: #ffffff;
+  border: 1px solid var(--stroke);
+  background: var(--card);
   padding: 0.8rem;
   text-align: center;
 }
@@ -3464,7 +3464,7 @@ button:disabled {
 
 .expense-history-row {
   align-items: flex-start;
-  background: #ffffff;
+  background: var(--card);
   border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 20%, var(--stroke));
 }
 
@@ -3566,7 +3566,7 @@ button:disabled {
   padding: 0.4rem 0.7rem;
   border-radius: 0.65rem;
   border: 1px solid var(--stroke);
-  background: #fff;
+  background: var(--card);
   color: var(--text);
 }
 
@@ -3575,7 +3575,7 @@ button:disabled {
   padding: 0.4rem 0.5rem;
   border-radius: 0.65rem;
   border: 1px solid var(--stroke);
-  background: #fff;
+  background: var(--card);
   color: var(--text);
   white-space: nowrap;
 }
@@ -3613,7 +3613,7 @@ button:disabled {
   padding: 0.35rem 0.75rem;
   border-radius: 0.6rem;
   border: 1.5px solid var(--stroke);
-  background: #f8faff;
+  background: var(--card);
   color: var(--text);
   cursor: pointer;
   white-space: nowrap;
@@ -3667,7 +3667,7 @@ button:disabled {
   cursor: pointer;
   text-align: center;
   width: 100%;
-  background: #f8faff;
+  background: var(--card);
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -3740,7 +3740,7 @@ button:disabled {
   padding: 0.35rem 0.5rem;
   border-radius: 0.6rem;
   border: 1px solid var(--stroke);
-  background: #fff;
+  background: var(--card);
   font-size: 0.88rem;
 }
 
@@ -3761,7 +3761,7 @@ button:disabled {
   padding: 0.2rem 0.4rem;
   border-radius: 0.45rem;
   border: 1px solid var(--stroke);
-  background: #f8faff;
+  background: var(--bg-3);
   max-width: 120px;
 }
 
@@ -3769,7 +3769,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: #f8faff;
+  background: var(--bg-3);
   border-radius: 0.7rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.88rem;
@@ -4229,4 +4229,109 @@ button:disabled {
   font-weight: 600;
   padding: 0.45rem 1rem;
   letter-spacing: 0.01em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   COMPREHENSIVE DARK MODE — trip sections, modals, receipts, badges
+   ───────────────────────────────────────────────────────────────────────── */
+:is([data-theme="dark"], :root:not([data-theme="light"]):has(body)) .expenses-list-panel,
+[data-theme="dark"] .expenses-list-panel { background: var(--bg-2); border-color: var(--stroke); }
+
+[data-theme="dark"] .expense-detail-summary { background: var(--card); border-color: var(--stroke); }
+[data-theme="dark"] .expense-detail-amount { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--stroke); }
+[data-theme="dark"] .expense-actions strong { color: var(--accent-strong); }
+
+[data-theme="dark"] .balance-segmented { background: var(--bg-3); border-color: var(--stroke); }
+
+[data-theme="dark"] .invite-code-box { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .qr-share-box { background: var(--card); border-color: var(--stroke); }
+[data-theme="dark"] .qr-share-box svg { background: var(--card); }
+[data-theme="dark"] .share-action-btn { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+[data-theme="dark"] .share-action-btn:hover { background: var(--bg-2); }
+
+[data-theme="dark"] .pill { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .trip-chip { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .member-avatar-bubble { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .member-show-all-btn { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .member-add-notice { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .member-history-chip { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+
+[data-theme="dark"] .expense-date-chip { background: var(--bg-3); color: var(--muted); }
+[data-theme="dark"] .beta-badge { background: var(--bg-3); color: var(--accent); }
+
+[data-theme="dark"] .expense-open-modal-btn {
+  background: var(--bg-3);
+  color: var(--accent);
+  border-color: var(--stroke);
+  box-shadow: none;
+}
+[data-theme="dark"] .expense-open-modal-btn:hover { background: var(--bg-2); }
+[data-theme="dark"] .expense-row-compact:hover { background: var(--bg-2); }
+
+[data-theme="dark"] .trip-theme .screen-pill { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .trip-theme .ghost { background: var(--bg-3); color: var(--accent-strong); box-shadow: none; }
+[data-theme="dark"] .trip-theme .mini-panel { background: var(--bg-3); }
+[data-theme="dark"] .trip-theme .ghost:hover { background: var(--bg-2); }
+
+[data-theme="dark"] .close-trip-btn { background: #2a1800; border-color: #6b3a00; color: #ffcc80; }
+[data-theme="dark"] .close-trip-btn:hover { background: #3a2200; border-color: #8b4d00; }
+[data-theme="dark"] .reopen-trip-btn { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+[data-theme="dark"] .reopen-trip-btn:hover { background: var(--bg-2); }
+
+[data-theme="dark"] .auth-switch-card { background: var(--card); border-color: var(--stroke); }
+[data-theme="dark"] .invite-auth-banner { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .google-btn { background: var(--bg-3); color: var(--text); border-color: var(--stroke); box-shadow: none; }
+[data-theme="dark"] .google-mark { background: var(--bg-2); }
+
+[data-theme="dark"] .admin-textarea { background: var(--bg-3) !important; }
+
+/* Category badges — dark variants */
+[data-theme="dark"] .category-jedlo      { background: #1a2e1c; color: #81c784; }
+[data-theme="dark"] .category-doprava    { background: #162030; color: #64b5f6; }
+[data-theme="dark"] .category-ubytovanie { background: #231527; color: #ce93d8; }
+[data-theme="dark"] .category-zabava     { background: #2a1a08; color: #ffa726; }
+[data-theme="dark"] .category-nakupy     { background: #0d2420; color: #4db6ac; }
+[data-theme="dark"] .category-ostatne    { background: #1e2028; color: #9e9e9e; }
+[data-theme="dark"] .category-zdravie    { background: #2a0e14; color: #ef9a9a; }
+[data-theme="dark"] .category-sport      { background: #1a2e1c; color: #a5d6a7; }
+[data-theme="dark"] .category-kultura    { background: #1a1c30; color: #9fa8da; }
+[data-theme="dark"] .category-technika   { background: #0d2420; color: #80cbc4; }
+
+/* Mirror all the above for system dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .expenses-list-panel { background: var(--bg-2); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .expense-detail-summary { background: var(--card); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .expense-detail-amount { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .expense-actions strong { color: var(--accent-strong); }
+  :root:not([data-theme="light"]) .balance-segmented { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .invite-code-box { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .qr-share-box { background: var(--card); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .qr-share-box svg { background: var(--card); }
+  :root:not([data-theme="light"]) .share-action-btn { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+  :root:not([data-theme="light"]) .pill { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .trip-chip { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .member-avatar-bubble { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .member-show-all-btn { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .member-add-notice { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .member-history-chip { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+  :root:not([data-theme="light"]) .expense-date-chip { background: var(--bg-3); color: var(--muted); }
+  :root:not([data-theme="light"]) .beta-badge { background: var(--bg-3); color: var(--accent); }
+  :root:not([data-theme="light"]) .expense-open-modal-btn { background: var(--bg-3); color: var(--accent); border-color: var(--stroke); box-shadow: none; }
+  :root:not([data-theme="light"]) .trip-theme .screen-pill { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .trip-theme .ghost { background: var(--bg-3); color: var(--accent-strong); }
+  :root:not([data-theme="light"]) .trip-theme .mini-panel { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .close-trip-btn { background: #2a1800; border-color: #6b3a00; color: #ffcc80; }
+  :root:not([data-theme="light"]) .reopen-trip-btn { background: var(--bg-3); border-color: var(--stroke); color: var(--text); }
+  :root:not([data-theme="light"]) .invite-auth-banner { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .google-btn { background: var(--bg-3); color: var(--text); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .category-jedlo      { background: #1a2e1c; color: #81c784; }
+  :root:not([data-theme="light"]) .category-doprava    { background: #162030; color: #64b5f6; }
+  :root:not([data-theme="light"]) .category-ubytovanie { background: #231527; color: #ce93d8; }
+  :root:not([data-theme="light"]) .category-zabava     { background: #2a1a08; color: #ffa726; }
+  :root:not([data-theme="light"]) .category-nakupy     { background: #0d2420; color: #4db6ac; }
+  :root:not([data-theme="light"]) .category-ostatne    { background: #1e2028; color: #9e9e9e; }
+  :root:not([data-theme="light"]) .category-zdravie    { background: #2a0e14; color: #ef9a9a; }
+  :root:not([data-theme="light"]) .category-sport      { background: #1a2e1c; color: #a5d6a7; }
+  :root:not([data-theme="light"]) .category-kultura    { background: #1a1c30; color: #9fa8da; }
+  :root:not([data-theme="light"]) .category-technika   { background: #0d2420; color: #80cbc4; }
 }
