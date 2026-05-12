@@ -2214,7 +2214,7 @@ export default function SplitPayWebApp() {
 
       await Promise.all(
         syncableTrips.map(async (trip) => {
-          const { error: syncError } = await supabaseClient.rpc('sync_trip_state_by_invite_code', {
+          const { data: syncData2, error: syncError } = await supabaseClient.rpc('sync_trip_state_by_invite_code', {
             p_invite_code: trip.inviteCode,
             p_trip: trip,
           });
@@ -2229,6 +2229,12 @@ export default function SplitPayWebApp() {
 
           if (syncError) {
             console.error('Trip propagation sync failed:', syncError.message);
+            return;
+          }
+
+          const rpcResult2 = syncData2 as { error?: string; success?: boolean } | null;
+          if (rpcResult2?.error) {
+            console.warn('Trip propagation RPC error:', rpcResult2.error);
             return;
           }
 
@@ -3164,9 +3170,21 @@ export default function SplitPayWebApp() {
         const sharedSerialized = JSON.stringify(sharedTrip);
         if (existingSerialized === sharedSerialized) return prev;
 
+        // Merge: keep any locally-added expenses not yet propagated to Supabase.
+        // Without this guard, a 2.5s poll arriving before the async write completes
+        // silently discards a freshly-created expense.
+        const sharedIds = new Set((sharedTrip.expenses || []).map((e) => e.id));
+        const localOnlyActive = (existing.expenses || []).filter(
+          (e) => !e.deletedAt && !sharedIds.has(e.id)
+        );
+        const mergedTrip: Trip =
+          localOnlyActive.length > 0
+            ? { ...sharedTrip, expenses: [...localOnlyActive, ...(sharedTrip.expenses || [])] }
+            : sharedTrip;
+
         skipNextSaveRef.current = true;
         const next = [...prev];
-        next[idx] = sharedTrip;
+        next[idx] = mergedTrip;
         return next;
       });
     };
@@ -4472,7 +4490,7 @@ export default function SplitPayWebApp() {
   async function propagateTripStateImmediately(trip: Trip) {
     if (!supabase || !canSyncWithDb || !trip.inviteCode) return;
 
-    const { error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
+    const { data: syncData, error: syncError } = await supabase.rpc('sync_trip_state_by_invite_code', {
       p_invite_code: trip.inviteCode,
       p_trip: trip,
     });
@@ -4487,6 +4505,15 @@ export default function SplitPayWebApp() {
 
     if (syncError) {
       console.error('Immediate trip propagation failed:', syncError.message);
+      return;
+    }
+
+    // The RPC returns a JSON-level error (e.g. 'forbidden') on HTTP 200 when the
+    // caller's trip_states row doesn't yet contain this trip. Don't mark as synced
+    // in that case — the AutoSave will write it on the next cycle.
+    const rpcResult = syncData as { error?: string; success?: boolean } | null;
+    if (rpcResult?.error) {
+      console.warn('Immediate trip propagation RPC error:', rpcResult.error);
       return;
     }
 
@@ -4911,6 +4938,11 @@ export default function SplitPayWebApp() {
     }));
 
     setShowExpenseModal(false);
+    setReceiptStep(null);
+    setReceiptImagePreview(null);
+    setReceiptItems([]);
+    setReceiptMerchant('');
+    setReceiptCategory('');
     closeExpenseDetail();
   }
 

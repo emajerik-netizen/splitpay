@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>IG Post 2 – Items assigned</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px; height: 1350px;
+    background: linear-gradient(150deg, #0a0e1a 0%, #0d1220 45%, #111827 100%);
+    font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+    overflow: hidden; position: relative;
+  }
+
+  .glow-1 { position: absolute; width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(44,121,246,0.14) 0%, transparent 70%);
+    top: -150px; right: -150px; }
+  .glow-2 { position: absolute; width: 400px; height: 400px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
+    bottom: 60px; left: -60px; }
+
+  /* Brand strip at top */
+  .top-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 90px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 70px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 48px; height: 48px; border-radius: 13px;
+    background: linear-gradient(135deg, #2c79f6, #1a5cc8);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    box-shadow: 0 6px 20px rgba(44,121,246,0.4);
+  }
+  .brand-name { font-size: 20px; font-weight: 800; color: #e8edf8; letter-spacing: 0.06em; text-transform: uppercase; }
+  .step-badge {
+    background: rgba(44,121,246,0.15); border: 1px solid rgba(44,121,246,0.35);
+    border-radius: 999px; padding: 6px 16px; font-size: 13px; font-weight: 700; color: #6ba3f5;
+  }
+
+  /* Two phones side by side - BEFORE / AFTER */
+  .phones-wrap {
+    position: absolute; top: 102px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 28px; align-items: flex-start;
+  }
+
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .phone-label {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 16px; border-radius: 999px;
+  }
+  .phone-label.before { color: #8899bb; background: rgba(136,153,187,0.12); border: 1px solid rgba(136,153,187,0.2); }
+  .phone-label.after { color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); }
+
+  .phone {
+    width: 290px; height: 620px;
+    background: #141820;
+    border-radius: 40px;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .phone-notch { width: 90px; height: 24px; background: #141820; border-radius: 0 0 16px 16px; margin: 0 auto; }
+  .phone-screen { padding: 0 14px; height: calc(100% - 24px); overflow: hidden; }
+
+  .status-bar { display: flex; justify-content: space-between; padding: 4px 2px 8px; font-size: 11px; font-weight: 600; color: #e8edf8; }
+
+  /* ── Before phone content ── */
+  .expense-form-preview { display: flex; flex-direction: column; gap: 8px; }
+  .modal-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6ba3f5; margin-bottom: 2px; }
+  .modal-title { font-size: 16px; font-weight: 800; color: #e8edf8; margin-bottom: 10px; }
+
+  .scan-btn-before {
+    display: flex; align-items: center; gap: 6px;
+    background: #1e2535; border: 1px solid #2a3550; border-radius: 10px;
+    padding: 9px 12px; font-size: 12px; color: #e8edf8; font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .cam-icon { font-size: 16px; }
+
+  .empty-field {
+    background: #1e2535; border: 1px solid #2a3550; border-radius: 9px;
+    padding: 8px 10px; font-size: 12px; color: #3a4560;
+    height: 35px; display: flex; align-items: center;
+  }
+  .f-label { font-size: 10px; font-weight: 700; color: #6b7a9a; margin-bottom: 4px; }
+  .f-row { display: flex; gap: 7px; }
+  .f-col { flex: 1; }
+
+  .participants-empty { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .p-chip { padding: 5px 9px; border-radius: 999px; font-size: 11px; border: 1px solid #2a3550; background: #1e2535; color: #3a4560; }
+
+  .manual-notice {
+    text-align: center; margin-top: 10px; font-size: 11px; color: #3a4560;
+    padding: 8px; border: 1px dashed #2a3550; border-radius: 8px;
+  }
+
+  /* ── After phone content ── */
+  .success-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .success-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+  }
+  .success-title { font-size: 15px; font-weight: 800; color: #e8edf8; }
+  .success-sub { font-size: 10px; color: #34d399; font-weight: 600; }
+
+  .merchant-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(44,121,246,0.15); border: 1px solid rgba(44,121,246,0.3);
+    border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700;
+    color: #6ba3f5; margin-bottom: 10px;
+  }
+
+  .items-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .item-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1a2030; border: 1px solid #2a3550; border-radius: 9px;
+    padding: 7px 10px;
+  }
+  .item-name { font-size: 11px; color: #c8d4ee; flex: 1; }
+  .item-price { font-size: 12px; font-weight: 800; color: #e8edf8; margin: 0 8px; }
+  .item-assign {
+    background: #1e2535; border: 1px solid #2a3550; border-radius: 6px;
+    padding: 3px 8px; font-size: 10px; color: #6ba3f5; font-weight: 600;
+  }
+  .item-row.highlighted { background: rgba(44,121,246,0.1); border-color: rgba(44,121,246,0.3); }
+
+  .total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(44,121,246,0.12); border: 1px solid rgba(44,121,246,0.25);
+    border-radius: 10px; padding: 8px 10px; margin-bottom: 10px;
+  }
+  .total-label { font-size: 11px; font-weight: 700; color: #6ba3f5; }
+  .total-amount { font-size: 16px; font-weight: 900; color: #e8edf8; }
+
+  .cat-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #1a2e1c; color: #81c784; border-radius: 999px;
+    padding: 3px 9px; font-size: 10px; font-weight: 700; margin-bottom: 10px;
+  }
+
+  .cta-after {
+    width: 100%; padding: 11px; border-radius: 12px;
+    background: linear-gradient(135deg, #2c79f6, #1f67df);
+    color: #fff; font-size: 13px; font-weight: 800; text-align: center;
+    box-shadow: 0 6px 16px rgba(44,121,246,0.35);
+  }
+
+  /* Arrow between phones */
+  .arrow-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-top: 80px; gap: 8px;
+  }
+  .arrow-line {
+    width: 3px; height: 60px;
+    background: linear-gradient(180deg, transparent, #2c79f6, transparent);
+  }
+  .arrow-head { font-size: 28px; color: #2c79f6; }
+  .arrow-label { font-size: 11px; font-weight: 700; color: #4d8ff0; text-align: center; line-height: 1.3; }
+
+  /* Bottom section */
+  .bottom-section {
+    position: absolute; bottom: 44px; left: 0; right: 0;
+    padding: 0 70px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .bottom-text h2 { font-size: 32px; font-weight: 900; color: #e8edf8; line-height: 1.2; }
+  .bottom-text h2 span { color: #2c79f6; }
+  .bottom-text p { font-size: 16px; color: #8899bb; margin-top: 6px; line-height: 1.5; }
+
+  .stats-col { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .stat-item { text-align: right; }
+  .stat-num { font-size: 28px; font-weight: 900; color: #2c79f6; line-height: 1; }
+  .stat-desc { font-size: 12px; color: #6b7a9a; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="brand">
+      <div class="brand-icon">🧾</div>
+      <span class="brand-name">Split Pay</span>
+    </div>
+    <div class="step-badge">✨ AI Receipt Scanner</div>
+  </div>
+
+  <!-- Two phones -->
+  <div class="phones-wrap">
+
+    <!-- BEFORE -->
+    <div class="phone-wrap">
+      <div class="phone-label before">Bez scannera</div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>🔋</span></div>
+          <div class="expense-form-preview">
+            <div>
+              <div class="modal-eyebrow">Nový výdavok</div>
+              <div class="modal-title">Pridať výdavok</div>
+            </div>
+
+            <div class="f-col">
+              <div class="f-label">Názov výdavku</div>
+              <div class="empty-field">Zadaj ručne…</div>
+            </div>
+            <div class="f-row">
+              <div class="f-col">
+                <div class="f-label">Suma (€)</div>
+                <div class="empty-field">0,00</div>
+              </div>
+              <div class="f-col">
+                <div class="f-label">Kategória</div>
+                <div class="empty-field">Ostatné</div>
+              </div>
+            </div>
+
+            <div class="f-label" style="margin-top:4px">Platiteľ</div>
+            <div class="empty-field">Vyber…</div>
+
+            <div class="f-label" style="margin-top:4px">Účastníci</div>
+            <div class="participants-empty">
+              <div class="p-chip">Eugen</div>
+              <div class="p-chip">Martin</div>
+              <div class="p-chip">Katka</div>
+              <div class="p-chip">Tomáš</div>
+            </div>
+
+            <div class="manual-notice">✏️ Všetko treba zadať ručne</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow-wrap">
+      <div class="arrow-line"></div>
+      <div class="arrow-head">→</div>
+      <div class="arrow-label">AI<br>scan</div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="phone-wrap">
+      <div class="phone-label after">S AI scannerom</div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>🔋</span></div>
+
+          <div class="success-header">
+            <div class="success-icon">✓</div>
+            <div>
+              <div class="success-title">Blok naskenovaný</div>
+              <div class="success-sub">Rozpoznané za 2,3 s</div>
+            </div>
+          </div>
+
+          <div class="merchant-chip">🏪 Koliba Reštaurácia</div>
+
+          <div class="items-list">
+            <div class="item-row highlighted">
+              <div class="item-name">Kurací rezeň</div>
+              <div class="item-price">8,50€</div>
+              <div class="item-assign">Eugen</div>
+            </div>
+            <div class="item-row highlighted">
+              <div class="item-name">Cesnaková polievka</div>
+              <div class="item-price">4,20€</div>
+              <div class="item-assign">Martin</div>
+            </div>
+            <div class="item-row">
+              <div class="item-name">Víno biele 2dl</div>
+              <div class="item-price">3,80€</div>
+              <div class="item-assign">Katka</div>
+            </div>
+            <div class="item-row">
+              <div class="item-name">Kofola 0,5l</div>
+              <div class="item-price">1,90€</div>
+              <div class="item-assign">Tomáš</div>
+            </div>
+            <div class="item-row">
+              <div class="item-name">Čaj šípkový</div>
+              <div class="item-price">2,20€</div>
+              <div class="item-assign">Katka</div>
+            </div>
+          </div>
+
+          <div class="total-row">
+            <div class="total-label">Spolu</div>
+            <div class="total-amount">24,60 €</div>
+          </div>
+
+          <div class="cat-badge">🍽 jedlo · automaticky</div>
+
+          <div class="cta-after">✓ &nbsp;Pridať výdavok</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottom-section">
+    <div class="bottom-text">
+      <h2>Žiadne<br><span>ručné písanie.</span></h2>
+      <p>Odfot blok a Split Pay<br>priradí každú položku.</p>
+    </div>
+    <div class="stats-col">
+      <div class="stat-item">
+        <div class="stat-num">~3s</div>
+        <div class="stat-desc">čas skenovania</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-desc">bez zadávania ručne</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

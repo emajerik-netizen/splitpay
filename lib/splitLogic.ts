@@ -21,7 +21,7 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
 
   const norm = (s?: string) => (s || '').trim().toLowerCase();
 
-  // Build mapping: name -> id (if provided), id -> display name
+  // Build mapping: name -> balance-key, id -> display name
   const idByName = new Map<string, string>();
   const nameById = new Map<string, string>();
   const friendKeys: string[] = [];
@@ -43,17 +43,32 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
     }
   });
 
-  const resolveParticipantKey = (raw?: string) => {
+  // Resolve a raw string (id or name) to the balance-map key for that member.
+  const resolveParticipantKey = (raw?: string): string | null => {
     if (!raw) return null;
-    // If raw looks like an id present in nameById, prefer id
-    if (nameById.has(raw)) return raw;
-    // If raw matches a name, return associated id or name key
+    if (nameById.has(raw)) return raw;                  // raw is a recognised UUID
     const byName = idByName.get(norm(raw));
-    if (byName) return byName;
-    return raw;
+    if (byName) return byName;                          // raw matched a member name
+    return raw;                                         // last resort
   };
 
-  const safeNumber = (v: any) => {
+  // Like resolveParticipantKey but guarantees the returned key exists in balance.
+  // When an expense stores a UUID from a session that is not present in the current
+  // friends list (e.g. member entry has no id stored), fall back to the name-based
+  // key so the balance is always attributed to a recognised friend.
+  const resolveKnownKey = (idHint?: string | null, nameHint?: string): string | null => {
+    if (idHint) {
+      const k = resolveParticipantKey(idHint);
+      if (k && Object.prototype.hasOwnProperty.call(balance, k)) return k;
+    }
+    if (nameHint) {
+      const k = resolveParticipantKey(nameHint);
+      if (k && Object.prototype.hasOwnProperty.call(balance, k)) return k;
+    }
+    return null;
+  };
+
+  const safeNumber = (v: unknown) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   };
@@ -61,29 +76,60 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
   expenses.forEach((expense) => {
     const amount = safeNumber(expense.amount);
 
+    // ── Transfer (settlement payment) ──────────────────────────────────────
     if (expense.expenseType === 'transfer') {
-      const payerKey = expense.payerId ? expense.payerId : resolveParticipantKey(expense.payer);
-      const transferToKey = expense.transferToId ? expense.transferToId : resolveParticipantKey(expense.transferTo);
+      const payerKey = resolveKnownKey(expense.payerId, expense.payer);
+      const transferToKey = resolveKnownKey(expense.transferToId, expense.transferTo);
       if (!payerKey || !transferToKey) return;
       if (amount <= 0) return;
+      // Debtor (payer) clears debt → balance moves toward 0 (positive delta)
+      // Creditor (transferTo) is owed less → balance moves toward 0 (negative delta)
       balance[payerKey] = (balance[payerKey] || 0) + amount;
       balance[transferToKey] = (balance[transferToKey] || 0) - amount;
       return;
     }
 
+    // ── Resolve participants list ───────────────────────────────────────────
+    // Prefer participantIds when present; fall back to participants names; fall back to all friends.
     const participantsRaw = (expense.participantIds && expense.participantIds.length)
       ? expense.participantIds
       : (expense.participants && expense.participants.length ? expense.participants : friendKeys.slice());
 
-    const participants = participantsRaw.map(resolveParticipantKey).filter(Boolean) as string[];
+    // Resolve each raw value to a known balance key; skip any that can't be resolved.
+    const participants: string[] = participantsRaw
+      .map((raw) => {
+        const k = resolveParticipantKey(raw);
+        if (!k) return null;
+        if (Object.prototype.hasOwnProperty.call(balance, k)) return k;
+        // raw was not a recognised key — try the display-name lookup as a final fallback
+        const displayName = nameById.get(raw);
+        if (displayName) {
+          const byDisplay = resolveParticipantKey(displayName);
+          if (byDisplay && Object.prototype.hasOwnProperty.call(balance, byDisplay)) return byDisplay;
+        }
+        return null;
+      })
+      .filter((k): k is string => k !== null);
+
     if (!participants.length) return;
 
+    // ── Individual split ────────────────────────────────────────────────────
     if (expense.splitType === 'individual') {
       participantsRaw.forEach((raw) => {
         const key = resolveParticipantKey(raw);
         if (!key) return;
-        // participantAmounts may be keyed by name even when participantsRaw are IDs;
-        // fall back to looking up by display name via nameById
+        // Resolve to a known key with the same fallback used above
+        let knownKey = Object.prototype.hasOwnProperty.call(balance, key) ? key : null;
+        if (!knownKey) {
+          const displayName = nameById.get(raw);
+          if (displayName) {
+            const byDisplay = resolveParticipantKey(displayName);
+            if (byDisplay && Object.prototype.hasOwnProperty.call(balance, byDisplay)) knownKey = byDisplay;
+          }
+        }
+        if (!knownKey) return;
+
+        // participantAmounts may be keyed by name even when participantsRaw are IDs
         const displayName = nameById.get(raw) || nameById.get(key);
         const share = safeNumber(
           expense.participantAmounts?.[raw] ??
@@ -92,15 +138,17 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
           0
         );
         if (share === 0) return;
-        balance[key] = (balance[key] || 0) - share;
+        balance[knownKey] = (balance[knownKey] || 0) - share;
       });
-      const payerKey = expense.payerId ? expense.payerId : resolveParticipantKey(expense.payer) || friendKeys[0] || null;
+
+      const payerKey = resolveKnownKey(expense.payerId, expense.payer) ?? friendKeys[0] ?? null;
       if (payerKey) balance[payerKey] = (balance[payerKey] || 0) + amount;
       return;
     }
 
+    // ── Shares split ────────────────────────────────────────────────────────
     if (expense.splitType === 'shares') {
-      // participantWeights may be keyed by name even when participants are IDs; try displayName fallback
+      // participantWeights may be keyed by name even when participants are IDs
       const weights = participants.map((p) => {
         const displayName = nameById.get(p);
         return safeNumber(
@@ -115,17 +163,17 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
         const share = (amount * safeWeight) / totalWeight;
         balance[p] = (balance[p] || 0) - share;
       });
-      const payerKey = expense.payerId ? expense.payerId : resolveParticipantKey(expense.payer) || friendKeys[0] || null;
+      const payerKey = resolveKnownKey(expense.payerId, expense.payer) ?? friendKeys[0] ?? null;
       if (payerKey) balance[payerKey] = (balance[payerKey] || 0) + amount;
       return;
     }
 
-    // equal
+    // ── Equal split (default) ───────────────────────────────────────────────
     const share = amount / participants.length;
     participants.forEach((p) => {
       balance[p] = (balance[p] || 0) - share;
     });
-    const payerKey = expense.payerId ? expense.payerId : resolveParticipantKey(expense.payer) || friendKeys[0] || null;
+    const payerKey = resolveKnownKey(expense.payerId, expense.payer) ?? friendKeys[0] ?? null;
     if (payerKey) balance[payerKey] = (balance[payerKey] || 0) + amount;
   });
 
@@ -168,13 +216,8 @@ export function settleDebts(balanceMap: BalanceMap) {
       });
     }
 
-    debtors[i].amount = Math.round(
-      (debtors[i].amount - roundedPay) * 100
-    ) / 100;
-
-    creditors[j].amount = Math.round(
-      (creditors[j].amount - roundedPay) * 100
-    ) / 100;
+    debtors[i].amount = Math.round((debtors[i].amount - roundedPay) * 100) / 100;
+    creditors[j].amount = Math.round((creditors[j].amount - roundedPay) * 100) / 100;
 
     if (debtors[i].amount <= 0.01) i++;
     if (creditors[j].amount <= 0.01) j++;
