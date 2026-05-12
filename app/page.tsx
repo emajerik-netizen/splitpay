@@ -7554,6 +7554,7 @@ export default function SplitPayWebApp() {
                           placeholder={t('amountPlaceholder')}
                         />
                       )}
+                      <label className="field-label">{t('paidBy')}</label>
                       <select
                         value={safePayer}
                         onChange={(event) => setDraft((prev) => ({ ...prev, payer: event.target.value }))}

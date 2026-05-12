@@ -1016,6 +1016,13 @@ body {
   gap: 0.6rem;
 }
 
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: -0.2rem;
+}
+
 .inline-form {
   margin-bottom: 0.8rem;
 }
