@@ -169,7 +169,7 @@ body {
 
 .field-block span {
   font-weight: 700;
-  color: #132e62;
+  color: var(--text);
 }
 
 .auth-divider {
@@ -3909,7 +3909,12 @@ button:disabled {
   border-color: var(--stroke);
 }
 [data-theme="dark"] .ai-summary-text { color: var(--text); }
-[data-theme="dark"] .balance-total-card { background: var(--bg-3); }
+[data-theme="dark"] .balance-total-card { background: var(--bg-3); border-color: var(--stroke); }
+[data-theme="dark"] .hero-metrics span {
+  background: var(--bg-3);
+  border-color: var(--stroke);
+  color: var(--text);
+}
 [data-theme="dark"] .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
 [data-theme="dark"] .hero-panel {
   background: var(--card);
@@ -4024,4 +4029,13 @@ button:disabled {
   }
   :root:not([data-theme="light"]) .ghost:hover { background: var(--bg-2); }
   :root:not([data-theme="light"]) .modal-card { background: var(--card); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .hero-metrics span {
+    background: var(--bg-3);
+    border-color: var(--stroke);
+    color: var(--text);
+  }
+  :root:not([data-theme="light"]) .balance-total-card {
+    background: var(--bg-3);
+    border-color: var(--stroke);
+  }
 }

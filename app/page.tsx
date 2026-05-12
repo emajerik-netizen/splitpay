@@ -533,7 +533,7 @@ const T = {
     categoryKultura: 'Kultúra',
     categoryTech: 'Technika',
     categoryOther: 'Ostatné',
-    categoryBreakdown: 'Výdavky podľa kategórií',
+    categoryBreakdown: 'Kategórie výdavkov',
   },
   en: {
     resumingSession: 'Resuming session',
@@ -927,7 +927,7 @@ const T = {
     categoryKultura: 'Culture',
     categoryTech: 'Tech',
     categoryOther: 'Other',
-    categoryBreakdown: 'Expenses by category',
+    categoryBreakdown: 'Expense categories',
   },
 } as const;
 
