@@ -136,6 +136,7 @@ const STARTUP_SEEN_KEY = 'splitpay-web-startup-seen-v1';
 const INVITE_PENDING_KEY = 'splitpay-invite-pending';
 const LANG_KEY = 'splitpay-lang';
 const STALE_TRIP_WARNING_ACK_KEY = 'splitpay-stale-trip-warning-acks-v1';
+const THEME_KEY = 'splitpay-theme';
 
 type Lang = 'sk' | 'en';
 
@@ -1533,6 +1534,12 @@ export default function SplitPayWebApp() {
   const [receiptCategory, setReceiptCategory] = useState('');
   const [isClosingTrip, setIsClosingTrip] = useState(false);
   const [isCurrencyConverting, setIsCurrencyConverting] = useState(false);
+  const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    return (window.localStorage.getItem(THEME_KEY) as 'auto' | 'light' | 'dark') || 'auto';
+  });
+  const [editingCategoryExpenseId, setEditingCategoryExpenseId] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ title: string; amount: number; date: string } | null>(null);
     const [lang, setLang] = useState<Lang>(() => {
       if (typeof window === 'undefined') return 'sk';
       return (window.localStorage.getItem(LANG_KEY) as Lang) || 'sk';
@@ -1605,6 +1612,14 @@ export default function SplitPayWebApp() {
   useEffect(() => {
     window.localStorage.setItem(LANG_KEY, lang);
   }, [lang]);
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_KEY, theme);
+    const root = document.documentElement;
+    if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+    else if (theme === 'light') root.setAttribute('data-theme', 'light');
+    else root.removeAttribute('data-theme');
+  }, [theme]);
 
   useEffect(() => {
     if (!showStartup) return;
@@ -4735,6 +4750,26 @@ export default function SplitPayWebApp() {
       }
     }
 
+    // Duplicate detection (skip when editing an existing expense)
+    if (!editingExpenseId && draft.expenseType !== 'transfer') {
+      const checkAmount = draft.splitType === 'individual'
+        ? safeParticipants.reduce((s, n) => s + (parseMoneyInput(draft.participantAmounts?.[n] || 0) || 0), 0)
+        : parseMoneyInput(draft.amount);
+      const checkDate = draft.date || new Date().toISOString().slice(0, 10);
+      const normTitle = (draft.title || '').trim().toLowerCase();
+      const duplicate = normalizedExpenses.find((e) => {
+        const sameAmount = Math.abs(e.amount - checkAmount) < 0.01;
+        const sameDate = e.date === checkDate;
+        const similarTitle = normTitle && e.title.toLowerCase() === normTitle;
+        return (sameAmount && sameDate) || (similarTitle && sameAmount);
+      });
+      if (duplicate && !duplicateWarning) {
+        setDuplicateWarning({ title: duplicate.title, amount: duplicate.amount, date: duplicate.date || '' });
+        return;
+      }
+    }
+    setDuplicateWarning(null);
+
     // For 'individual' split, compute total from participantAmounts instead of relying on draft.amount
     let amount = parseMoneyInput(draft.amount);
     if (draft.splitType === 'individual') {
@@ -5098,6 +5133,14 @@ export default function SplitPayWebApp() {
   function handleReopenTrip() {
     if (!currentTrip || !currentTripOwnerIsSelf) return;
     updateCurrentTrip((trip) => ({ ...trip, status: 'active', aiSummary: null, closedAt: null }));
+  }
+
+  function updateExpenseCategory(expenseId: string, category: string) {
+    updateCurrentTrip((trip) => ({
+      ...trip,
+      expenses: trip.expenses.map((e) => e.id === expenseId ? { ...e, category } : e),
+    }));
+    setEditingCategoryExpenseId(null);
   }
 
   async function handleConvertToEur() {
@@ -5849,6 +5892,11 @@ export default function SplitPayWebApp() {
                 >
                   🇬🇧
                 </button>
+              </div>
+              <div className="theme-toggle-row">
+                <button type="button" className={`theme-btn${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme('light')} title="Light">☀️</button>
+                <button type="button" className={`theme-btn${theme === 'auto' ? ' active' : ''}`} onClick={() => setTheme('auto')} title="Auto">⚙️</button>
+                <button type="button" className={`theme-btn${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme('dark')} title="Dark">🌙</button>
               </div>
             </div>
           </section>
@@ -7496,9 +7544,19 @@ export default function SplitPayWebApp() {
                         </>
                       )}
 
-                      <button type="submit" disabled={!canAddExpense}>
+                      {duplicateWarning ? (
+                        <div className="duplicate-warning">
+                          <p>{lang === 'sk' ? `Podobný výdavok už existuje: "${duplicateWarning.title}" (${eur(duplicateWarning.amount)})` : `Similar expense already exists: "${duplicateWarning.title}" (${eur(duplicateWarning.amount)})`}</p>
+                          <div className="duplicate-warning-btns">
+                            <button type="submit" className="ghost danger-btn">{lang === 'sk' ? 'Pridaj aj tak' : 'Add anyway'}</button>
+                            <button type="button" className="ghost" onClick={() => setDuplicateWarning(null)}>{lang === 'sk' ? 'Zrušiť' : 'Cancel'}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button type="submit" disabled={!canAddExpense}>
                           {editingExpenseId ? t('saveChanges') : t('addExpenseTitle')}
-                      </button>
+                        </button>
+                      )}
                       {editingExpenseId ? (
                           <button type="button" className="ghost" onClick={() => setEditingExpenseId(null)}>
                             {t('cancelEdit')}
@@ -7541,6 +7599,30 @@ export default function SplitPayWebApp() {
                         <p className="muted expense-detail-meta">
                           {t('participantsLabel')} {(selectedExpense.participants || []).map((name) => formatMemberName(memberNameOf(name))).join(', ')}
                         </p>
+                        {(() => {
+                          const cat = selectedExpense.category || inferCategory(selectedExpense.title);
+                          const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={12}/>, doprava:<Car size={12}/>, ubytovanie:<Bed size={12}/>, zabava:<PartyPopper size={12}/>, nakupy:<ShoppingBag size={12}/>, zdravie:<Heart size={12}/>, sport:<Dumbbell size={12}/>, kultura:<Music size={12}/>, technika:<Cpu size={12}/>, ostatne:<Package size={12}/> };
+                          const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther') };
+                          const allCats = ['jedlo','doprava','ubytovanie','zabava','nakupy','zdravie','sport','kultura','technika','ostatne'];
+                          return (
+                            <div className="expense-category-row">
+                              {editingCategoryExpenseId === selectedExpense.id ? (
+                                <div className="category-picker">
+                                  {allCats.map((c) => (
+                                    <button key={c} type="button" className={`category-badge category-${c}${c === cat ? ' category-selected' : ''}`} onClick={() => updateExpenseCategory(selectedExpense.id, c)}>
+                                      {iconMap[c]}{labelMap[c]}
+                                    </button>
+                                  ))}
+                                  <button type="button" className="ghost category-picker-cancel" onClick={() => setEditingCategoryExpenseId(null)}>✕</button>
+                                </div>
+                              ) : (
+                                <button type="button" className={`category-badge category-${cat} category-editable`} onClick={() => setEditingCategoryExpenseId(selectedExpense.id)} title={lang === 'sk' ? 'Zmeniť kategóriu' : 'Change category'}>
+                                  {iconMap[cat]}{labelMap[cat] || cat} ✎
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <div className="expense-detail-actions">
                           <button type="button" className="ghost" onClick={() => editExpense(selectedExpense.id)}>
                             {t('editBtn')}
