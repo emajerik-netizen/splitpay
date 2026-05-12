@@ -305,25 +305,51 @@ body {
   margin: 0;
 }
 
+.hero-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .hero-brand {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.65rem;
 }
 
 .hero-brand > div {
   min-width: 0;
 }
 
-.hero-brand .eyebrow {
-  margin-bottom: 0.35rem;
+.hero-app-name {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hero-title {
+  font-size: clamp(1.65rem, 5vw, 2.8rem);
+  line-height: 1.12;
+  margin: 0.6rem 0 0.4rem;
+  font-weight: 800;
+}
+
+.hero-desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 0.1rem;
+  max-width: 58ch;
 }
 
 .hero-app-icon {
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  box-shadow: 0 10px 18px rgba(31, 103, 223, 0.2);
+  box-shadow: 0 8px 16px rgba(31, 103, 223, 0.18);
   background: #ffffff;
+  flex-shrink: 0;
 }
 
 .compact-brand {
@@ -333,17 +359,76 @@ body {
 .hero-metrics {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 0.9rem;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
 }
 
 .hero-metrics span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   border-radius: 999px;
-  padding: 0.38rem 0.7rem;
-  font-size: 0.82rem;
-  color: #22427c;
-  border: 1px solid #d6e3ff;
-  background: #eef4ff;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--stroke));
+  background: var(--accent-soft);
+}
+
+.hero-metrics span svg {
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.hero-user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--stroke);
+}
+
+.hero-user-avatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hero-user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archived-toggle-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.archived-toggle-compact input {
+  width: 0.9rem;
+  height: 0.9rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .hero p {

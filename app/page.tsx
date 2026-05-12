@@ -6329,31 +6329,30 @@ export default function SplitPayWebApp() {
             activeAppScreen === 'trip-detail' && !showTripDetail ? null : !showTripDetail ? (
             <>
               <section className="hero hero-panel">
-                <div>
+                <div className="hero-top-row">
                   <div className="hero-brand">
-                    <Image src="/icon.png" alt="Split Pay" width={56} height={56} className="hero-app-icon" />
-                    <div>
-                      <p className="eyebrow">{t('appName')}</p>
-                        <h1>{t('heroTitle')}</h1>
-                    </div>
+                    <Image src="/icon.png" alt="Split Pay" width={48} height={48} className="hero-app-icon" />
+                    <span className="hero-app-name">Split Pay</span>
                   </div>
-                    <p>{t('heroDesc')}</p>
-                  <div className="hero-metrics">
-                      <span>{t('quickInvites')}</span>
-                      <span>{t('fairSplit')}</span>
-                      <span>{t('instantBalance')}</span>
-                  </div>
-                </div>
-                <div className="hero-actions">
-                    <p><span className="muted">{t('loggedInEmail')}</span> <strong>{appSession?.name || appSession?.email}</strong></p>
-                  <label className="muted archived-toggle">
+                  <label className="archived-toggle-compact">
                     <input
                       type="checkbox"
                       checked={showArchived}
                       onChange={(event) => setShowArchived(event.target.checked)}
                     />
-                      {t('showArchived')}
+                    <span>{t('showArchived')}</span>
                   </label>
+                </div>
+                <h1 className="hero-title">{t('heroTitle')}</h1>
+                <p className="hero-desc">{t('heroDesc')}</p>
+                <div className="hero-metrics">
+                  <span><QrCode size={12} />{t('quickInvites')}</span>
+                  <span><Users size={12} />{t('fairSplit')}</span>
+                  <span><Coins size={12} />{t('instantBalance')}</span>
+                </div>
+                <div className="hero-user-row">
+                  <span className="hero-user-avatar">{(appSession?.name || appSession?.email || '?')[0].toUpperCase()}</span>
+                  <span className="hero-user-name">{appSession?.name || appSession?.email}</span>
                 </div>
                 {infoMessage ? <p className="info-banner hero-info">{infoMessage}</p> : null}
               </section>
