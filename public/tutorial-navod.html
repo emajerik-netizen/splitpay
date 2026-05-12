@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Split Pay – Ako začať</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --blue: #2c79f6;
+  --blue-d: #1f67df;
+  --blue-soft: rgba(44,121,246,0.12);
+  --blue-border: rgba(44,121,246,0.32);
+  --indigo: #6366f1;
+  --green: #22c55e;
+  --bg:   #08090e;
+  --bg2:  #0f1117;
+  --bg3:  #161b27;
+  --card: #1a2030;
+  --card2:#1e2535;
+  --stroke: #2a3550;
+  --text: #e8edf8;
+  --muted: #7a8aaa;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 2rem;
+}
+
+/* ─── Header ─── */
+.page-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 2.2rem 1rem 0;
+}
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--blue), #1a5cc8);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 6px 18px rgba(44,121,246,0.45);
+}
+.brand-name {
+  font-size: 20px; font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.page-subtitle {
+  font-size: 12px; font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ─── Step caption ─── */
+.step-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 1.2rem 1.5rem 0.6rem;
+  min-height: 80px;
+}
+.step-badge {
+  font-size: 11px; font-weight: 800;
+  color: var(--blue);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.step-title {
+  font-size: 24px; font-weight: 900;
+  line-height: 1.18;
+  transition: opacity 0.3s;
+}
+.step-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+  transition: opacity 0.3s;
+}
+
+/* ─── Phone ─── */
+.phone-wrap {
+  position: relative;
+}
+.phone-glow {
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(ellipse at 50% 60%, rgba(44,121,246,0.18) 0%, transparent 65%);
+  pointer-events: none;
+}
+.phone {
+  position: relative;
+  width: 312px;
+  height: 620px;
+  background: var(--bg2);
+  border-radius: 46px;
+  border: 2px solid rgba(255,255,255,0.07);
+  box-shadow:
+    0 0 0 1px rgba(44,121,246,0.15),
+    0 40px 80px rgba(0,0,0,0.65),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.notch {
+  width: 88px; height: 22px;
+  background: var(--bg);
+  border-radius: 0 0 13px 13px;
+  margin: 0 auto;
+}
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 20px 3px;
+  font-size: 11px; font-weight: 600;
+  color: var(--muted);
+}
+.phone-screen {
+  position: relative;
+  height: calc(100% - 34px);
+  overflow: hidden;
+}
+
+/* ─── Screens ─── */
+.screen {
+  position: absolute;
+  inset: 0;
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  opacity: 0;
+  transform: translateX(28px);
+  transition: opacity 0.42s ease, transform 0.42s ease;
+  pointer-events: none;
+  overflow: hidden;
+}
+.screen.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.screen.exit {
+  opacity: 0;
+  transform: translateX(-28px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* ─── Shared UI components inside phone ─── */
+.ph-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0 3px;
+  flex-shrink: 0;
+}
+.ph-back {
+  font-size: 13px; font-weight: 600;
+  color: var(--blue);
+}
+.ph-modal-title {
+  font-size: 15px; font-weight: 800;
+}
+.ph-spacer { width: 40px; }
+
+.ph-logo {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 15px; font-weight: 800;
+}
+.ph-logo-icon {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, var(--blue), #1a5cc8);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+.ph-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--indigo));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+
+.ph-label {
+  font-size: 10.5px; font-weight: 700;
+  color: var(--muted);
+  margin-bottom: -5px;
+  flex-shrink: 0;
+}
+.ph-input {
+  background: var(--card2);
+  border: 1.5px solid var(--stroke);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+  width: 100%;
+  min-height: 36px;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ph-input.focus {
+  border-color: var(--blue-border);
+  background: rgba(44,121,246,0.07);
+}
+.ph-input.done {
+  border-color: rgba(44,121,246,0.35);
+  background: rgba(44,121,246,0.06);
+}
+.ph-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ph-row > * { flex: 1; min-width: 0; }
+
+.ph-btn {
+  background: linear-gradient(135deg, var(--blue), var(--blue-d));
+  color: #fff;
+  border-radius: 13px;
+  padding: 12px;
+  font-size: 14px; font-weight: 800;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(44,121,246,0.38);
+  transition: transform 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+.ph-btn.tap {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.ph-section {
+  font-size: 10px; font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.ph-card {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: 13px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.ph-chip-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  min-height: 28px;
+}
+.ph-chip {
+  display: inline-flex; align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+  background: var(--blue-soft);
+  border: 1px solid var(--blue-border);
+  color: #6ba3f5;
+  transform-origin: center;
+}
+.ph-chip.pop {
+  animation: chipPop 0.38s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes chipPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Screen 1 specific ─── */
+.empty-area {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 9px; text-align: center; padding: 12px;
+}
+.empty-emoji { font-size: 38px; opacity: 0.4; }
+.empty-hint  { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+.fab {
+  margin-top: auto;
+  background: linear-gradient(135deg, var(--blue), var(--blue-d));
+  color: #fff;
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 15px; font-weight: 800;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(44,121,246,0.42);
+  flex-shrink: 0;
+}
+.fab.pulse { animation: fabPulse 1.6s ease-in-out infinite; }
+.fab.tap   { transform: scale(0.95); opacity: 0.8; transition: transform 0.12s, opacity 0.12s; }
+@keyframes fabPulse {
+  0%,100% { box-shadow: 0 8px 24px rgba(44,121,246,0.42); }
+  50%     { box-shadow: 0 10px 38px rgba(44,121,246,0.72); transform: scale(1.015); }
+}
+
+/* ─── Screen 4: Invite ─── */
+.invite-box {
+  background: var(--card2);
+  border: 1.5px solid var(--blue-border);
+  border-radius: 11px;
+  padding: 9px 12px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.invite-url {
+  font-size: 11px; font-weight: 600; color: var(--blue);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1;
+}
+.copy-btn {
+  background: var(--blue);
+  color: #fff;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 10.5px; font-weight: 700;
+  white-space: nowrap; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.copy-btn.ok { background: var(--green); }
+
+.share-row {
+  display: flex; gap: 8px; justify-content: center;
+  flex-shrink: 0;
+}
+.share-icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  background: var(--card2); border: 1px solid var(--stroke);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+/* ─── Screen 5: amount big ─── */
+.amount-big {
+  font-size: 30px; font-weight: 900;
+  color: var(--text);
+  text-align: center;
+  flex-shrink: 0;
+}
+.amount-big .hl { color: var(--blue); }
+
+.success-box {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  padding: 16px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.28);
+  border-radius: 15px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.success-emo { font-size: 28px; }
+.success-ttl { font-size: 14px; font-weight: 800; color: var(--green); }
+.success-sub { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+
+/* ─── Fade-in utility ─── */
+.fi { opacity: 0; }
+.fi.show { animation: fadeUp 0.38s ease both; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Typing caret ─── */
+.caret::after {
+  content: '|';
+  animation: blinkCaret 0.65s step-start infinite;
+  color: var(--blue); margin-left: 1px;
+}
+@keyframes blinkCaret { 50% { opacity: 0; } }
+
+/* ─── Progress & nav ─── */
+.nav-area {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 14px;
+  padding: 1.1rem 1rem 0;
+}
+.prog-track {
+  width: 260px; height: 3px;
+  background: var(--stroke); border-radius: 2px; overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--indigo));
+  border-radius: 2px;
+  transition: width 0.08s linear;
+  width: 0%;
+}
+
+.dots {
+  display: flex; gap: 22px; align-items: flex-start;
+}
+.dot-item {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  cursor: pointer;
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--stroke);
+  transition: all 0.3s ease;
+}
+.dot-item.on  .dot { background: var(--blue); width: 22px; border-radius: 4px; box-shadow: 0 0 10px rgba(44,121,246,0.5); }
+.dot-item.done .dot { background: rgba(44,121,246,0.42); }
+.dot-lbl {
+  font-size: 9.5px; color: var(--muted); text-align: center;
+  max-width: 58px; line-height: 1.3;
+  opacity: 0; transition: opacity 0.3s;
+}
+.dot-item.on .dot-lbl { opacity: 1; color: #6ba3f5; }
+
+.nav-btns {
+  display: flex; gap: 10px; align-items: center;
+}
+.nbtn {
+  background: var(--card2);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 8px 22px;
+  color: var(--text);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nbtn:hover { background: var(--bg3); border-color: var(--blue-border); }
+.nbtn:disabled { opacity: 0.28; cursor: default; }
+.nbtn.pri {
+  background: linear-gradient(135deg, var(--blue), var(--blue-d));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(44,121,246,0.35);
+}
+.nbtn.pri:hover { opacity: 0.9; background: linear-gradient(135deg, var(--blue), var(--blue-d)); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="page-header">
+  <div class="brand-row">
+    <div class="brand-icon">🧾</div>
+    <span class="brand-name">Split Pay</span>
+  </div>
+  <div class="page-subtitle">Návod · 5 krokov</div>
+</div>
+
+<!-- ── Step caption ── -->
+<div class="step-caption">
+  <div class="step-badge" id="sBadge">Krok 1 z 5</div>
+  <div class="step-title" id="sTitle">Otvor aplikáciu</div>
+  <div class="step-desc"  id="sDesc">Klepni na tlačidlo Nový výlet</div>
+</div>
+
+<!-- ── Phone ── -->
+<div class="phone-wrap">
+  <div class="phone-glow"></div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar"><span>9:41</span><span>🔋</span></div>
+    <div class="phone-screen">
+
+      <!-- S1: Domov -->
+      <div class="screen active" id="s1">
+        <div class="ph-top">
+          <div class="ph-logo">
+            <div class="ph-logo-icon">🧾</div>
+            Split Pay
+          </div>
+          <div class="ph-avatar">M</div>
+        </div>
+        <div class="empty-area">
+          <div class="empty-emoji">✈️</div>
+          <div class="empty-hint">Zatiaľ žiadny výlet.<br>Začni vytvorením nového.</div>
+        </div>
+        <div class="fab" id="s1fab">＋ Nový výlet</div>
+      </div>
+
+      <!-- S2: Nový výlet -->
+      <div class="screen" id="s2">
+        <div class="ph-top">
+          <span class="ph-back">← Späť</span>
+          <span class="ph-modal-title">Nový výlet</span>
+          <span class="ph-spacer"></span>
+        </div>
+        <div class="ph-label">Názov výletu</div>
+        <div class="ph-input focus" id="s2name"><span class="caret" id="s2nameTxt"></span></div>
+        <div class="ph-row">
+          <div>
+            <div class="ph-label">Dátum od</div>
+            <div class="ph-input fi" id="s2from"></div>
+          </div>
+          <div>
+            <div class="ph-label">Dátum do</div>
+            <div class="ph-input fi" id="s2to"></div>
+          </div>
+        </div>
+        <div class="ph-label">Mena</div>
+        <div class="ph-input done">EUR €</div>
+        <div style="flex:1"></div>
+        <div class="ph-btn fi" id="s2btn">Vytvoriť výlet →</div>
+      </div>
+
+      <!-- S3: Členovia -->
+      <div class="screen" id="s3">
+        <div class="ph-top">
+          <div class="ph-logo" style="font-size:13px">
+            <div class="ph-logo-icon">✈️</div>
+            Tenerife 2025
+          </div>
+          <div class="ph-avatar">M</div>
+        </div>
+        <div class="ph-section">Členovia výletu</div>
+        <div class="ph-card" style="display:flex;flex-direction:column;gap:9px">
+          <div class="ph-chip-row" id="s3chips"></div>
+          <div class="ph-input focus" id="s3inp"><span class="caret" id="s3inpTxt"></span></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.5;flex-shrink:0">
+          Po pridaní členov im pošli pozvánku<br>v ďalšom kroku.
+        </div>
+      </div>
+
+      <!-- S4: Pozvánka -->
+      <div class="screen" id="s4">
+        <div class="ph-top">
+          <span class="ph-modal-title">Pozvánka</span>
+          <span style="font-size:11.5px;font-weight:700;color:var(--blue)">Tenerife 2025</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);text-align:center;line-height:1.5;flex-shrink:0">
+          Pošli odkaz kamarátom. Prihlásení<br>si sami priradia výdavky k výletu.
+        </div>
+        <div class="invite-box">
+          <span class="invite-url">splitpay.app/join/ABCD1234</span>
+          <span class="copy-btn" id="copyBtn">Kopírovať</span>
+        </div>
+        <div class="ph-section">Zdieľaj cez</div>
+        <div class="share-row">
+          <div class="share-icon">💬</div>
+          <div class="share-icon">📱</div>
+          <div class="share-icon">📧</div>
+          <div class="share-icon">🔗</div>
+        </div>
+        <div class="ph-section">Členovia (3)</div>
+        <div class="ph-chip-row">
+          <div class="ph-chip">✓ Martin</div>
+          <div class="ph-chip">✓ Katka</div>
+          <div class="ph-chip">✓ Tomáš</div>
+        </div>
+      </div>
+
+      <!-- S5: Výdavok -->
+      <div class="screen" id="s5">
+        <div class="ph-top">
+          <span class="ph-back">← Späť</span>
+          <span class="ph-modal-title">Pridať výdavok</span>
+          <span class="ph-spacer"></span>
+        </div>
+        <div class="ph-label">Názov</div>
+        <div class="ph-input focus" id="s5name"><span class="caret" id="s5nameTxt"></span></div>
+        <div class="ph-label fi" id="s5amtLbl">Suma</div>
+        <div class="amount-big fi" id="s5amt">— €</div>
+        <div class="ph-label fi" id="s5payLbl">Platil</div>
+        <div class="ph-input done fi" id="s5pay">Martin</div>
+        <div class="ph-label fi" id="s5splLbl">Rozdeliť medzi</div>
+        <div class="ph-chip-row fi" id="s5chips">
+          <div class="ph-chip">Martin</div>
+          <div class="ph-chip">Katka</div>
+          <div class="ph-chip">Tomáš</div>
+        </div>
+        <div style="flex:1"></div>
+        <div id="s5ctaWrap">
+          <div class="ph-btn fi" id="s5btn">✓ Pridať výdavok</div>
+        </div>
+        <div class="success-box" id="s5ok" style="display:none">
+          <div class="success-emo">✅</div>
+          <div class="success-ttl">Výdavok pridaný!</div>
+          <div class="success-sub">Večera pri mori · 45,80 €<br>rozdelené medzi 3 členov</div>
+        </div>
+      </div>
+
+    </div><!-- /phone-screen -->
+  </div><!-- /phone -->
+</div><!-- /phone-wrap -->
+
+<!-- ── Nav ── -->
+<div class="nav-area">
+  <div class="prog-track">
+    <div class="prog-fill" id="progFill"></div>
+  </div>
+
+  <div class="dots" id="dotsRow">
+    <div class="dot-item on" data-i="0">
+      <div class="dot"></div>
+      <div class="dot-lbl">Domov</div>
+    </div>
+    <div class="dot-item" data-i="1">
+      <div class="dot"></div>
+      <div class="dot-lbl">Nový výlet</div>
+    </div>
+    <div class="dot-item" data-i="2">
+      <div class="dot"></div>
+      <div class="dot-lbl">Členovia</div>
+    </div>
+    <div class="dot-item" data-i="3">
+      <div class="dot"></div>
+      <div class="dot-lbl">Pozvánka</div>
+    </div>
+    <div class="dot-item" data-i="4">
+      <div class="dot"></div>
+      <div class="dot-lbl">Výdavok</div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="nbtn" id="prevBtn" disabled>← Späť</button>
+    <button class="nbtn pri" id="nextBtn">Ďalej →</button>
+  </div>
+</div>
+
+<script>
+const STEPS = [
+  { badge:'Krok 1 z 5', title:'Otvor aplikáciu',   desc:'Klepni na tlačidlo Nový výlet' },
+  { badge:'Krok 2 z 5', title:'Vyplň výlet',        desc:'Pomenuj výlet a nastav dátumy' },
+  { badge:'Krok 3 z 5', title:'Pridaj členov',      desc:'Zadaj mená spolucestujúcich' },
+  { badge:'Krok 4 z 5', title:'Pošli pozvánku',     desc:'Zdieľaj odkaz s kamarátmi' },
+  { badge:'Krok 5 z 5', title:'Pridaj výdavok',     desc:'Zadaj výdavok a rozdeľ náklady' },
+];
+const DURATION = 6800; // ms per slide
+let cur = 0;
+let timers = [];
+let progRaf = null;
+let progStart = null;
+
+/* ── helpers ── */
+function clearTimers() {
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+}
+function delay(fn, ms) { const t = setTimeout(fn, ms); timers.push(t); return t; }
+
+function typeInto(txtElId, text, speed, onDone) {
+  const el = document.getElementById(txtElId);
+  if (!el) return;
+  el.textContent = '';
+  let i = 0;
+  function tick() {
+    el.textContent += text[i++];
+    if (i < text.length) {
+      const t = setTimeout(tick, speed);
+      timers.push(t);
+    } else if (onDone) onDone();
+  }
+  tick();
+}
+
+function fi(id, extraDelay) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  delay(() => el.classList.add('show'), extraDelay || 0);
+}
+
+/* ── per-slide animations ── */
+function animSlide(idx) {
+  if (idx === 0) {
+    delay(() => {
+      const fab = document.getElementById('s1fab');
+      fab.classList.add('pulse');
+    }, 400);
+    delay(() => {
+      const fab = document.getElementById('s1fab');
+      fab.classList.remove('pulse');
+      fab.classList.add('tap');
+    }, 4200);
+  }
+
+  if (idx === 1) {
+    delay(() => {
+      typeInto('s2nameTxt', 'Tenerife 2025', 75, () => {
+        const nameEl = document.getElementById('s2name');
+        nameEl.classList.remove('focus');
+        nameEl.classList.add('done');
+        delay(() => {
+          const fromEl = document.getElementById('s2from');
+          fromEl.textContent = '15. 6. 2025';
+          fromEl.classList.add('show', 'done');
+          delay(() => {
+            const toEl = document.getElementById('s2to');
+            toEl.textContent = '22. 6. 2025';
+            toEl.classList.add('show', 'done');
+            delay(() => {
+              document.getElementById('s2btn').classList.add('show');
+              delay(() => document.getElementById('s2btn').classList.add('tap'), 1400);
+            }, 350);
+          }, 350);
+        }, 200);
+      });
+    }, 450);
+  }
+
+  if (idx === 2) {
+    const names = ['Martin','Katka','Tomáš'];
+    let ni = 0;
+    const chips = document.getElementById('s3chips');
+    function addMember() {
+      if (ni >= names.length) return;
+      const name = names[ni++];
+      typeInto('s3inpTxt', name, 80, () => {
+        delay(() => {
+          const ch = document.createElement('div');
+          ch.className = 'ph-chip pop';
+          ch.textContent = '✓ ' + name;
+          chips.appendChild(ch);
+          document.getElementById('s3inpTxt').textContent = '';
+          delay(addMember, 520);
+        }, 200);
+      });
+    }
+    delay(addMember, 500);
+  }
+
+  if (idx === 3) {
+    delay(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('ok');
+      btn.textContent = '✓ Skopírované!';
+    }, 2400);
+  }
+
+  if (idx === 4) {
+    delay(() => {
+      typeInto('s5nameTxt', 'Večera pri mori', 70, () => {
+        document.getElementById('s5name').classList.remove('focus');
+        document.getElementById('s5name').classList.add('done');
+        delay(() => {
+          fi('s5amtLbl', 0);
+          delay(() => {
+            const amtEl = document.getElementById('s5amt');
+            amtEl.innerHTML = '<span class="hl">45,80 €</span>';
+            amtEl.classList.add('show');
+            delay(() => {
+              fi('s5payLbl',   0);
+              fi('s5pay',    120);
+              fi('s5splLbl', 240);
+              fi('s5chips',  360);
+              fi('s5btn',    500);
+              delay(() => {
+                document.getElementById('s5btn').classList.add('tap');
+                delay(() => {
+                  document.getElementById('s5ctaWrap').style.display = 'none';
+                  const ok = document.getElementById('s5ok');
+                  ok.style.display = 'flex';
+                  ok.style.flexDirection = 'column';
+                  ok.classList.add('fi');
+                  delay(() => ok.classList.add('show'), 30);
+                }, 380);
+              }, 1600);
+            }, 300);
+          }, 250);
+        }, 200);
+      });
+    }, 420);
+  }
+}
+
+function resetSlide(idx) {
+  if (idx === 0) {
+    const fab = document.getElementById('s1fab');
+    fab.classList.remove('pulse','tap');
+  }
+  if (idx === 1) {
+    document.getElementById('s2nameTxt').textContent = '';
+    const nm = document.getElementById('s2name');
+    nm.classList.remove('done'); nm.classList.add('focus');
+    const fr = document.getElementById('s2from');
+    fr.textContent = ''; fr.classList.remove('show','done');
+    const to = document.getElementById('s2to');
+    to.textContent = ''; to.classList.remove('show','done');
+    const btn = document.getElementById('s2btn');
+    btn.classList.remove('show','tap');
+  }
+  if (idx === 2) {
+    document.getElementById('s3inpTxt').textContent = '';
+    document.getElementById('s3chips').innerHTML = '';
+  }
+  if (idx === 3) {
+    const c = document.getElementById('copyBtn');
+    c.textContent = 'Kopírovať'; c.classList.remove('ok');
+  }
+  if (idx === 4) {
+    document.getElementById('s5nameTxt').textContent = '';
+    const nm5 = document.getElementById('s5name');
+    nm5.classList.remove('done'); nm5.classList.add('focus');
+    ['s5amtLbl','s5payLbl','s5pay','s5splLbl','s5chips','s5btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
+    });
+    const amtEl = document.getElementById('s5amt');
+    amtEl.innerHTML = '— €'; amtEl.classList.remove('show');
+    document.getElementById('s5ctaWrap').style.display = '';
+    const ok = document.getElementById('s5ok');
+    ok.style.display = 'none'; ok.classList.remove('fi','show');
+  }
+}
+
+/* ── progress bar ── */
+function startProg() {
+  if (progRaf) cancelAnimationFrame(progRaf);
+  progStart = performance.now();
+  const fill = document.getElementById('progFill');
+  fill.style.width = '0%';
+  function tick(ts) {
+    const pct = Math.min(((ts - progStart) / DURATION) * 100, 100);
+    fill.style.width = pct + '%';
+    if (pct < 100) {
+      progRaf = requestAnimationFrame(tick);
+    } else {
+      goTo((cur + 1) % STEPS.length);
+    }
+  }
+  progRaf = requestAnimationFrame(tick);
+}
+
+/* ── go to slide ── */
+function goTo(next) {
+  if (next === cur && next !== 0) return;
+  clearTimers();
+  if (progRaf) cancelAnimationFrame(progRaf);
+
+  const oldEl = document.getElementById('s' + (cur + 1));
+  const newEl = document.getElementById('s' + (next + 1));
+
+  oldEl.classList.add('exit');
+  oldEl.classList.remove('active');
+  setTimeout(() => oldEl.classList.remove('exit'), 360);
+
+  resetSlide(next);
+  newEl.classList.add('active');
+
+  cur = next;
+  updateUI();
+  startProg();
+  animSlide(next);
+}
+
+function updateUI() {
+  const s = STEPS[cur];
+  document.getElementById('sBadge').textContent = s.badge;
+  document.getElementById('sTitle').textContent = s.title;
+  document.getElementById('sDesc').textContent  = s.desc;
+
+  document.querySelectorAll('.dot-item').forEach((el, i) => {
+    el.classList.toggle('on',   i === cur);
+    el.classList.toggle('done', i < cur);
+  });
+
+  document.getElementById('prevBtn').disabled = cur === 0;
+  document.getElementById('nextBtn').textContent = cur === STEPS.length - 1 ? '↺ Znova' : 'Ďalej →';
+}
+
+/* ── listeners ── */
+document.getElementById('nextBtn').addEventListener('click', () => {
+  goTo(cur === STEPS.length - 1 ? 0 : cur + 1);
+});
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (cur > 0) goTo(cur - 1);
+});
+document.querySelectorAll('.dot-item').forEach(el => {
+  el.addEventListener('click', () => goTo(+el.dataset.i));
+});
+
+/* ── boot ── */
+animSlide(0);
+startProg();
+</script>
+</body>
+</html>
