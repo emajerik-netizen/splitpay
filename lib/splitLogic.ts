@@ -90,12 +90,17 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
     }
 
     // ── Resolve participants list ───────────────────────────────────────────
-    // Prefer participantIds when present; fall back to participants names; fall back to all friends.
-    const participantsRaw = (expense.participantIds && expense.participantIds.length)
-      ? expense.participantIds
-      : (expense.participants && expense.participants.length ? expense.participants : friendKeys.slice());
+    // Merge participantIds AND participants names: IDs may be incomplete (member had no id when
+    // the expense was created), so names serve as the safety net. Deduplication by resolved key
+    // prevents any participant from being counted twice.
+    const ids = expense.participantIds || [];
+    const names = expense.participants || [];
+    const participantsRaw = (ids.length || names.length)
+      ? [...ids, ...names]
+      : friendKeys.slice();
 
-    // Resolve each raw value to a known balance key; skip any that can't be resolved.
+    // Resolve each raw value to a known balance key; deduplicate by resolved key.
+    const seenKeys = new Set<string>();
     const participants: string[] = participantsRaw
       .map((raw) => {
         const k = resolveParticipantKey(raw);
@@ -109,12 +114,18 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
         }
         return null;
       })
-      .filter((k): k is string => k !== null);
+      .filter((k): k is string => {
+        if (k === null) return false;
+        if (seenKeys.has(k)) return false;
+        seenKeys.add(k);
+        return true;
+      });
 
     if (!participants.length) return;
 
     // ── Individual split ────────────────────────────────────────────────────
     if (expense.splitType === 'individual') {
+      const seenIndividual = new Set<string>();
       participantsRaw.forEach((raw) => {
         const key = resolveParticipantKey(raw);
         if (!key) return;
@@ -128,6 +139,8 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
           }
         }
         if (!knownKey) return;
+        if (seenIndividual.has(knownKey)) return;
+        seenIndividual.add(knownKey);
 
         // participantAmounts may be keyed by name even when participantsRaw are IDs
         const displayName = nameById.get(raw) || nameById.get(key);
