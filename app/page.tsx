@@ -7191,7 +7191,7 @@ export default function SplitPayWebApp() {
                     </div>
                     {(() => {
                       const q = expenseSearchQuery.trim().toLowerCase();
-                      const sorted = [...currentTrip.expenses].sort((a, b) => {
+                      const sorted = [...normalizedExpenses].sort((a, b) => {
                         if (expenseSortOrder === 'highest') return b.amount - a.amount;
                         if (expenseSortOrder === 'lowest') return a.amount - b.amount;
                         const aDate = a.date || '';
@@ -7211,13 +7211,13 @@ export default function SplitPayWebApp() {
                         <div className="stack-list">
                           {filtered.map((expense) => (
                             <div
-                              className={`row expense-row expense-row-compact${expense.deletedAt ? ' expense-row-deleted' : ''}`}
+                              className="row expense-row expense-row-compact"
                               key={expense.id}
                               role="button"
                               tabIndex={0}
-                              onClick={() => !expense.deletedAt && openExpenseDetail(expense.id)}
+                              onClick={() => openExpenseDetail(expense.id)}
                               onKeyDown={(event) => {
-                                if (!expense.deletedAt && (event.key === 'Enter' || event.key === ' ')) {
+                                if (event.key === 'Enter' || event.key === ' ') {
                                   event.preventDefault();
                                   openExpenseDetail(expense.id);
                                 }
@@ -7226,9 +7226,8 @@ export default function SplitPayWebApp() {
                               <span className="expense-row-title">
                                 <strong>{expense.title}</strong>
                                 {expense.date ? <span className="expense-date-chip">{expense.date}</span> : null}
-                                {expense.deletedAt ? <span className="expense-deleted-badge">{lang === 'sk' ? 'zmazaný' : 'deleted'}</span> : null}
                               </span>
-                              <strong className={expense.deletedAt ? 'muted' : ''}>{money(expense.amount)}</strong>
+                              <strong>{money(expense.amount)}</strong>
                             </div>
                           ))}
                         </div>

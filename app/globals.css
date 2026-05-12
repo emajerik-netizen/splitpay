@@ -2060,6 +2060,15 @@ button:disabled {
 .balance-target {
   font-weight: 700;
   min-width: 0;
+}
+
+.balance-person {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.balance-target {
   overflow-wrap: anywhere;
 }
 
@@ -4272,6 +4281,7 @@ button:disabled {
 .tutorial-profile-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   text-decoration: none;
   font-size: inherit;
