@@ -5,17 +5,28 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import {
+  Bed,
+  Car,
   Clipboard,
   Coins,
+  Dumbbell,
+  Heart,
   Link2,
   Mail,
   MessageSquare,
+  Music,
+  Package,
+  PartyPopper,
+  Plane,
   Plus,
   QrCode,
   Receipt,
   Settings2,
   Share2,
+  ShoppingBag,
   Users,
+  Utensils,
+  Cpu,
 } from 'lucide-react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -516,6 +527,10 @@ const T = {
     categoryAccom: 'Ubytovanie',
     categoryFun: 'Zábava',
     categoryShopping: 'Nákupy',
+    categoryHealth: 'Zdravie',
+    categorySport: 'Šport',
+    categoryKultura: 'Kultúra',
+    categoryTech: 'Technika',
     categoryOther: 'Ostatné',
     categoryBreakdown: 'Výdavky podľa kategórií',
   },
@@ -906,6 +921,10 @@ const T = {
     categoryAccom: 'Accommodation',
     categoryFun: 'Entertainment',
     categoryShopping: 'Shopping',
+    categoryHealth: 'Health',
+    categorySport: 'Sport',
+    categoryKultura: 'Culture',
+    categoryTech: 'Tech',
     categoryOther: 'Other',
     categoryBreakdown: 'Expenses by category',
   },
@@ -1305,11 +1324,15 @@ function withExpandedParticipants(expenses: TripExpense[], members: string[]): T
 function inferCategory(title: string): string {
   // strip diacritics so "večera" == "vecera", "šalát" == "salat", etc.
   const t = (title || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  if (/jedl|restaur|pizza|burger|salat|obed|vecer|snidan|kaviar|kaviaren|bar\b|pub\b|pivo|vino|wine|food|restaurant|lunch|dinner|cafe|coffee|drink|fast.?food|kfc|mcdo|sushi|grill|bistro/.test(t)) return 'jedlo';
-  if (/taxi|uber|vlak|bus\b|autobus|benzin|parkov|letisk|\blet\b|flight|train|transport|bike|metro|mhd|bolt\b|doprava/.test(t)) return 'doprava';
-  if (/hotel|hostel|airbnb|ubytov|apartm|izba\b|room\b|noclah|nocl|pension|chatka|chata/.test(t)) return 'ubytovanie';
-  if (/vstupn|concert|kino|zabav|aktivi|ticket|museum|vylet|sport|aqua|bazen|bowling|paintball|escape/.test(t)) return 'zabava';
-  if (/nakup|supermarket|lidl|tesco|billa|kaufland|shopping|market|grocery|obchod|\bdm\b|rossmann/.test(t)) return 'nakupy';
+  if (/jedl|restaur|pizza|burger|salat|obed|raňajk|snidan|vecer|kaviar|kaviaren|\bbar\b|\bpub\b|pivo|vino|wine|food|restaurant|lunch|dinner|breakfast|cafe|coffee|drink|fast.?food|kfc|mcdo|sushi|grill|bistro|bufet|canteen/.test(t)) return 'jedlo';
+  if (/taxi|uber|vlak|bus\b|autobus|benzin|parkov|letisk|\blet\b|flight|train|transport|metro|mhd|bolt\b|doprava|autodialna|toll|diaľnic/.test(t)) return 'doprava';
+  if (/hotel|hostel|airbnb|ubytov|apartm|\bizba\b|room\b|noclah|nocl|pension|chatka|\bchata\b|resort|motel/.test(t)) return 'ubytovanie';
+  if (/kino|bowling|paintball|escape|aquapark|bazen|aqua|lunapark|vodny|atrakci|trampolin|laser/.test(t)) return 'zabava';
+  if (/nakup|supermarket|lidl|tesco|billa|kaufland|shopping|market|grocery|obchod|\bdm\b|rossmann|albert|cba/.test(t)) return 'nakupy';
+  if (/lekar|lekaren|nemocnic|ambulanci|pharmacy|hospital|zdravi|lieky|zubár|zubar|doktor|doctor|medical|health|optika/.test(t)) return 'zdravie';
+  if (/posilovna|gym|fitness|futbal|tenis|plavan|swimming|ski|snowboard|cykl|bike|hike|turistik|sport|workout|trening/.test(t)) return 'sport';
+  if (/muzeum|galeria|divadlo|opera|concert|vystava|theater|gallery|kultura|festival|film|kinoteka/.test(t)) return 'kultura';
+  if (/telefon|laptop|pocitac|tablet|nabijac|elektronik|tech|phone|cable|gadget|apple|samsung|alza|notino/.test(t)) return 'technika';
   return 'ostatne';
 }
 
@@ -6700,19 +6723,32 @@ export default function SplitPayWebApp() {
                     }, {});
                     const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
                     if (catEntries.length < 2) return null;
-                    const catLabel: Record<string, string> = {
-                      jedlo: t('categoryFood'), doprava: t('categoryTransport'), ubytovanie: t('categoryAccom'),
-                      zabava: t('categoryFun'), nakupy: t('categoryShopping'), ostatne: t('categoryOther'),
+                    const catMeta: Record<string, { label: string; icon: React.ReactNode }> = {
+                      jedlo:     { label: t('categoryFood'),      icon: <Utensils size={13} /> },
+                      doprava:   { label: t('categoryTransport'), icon: <Car size={13} /> },
+                      ubytovanie:{ label: t('categoryAccom'),     icon: <Bed size={13} /> },
+                      zabava:    { label: t('categoryFun'),       icon: <PartyPopper size={13} /> },
+                      nakupy:    { label: t('categoryShopping'),  icon: <ShoppingBag size={13} /> },
+                      zdravie:   { label: t('categoryHealth'),    icon: <Heart size={13} /> },
+                      sport:     { label: t('categorySport'),     icon: <Dumbbell size={13} /> },
+                      kultura:   { label: t('categoryKultura'),   icon: <Music size={13} /> },
+                      technika:  { label: t('categoryTech'),      icon: <Cpu size={13} /> },
+                      ostatne:   { label: t('categoryOther'),     icon: <Package size={13} /> },
                     };
                     return (
                       <div className="category-breakdown">
                         <p className="category-breakdown-title">{t('categoryBreakdown')}</p>
-                        {catEntries.map(([cat, amt]) => (
-                          <div key={cat} className="category-row">
-                            <span className={`category-badge category-${cat}`}>{catLabel[cat] || cat}</span>
-                            <span className="category-amount">{money(amt)}</span>
-                          </div>
-                        ))}
+                        {catEntries.map(([cat, amt]) => {
+                          const meta = catMeta[cat] || { label: cat, icon: <Package size={13} /> };
+                          return (
+                            <div key={cat} className="category-row">
+                              <span className={`category-badge category-${cat}`}>
+                                {meta.icon}{meta.label}
+                              </span>
+                              <span className="category-amount">{money(amt)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}
@@ -6778,7 +6814,11 @@ export default function SplitPayWebApp() {
                                 >
                                   {formatMemberName(memberNameOf(expense.payer || ''))}
                                 </button>
-                                {expense.category ? <span className={`category-badge category-${expense.category} category-inline`}>{({jedlo:t('categoryFood'),doprava:t('categoryTransport'),ubytovanie:t('categoryAccom'),zabava:t('categoryFun'),nakupy:t('categoryShopping'),ostatne:t('categoryOther')} as Record<string,string>)[expense.category] || expense.category}</span> : null}
+                                {expense.category ? (() => {
+                                  const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={11}/>, doprava:<Car size={11}/>, ubytovanie:<Bed size={11}/>, zabava:<PartyPopper size={11}/>, nakupy:<ShoppingBag size={11}/>, zdravie:<Heart size={11}/>, sport:<Dumbbell size={11}/>, kultura:<Music size={11}/>, technika:<Cpu size={11}/>, ostatne:<Package size={11}/> };
+                                  const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther') };
+                                  return <span className={`category-badge category-${expense.category} category-inline`}>{iconMap[expense.category]}{labelMap[expense.category] || expense.category}</span>;
+                                })() : null}
                               </p>
                             </div>
                             <strong>{money(expense.amount)}</strong>
