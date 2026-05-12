@@ -195,6 +195,8 @@ const T = {
     contactSupport: 'Kontaktovať podporu',
     supportAuthor: 'Podporiť autora',
     openRevolutProfile: 'Otvoriť Revolut profil',
+    tutorialBtn: 'Ako začať',
+    tutorialDesc: 'Interaktívny návod v 5 krokoch',
     guideBtn: 'Návod',
     guideTitle: 'Ako pridať aplikáciu na plochu',
     guideIntro: 'Vyber zariadenie a postupuj podľa krokov. Aplikácia sa potom otvorí ako samostatná appka.',
@@ -592,6 +594,8 @@ const T = {
     contactSupport: 'Contact Support',
     supportAuthor: 'Support author',
     openRevolutProfile: 'Open Revolut profile',
+    tutorialBtn: 'Get started',
+    tutorialDesc: 'Interactive 5-step tutorial',
     guideBtn: 'Guide',
     guideTitle: 'How to add app to home screen',
     guideIntro: 'Choose your device and follow the steps. The app will then open like a standalone app.',
@@ -6033,6 +6037,14 @@ export default function SplitPayWebApp() {
                 >
                   {t('contactSupport')}
                 </button>
+                <a
+                  href="/tutorial-navod.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ghost tutorial-profile-btn"
+                >
+                  🎯 {t('tutorialBtn')}
+                </a>
                 <button
                   type="button"
                   className="ghost"
@@ -8038,6 +8050,22 @@ export default function SplitPayWebApp() {
               </div>
               <button type="button" className="ghost" onClick={() => setShowGuideModal(false)}>{t('close')}</button>
             </div>
+
+            <a
+              href="/tutorial-navod.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tutorial-banner-link"
+            >
+              <div className="tutorial-banner">
+                <div className="tutorial-banner-icon">🎯</div>
+                <div className="tutorial-banner-text">
+                  <strong>{t('tutorialBtn')}</strong>
+                  <span>{t('tutorialDesc')}</span>
+                </div>
+                <div className="tutorial-banner-arrow">→</div>
+              </div>
+            </a>
 
             <p className="muted">{t('guideIntro')}</p>
 

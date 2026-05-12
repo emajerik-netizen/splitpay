@@ -4268,6 +4268,94 @@ button:disabled {
   }
 }
 
+/* ── Tutorial banner & profile button ── */
+.tutorial-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 700;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--stroke));
+  background: color-mix(in srgb, var(--accent-soft) 46%, #fff);
+  color: color-mix(in srgb, var(--accent) 88%, #18335f);
+  padding: 0.75rem 0.95rem;
+  min-height: 3.3rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tutorial-profile-btn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 66%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke));
+}
+
+.tutorial-banner-link {
+  display: block;
+  text-decoration: none;
+  margin-bottom: 0.2rem;
+}
+.tutorial-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, var(--accent-soft) 0%, color-mix(in srgb, var(--accent-soft) 55%, #fff) 100%);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 38%, var(--stroke));
+  border-radius: 1rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.tutorial-banner:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--stroke));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 80%, #fff) 0%, color-mix(in srgb, var(--accent-soft) 65%, #fff) 100%);
+}
+.tutorial-banner-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.tutorial-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.tutorial-banner-text strong {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.tutorial-banner-text span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.tutorial-banner-arrow {
+  font-size: 1.1rem;
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .tutorial-banner {
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--card));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--stroke));
+}
+[data-theme="dark"] .tutorial-profile-btn {
+  background: var(--bg-3);
+  color: var(--accent-strong);
+  border-color: var(--stroke);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tutorial-banner {
+    background: color-mix(in srgb, var(--accent-soft) 55%, var(--card));
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--stroke));
+  }
+  :root:not([data-theme="light"]) .tutorial-profile-btn {
+    background: var(--bg-3);
+    color: var(--accent-strong);
+    border-color: var(--stroke);
+  }
+}
+
 /* ── Mark as paid button ── */
 .mark-paid-btn {
   display: inline-flex;
