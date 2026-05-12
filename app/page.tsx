@@ -1303,12 +1303,13 @@ function withExpandedParticipants(expenses: TripExpense[], members: string[]): T
 }
 
 function inferCategory(title: string): string {
-  const t = (title || '').toLowerCase();
-  if (/jedl|reštaur|pizza|burger|šalát|obed|večera|kaviar|kaviaren|bar\b|pub\b|pivo|vín|wine|food|restaurant|lunch|dinner|café|cafe|coffee|drink|fast.?food|kfc|mcdo|sushi|grill|bistro/.test(t)) return 'jedlo';
-  if (/taxi|uber|vlak|bus\b|autobus|benzín|benzin|parkov|letisk|\blet\b|flight|train|transport|bike|metro|mhd|bolt\b|doprava/.test(t)) return 'doprava';
-  if (/hotel|hostel|airbnb|ubytov|apartm|izba\b|room\b|nocľah|nocl|pension|chatka|chata/.test(t)) return 'ubytovanie';
-  if (/vstupn|concert|kino|zábav|zabav|aktivi|ticket|museum|výlet|vylet|sport|aqua|bazén|bowling|paintball|escape/.test(t)) return 'zabava';
-  if (/nákup|nakup|supermarket|lidl|tesco|billa|kaufland|shopping|market|grocery|obchod|\bdm\b|rossmann|dm\s/.test(t)) return 'nakupy';
+  // strip diacritics so "večera" == "vecera", "šalát" == "salat", etc.
+  const t = (title || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (/jedl|restaur|pizza|burger|salat|obed|vecer|snidan|kaviar|kaviaren|bar\b|pub\b|pivo|vino|wine|food|restaurant|lunch|dinner|cafe|coffee|drink|fast.?food|kfc|mcdo|sushi|grill|bistro/.test(t)) return 'jedlo';
+  if (/taxi|uber|vlak|bus\b|autobus|benzin|parkov|letisk|\blet\b|flight|train|transport|bike|metro|mhd|bolt\b|doprava/.test(t)) return 'doprava';
+  if (/hotel|hostel|airbnb|ubytov|apartm|izba\b|room\b|noclah|nocl|pension|chatka|chata/.test(t)) return 'ubytovanie';
+  if (/vstupn|concert|kino|zabav|aktivi|ticket|museum|vylet|sport|aqua|bazen|bowling|paintball|escape/.test(t)) return 'zabava';
+  if (/nakup|supermarket|lidl|tesco|billa|kaufland|shopping|market|grocery|obchod|\bdm\b|rossmann/.test(t)) return 'nakupy';
   return 'ostatne';
 }
 
