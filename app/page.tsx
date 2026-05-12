@@ -6358,9 +6358,19 @@ export default function SplitPayWebApp() {
               </section>
 
               <section className="app-section">
-                <div className="section-head">
-                  <p className="eyebrow">{t('overviewTab')}</p>
-                  <h2>{t('myTrips')}</h2>
+                <div className="section-head trips-section-head">
+                  <div>
+                    <p className="eyebrow">{t('overviewTab')}</p>
+                    <h2>{t('myTrips')}</h2>
+                  </div>
+                  <div className="trips-quick-actions">
+                    <button type="button" className="trips-quick-btn trips-quick-create" onClick={() => setShowCreateTripModal(true)}>
+                      <Plus size={14} />{t('newTrip')}
+                    </button>
+                    <button type="button" className="trips-quick-btn trips-quick-join" onClick={() => setShowJoinTripModal(true)}>
+                      <Link2 size={14} />{t('joinTripEyebrow')}
+                    </button>
+                  </div>
                 </div>
                 <div className="trip-overview-list">
                   {visibleTrips.map((trip) => {
@@ -6443,28 +6453,6 @@ export default function SplitPayWebApp() {
                     );
                   })}
                 </div>
-              </section>
-
-              <section className="screen-grid action-tiles-grid">
-                <button
-                  type="button"
-                  className="section-card action-tile action-tile-create"
-                  onClick={() => setShowCreateTripModal(true)}
-                >
-                    <p className="eyebrow">{t('newTrip')}</p>
-                    <h2>{t('createTrip')}</h2>
-                    <p className="muted card-subtitle">{t('createTripDesc')}</p>
-                </button>
-
-                <button
-                  type="button"
-                  className="section-card action-tile action-tile-join"
-                  onClick={() => setShowJoinTripModal(true)}
-                >
-                    <p className="eyebrow">{t('joinTripEyebrow')}</p>
-                    <h2>{t('joinTripTitle')}</h2>
-                    <p className="muted card-subtitle">{t('joinTripDesc')}</p>
-                </button>
               </section>
 
               {showCreateTripModal ? (
