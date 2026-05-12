@@ -100,7 +100,15 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
     }
 
     if (expense.splitType === 'shares') {
-      const weights = participants.map((p) => safeNumber(expense.participantWeights?.[p] ?? 1) || 1);
+      // participantWeights may be keyed by name even when participants are IDs; try displayName fallback
+      const weights = participants.map((p) => {
+        const displayName = nameById.get(p);
+        return safeNumber(
+          expense.participantWeights?.[p] ??
+          (displayName !== undefined ? expense.participantWeights?.[displayName] : undefined) ??
+          1
+        ) || 1;
+      });
       const totalWeight = weights.reduce((sum, v) => sum + (v > 0 ? v : 1), 0) || participants.length;
       participants.forEach((p, i) => {
         const safeWeight = weights[i] > 0 ? weights[i] : 1;

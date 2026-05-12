@@ -1251,7 +1251,8 @@ function withExpandedParticipants(expenses: TripExpense[], members: string[]): T
       raw.length === 1 &&
       raw[0] &&
       (expense.payer || '').trim().toLowerCase() === memberNameOf(raw[0]).trim().toLowerCase();
-    return onlyPayerListed ? { ...expense, participants: members } : expense;
+    // Also clear participantIds when expanding so computeBalances uses the name-based list
+    return onlyPayerListed ? { ...expense, participants: members, participantIds: [] } : expense;
   });
 }
 
@@ -3398,6 +3399,9 @@ export default function SplitPayWebApp() {
         ...expense,
         amount,
         participants,
+        // Clear participantIds when we expanded to all members so computeBalances
+        // falls back to the name-based participants list instead of the stale ID list.
+        participantIds: onlyPayerListed ? [] : expense.participantIds,
         participantAmounts: parsedParticipantAmounts,
         participantWeights: parsedParticipantWeights,
         expenseType: expense.expenseType || 'expense',

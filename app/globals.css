@@ -1942,12 +1942,19 @@ button:disabled {
 .balance-total-card-overview {
   width: 100%;
   cursor: pointer;
+  border-color: color-mix(in srgb, var(--accent) 25%, #edf2fb);
+  background: color-mix(in srgb, var(--accent-soft) 30%, #ffffff);
   transition: background 0.15s, border-color 0.15s;
 }
 
+.balance-total-card-overview p {
+  color: var(--text, #1a1a2e);
+  opacity: 1;
+}
+
 .balance-total-card-overview:hover {
-  background: color-mix(in srgb, var(--accent-soft) 40%, #ffffff);
-  border-color: color-mix(in srgb, var(--accent) 40%, #edf2fb);
+  background: color-mix(in srgb, var(--accent-soft) 55%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 45%, #edf2fb);
 }
 
 .balance-current-panel {
