@@ -28,6 +28,8 @@ import {
   Utensils,
   Cpu,
   ArrowLeftRight,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -6886,8 +6888,16 @@ export default function SplitPayWebApp() {
                     const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
                     if (!anyNonZero) {
                       return (
-                        <div className="mini-panel success-panel" role="status">
-                          <strong>{t('tripSettled')}</strong>
+                        <div className="trip-settled-card" role="status">
+                          <div className="trip-settled-glow">
+                            <CheckCircle2 size={36} strokeWidth={1.8} />
+                          </div>
+                          <div className="trip-settled-text">
+                            <strong>{t('tripSettled')}</strong>
+                            <span className="trip-settled-sub">
+                              <Sparkles size={12} />{lang === 'sk' ? 'Všetky náklady sú vyrovnané' : 'All expenses are settled'}
+                            </span>
+                          </div>
                         </div>
                       );
                     }

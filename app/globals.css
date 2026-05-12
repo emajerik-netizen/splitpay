@@ -1645,6 +1645,61 @@ button:disabled {
   margin: 0;
 }
 
+.trip-settled-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 1.1rem;
+  border: 1.5px solid #a8e6b8;
+  background: linear-gradient(135deg, #edfdf3 0%, #d6f5e3 100%);
+  padding: 1rem 1.1rem;
+  position: relative;
+  overflow: hidden;
+}
+.trip-settled-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(52,199,89,0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+.trip-settled-glow {
+  flex-shrink: 0;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #34c759, #28a745);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(52,199,89,0.2), 0 2px 8px rgba(52,199,89,0.35);
+  animation: settledPulse 2.4s ease-in-out infinite;
+}
+@keyframes settledPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(52,199,89,0.2), 0 2px 8px rgba(52,199,89,0.35); }
+  50%       { box-shadow: 0 0 0 8px rgba(52,199,89,0.12), 0 2px 12px rgba(52,199,89,0.45); }
+}
+.trip-settled-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.trip-settled-text strong {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1a5c2a;
+  line-height: 1.2;
+}
+.trip-settled-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #2a7d3a;
+  font-weight: 500;
+}
+
 .member-list {
   display: flex;
   flex-direction: column;
@@ -4154,6 +4209,9 @@ button:disabled {
   color: var(--text);
 }
 [data-theme="dark"] .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+[data-theme="dark"] .trip-settled-card { background: linear-gradient(135deg, #0d2a1a 0%, #0a2216 100%); border-color: #1f5c30; }
+[data-theme="dark"] .trip-settled-text strong { color: #6ee78a; }
+[data-theme="dark"] .trip-settled-sub { color: #52c96a; }
 [data-theme="dark"] .hero-panel {
   background: var(--card);
   border-color: var(--stroke);
@@ -4231,6 +4289,9 @@ button:disabled {
   :root:not([data-theme="light"]) .ai-summary-text { color: var(--text); }
   :root:not([data-theme="light"]) .balance-total-card { background: var(--bg-3); }
   :root:not([data-theme="light"]) .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+  :root:not([data-theme="light"]) .trip-settled-card { background: linear-gradient(135deg, #0d2a1a 0%, #0a2216 100%); border-color: #1f5c30; }
+  :root:not([data-theme="light"]) .trip-settled-text strong { color: #6ee78a; }
+  :root:not([data-theme="light"]) .trip-settled-sub { color: #52c96a; }
   :root:not([data-theme="light"]) .hero-panel {
     background: var(--card);
     border-color: var(--stroke);
