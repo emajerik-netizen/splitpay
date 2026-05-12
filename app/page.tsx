@@ -6478,6 +6478,8 @@ export default function SplitPayWebApp() {
                         // also match by member id
                         if (typeof m !== 'string' && m.id && Object.prototype.hasOwnProperty.call(tripBalances, m.id) && memberKey(mName) === norm) return tripBalances[m.id];
                       }
+                      // "Ty" is the canonical alias for the current user in their own trips (when member entry has no UUID)
+                      if (isSelfName(trip.owner) && Object.prototype.hasOwnProperty.call(tripBalances, 'Ty')) return tripBalances['Ty'];
                       return 0;
                     };
 
