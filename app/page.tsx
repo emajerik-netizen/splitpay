@@ -1449,6 +1449,12 @@ export default function SplitPayWebApp() {
   const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
   const [expenseSortOrder, setExpenseSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [isOffline, setIsOffline] = useState(false);
+  type ReceiptItem = { name: string; price: number; assignedTo: string };
+  const [receiptStep, setReceiptStep] = useState<'upload' | 'analyzing' | 'assign' | null>(null);
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
+  const [receiptCurrency, setReceiptCurrency] = useState('EUR');
+  const [receiptError, setReceiptError] = useState('');
+  const [receiptImagePreview, setReceiptImagePreview] = useState<string | null>(null);
     const [lang, setLang] = useState<Lang>(() => {
       if (typeof window === 'undefined') return 'sk';
       return (window.localStorage.getItem(LANG_KEY) as Lang) || 'sk';
@@ -4869,6 +4875,79 @@ export default function SplitPayWebApp() {
     setShowExpenseModal(true);
   }
 
+  async function handleReceiptImage(file: File) {
+    setReceiptError('');
+    setReceiptStep('analyzing');
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setReceiptImagePreview(dataUrl);
+      // Extract base64 and mime type
+      const [meta, b64] = dataUrl.split(',');
+      const mimeType = meta.match(/:(.*?);/)?.[1] || 'image/jpeg';
+      try {
+        const res = await fetch('/api/analyze-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: b64, mimeType }),
+        });
+        const data = await res.json();
+        if (data.error && !data.items?.length) {
+          setReceiptError(data.error);
+          setReceiptStep('upload');
+          return;
+        }
+        const currentPayer = members.find((m) => isSelfName(m)) || members[0] || 'Ty';
+        const items: ReceiptItem[] = (data.items || []).map((it: { name: string; price: number }) => ({
+          name: it.name,
+          price: Number(it.price) || 0,
+          assignedTo: '__all__',
+        }));
+        setReceiptItems(items);
+        setReceiptCurrency(data.currency || 'EUR');
+        setReceiptStep('assign');
+        // Pre-fill payer in draft
+        setDraft((prev) => ({ ...prev, payer: currentPayer }));
+      } catch {
+        setReceiptError(lang === 'sk' ? 'Analýza zlyhala' : 'Analysis failed');
+        setReceiptStep('upload');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyReceiptToDraft() {
+    if (!receiptItems.length) return;
+    const participantAmounts: Record<string, number> = {};
+    const allMembers = members.length > 0 ? members : ['Ty'];
+    // Tally amounts per member
+    receiptItems.forEach((item) => {
+      if (item.assignedTo === '__all__') {
+        const share = item.price / allMembers.length;
+        allMembers.forEach((m) => { participantAmounts[m] = (participantAmounts[m] || 0) + share; });
+      } else {
+        participantAmounts[item.assignedTo] = (participantAmounts[item.assignedTo] || 0) + item.price;
+      }
+    });
+    // Only keep members with amount > 0
+    const participants = Object.keys(participantAmounts).filter((m) => participantAmounts[m] > 0.001);
+    const total = participants.reduce((s, m) => s + participantAmounts[m], 0);
+    const currentPayer = members.find((m) => isSelfName(m)) || members[0] || 'Ty';
+    setDraft((prev) => ({
+      ...prev,
+      amount: String(Math.round(total * 100) / 100),
+      splitType: 'individual',
+      participants,
+      participantAmounts: Object.fromEntries(
+        participants.map((m) => [m, Math.round(participantAmounts[m] * 100) / 100])
+      ),
+      participantWeights: Object.fromEntries(participants.map((m) => [m, 1])),
+      payer: participants.includes(currentPayer) ? currentPayer : participants[0] || currentPayer,
+    }));
+    setReceiptStep(null);
+    setReceiptImagePreview(null);
+  }
+
   function removeExpense(expenseId: string) {
     if (!currentTrip) return;
     const found = currentTrip.expenses.find((expense) => expense.id === expenseId) || null;
@@ -6943,15 +7022,104 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {showExpenseModal ? (
-                <div className="modal-overlay" role="presentation" onClick={() => setShowExpenseModal(false)}>
+                <div className="modal-overlay" role="presentation" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); }}>
                   <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label={t('addExpenseTitle')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
                         <p className="eyebrow">{t('expenseModalEyebrow')}</p>
                         <h2>{editingExpenseId ? t('editExpenseTitle') : t('addExpenseTitle')}</h2>
                       </div>
-                      <button type="button" className="ghost" onClick={() => setShowExpenseModal(false)}>{t('close')}</button>
+                      <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+                        {!editingExpenseId ? (
+                          <button
+                            type="button"
+                            className={`receipt-scan-btn${receiptStep ? ' active' : ''}`}
+                            onClick={() => { setReceiptStep(receiptStep ? null : 'upload'); setReceiptError(''); }}
+                            title={lang === 'sk' ? 'Pridať z blocku (Beta)' : 'Add from receipt (Beta)'}
+                          >
+                            📷 {lang === 'sk' ? 'Z blocku' : 'Receipt'} <span className="beta-badge">Beta</span>
+                          </button>
+                        ) : null}
+                        <button type="button" className="ghost" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); }}>{t('close')}</button>
+                      </div>
                     </div>
+
+                    {/* ── Receipt scanner ── */}
+                    {receiptStep ? (
+                      <div className="receipt-scanner">
+                        {receiptStep === 'upload' ? (
+                          <div className="receipt-upload-area">
+                            <label className="receipt-upload-label" htmlFor="receipt-file-input">
+                              <span className="receipt-upload-icon">🧾</span>
+                              <strong>{lang === 'sk' ? 'Nahrať fotku blocku' : 'Upload receipt photo'}</strong>
+                              <span className="muted">{lang === 'sk' ? 'Klikni alebo presuň sem obrázok' : 'Click or drop image here'}</span>
+                            </label>
+                            <input
+                              id="receipt-file-input"
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              style={{ display: 'none' }}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleReceiptImage(f); }}
+                            />
+                            {receiptError ? <p className="receipt-error">{receiptError}</p> : null}
+                          </div>
+                        ) : receiptStep === 'analyzing' ? (
+                          <div className="receipt-analyzing">
+                            {receiptImagePreview ? <img src={receiptImagePreview} alt="receipt" className="receipt-preview" /> : null}
+                            <div className="receipt-spinner" />
+                            <p className="muted">{lang === 'sk' ? 'Analyzujem blok...' : 'Analysing receipt...'}</p>
+                          </div>
+                        ) : receiptStep === 'assign' ? (
+                          <div className="receipt-assign">
+                            <p className="receipt-assign-hint muted">{lang === 'sk' ? 'Priraď položky členom výletu. "Všetci" = rovnomerne rozdelí medzi všetkých.' : 'Assign items to trip members. "Everyone" = split equally.'}</p>
+                            <div className="receipt-items-list">
+                              {receiptItems.map((item, idx) => (
+                                <div className="receipt-item-row" key={idx}>
+                                  <span className="receipt-item-name">{item.name}</span>
+                                  <span className="receipt-item-price">{item.price.toFixed(2)} {receiptCurrency}</span>
+                                  <select
+                                    className="receipt-item-assign"
+                                    value={item.assignedTo}
+                                    onChange={(e) => setReceiptItems((prev) => prev.map((it, i) => i === idx ? { ...it, assignedTo: e.target.value } : it))}
+                                  >
+                                    <option value="__all__">{lang === 'sk' ? '👥 Všetci' : '👥 Everyone'}</option>
+                                    {members.map((m) => <option key={m} value={m}>{m}</option>)}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Per-member totals preview */}
+                            <div className="receipt-member-totals">
+                              {(() => {
+                                const totals: Record<string,number> = {};
+                                receiptItems.forEach((item) => {
+                                  if (item.assignedTo === '__all__') {
+                                    members.forEach((m) => { totals[m] = (totals[m] || 0) + item.price / members.length; });
+                                  } else {
+                                    totals[item.assignedTo] = (totals[item.assignedTo] || 0) + item.price;
+                                  }
+                                });
+                                return Object.entries(totals).map(([m, amt]) => (
+                                  <div key={m} className="receipt-member-total-row">
+                                    <span>{m}</span>
+                                    <strong>{amt.toFixed(2)} {receiptCurrency}</strong>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                            <button type="button" className="receipt-apply-btn" onClick={applyReceiptToDraft}>
+                              {lang === 'sk' ? '✓ Použiť ako výdavok' : '✓ Apply as expense'}
+                            </button>
+                            <button type="button" className="ghost" onClick={() => { setReceiptStep('upload'); setReceiptItems([]); }}>
+                              {lang === 'sk' ? '← Nahrať znova' : '← Re-upload'}
+                            </button>
+                          </div>
+                        ) : null}
+                        <hr className="receipt-divider" />
+                      </div>
+                    ) : null}
+
                     <form className="stack" onSubmit={handleAddExpense}>
                       <select
                         value={draft.expenseType}
