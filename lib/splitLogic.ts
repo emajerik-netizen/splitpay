@@ -53,19 +53,22 @@ export function computeBalances(friends: Array<string | { id?: string; name: str
   };
 
   // Like resolveParticipantKey but guarantees the returned key exists in balance.
-  // When an expense stores a UUID from a session that is not present in the current
-  // friends list (e.g. member entry has no id stored), fall back to the name-based
-  // key so the balance is always attributed to a recognised friend.
+  // Resolve a balance-map key using both a UUID hint and a display-name hint.
+  // When both resolve to DIFFERENT valid keys, the name wins: names are human-readable
+  // and can't be corrupted by the accidental session-UUID-as-fallback bug. UUIDs are
+  // authoritative only when the name can't be resolved independently.
   const resolveKnownKey = (idHint?: string | null, nameHint?: string): string | null => {
-    if (idHint) {
+    const idKey = idHint ? (() => {
       const k = resolveParticipantKey(idHint);
-      if (k && Object.prototype.hasOwnProperty.call(balance, k)) return k;
-    }
-    if (nameHint) {
+      return k && Object.prototype.hasOwnProperty.call(balance, k) ? k : null;
+    })() : null;
+    const nameKey = nameHint ? (() => {
       const k = resolveParticipantKey(nameHint);
-      if (k && Object.prototype.hasOwnProperty.call(balance, k)) return k;
-    }
-    return null;
+      return k && Object.prototype.hasOwnProperty.call(balance, k) ? k : null;
+    })() : null;
+    // If both resolve to different keys, trust the name
+    if (idKey && nameKey && idKey !== nameKey) return nameKey;
+    return idKey ?? nameKey ?? null;
   };
 
   const safeNumber = (v: unknown) => {
