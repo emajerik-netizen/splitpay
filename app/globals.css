@@ -3869,3 +3869,75 @@ button:disabled {
   gap: 0.5rem;
   margin-top: 0.45rem;
 }
+
+/* ── Dark mode card/component overrides ── */
+[data-theme="dark"] .section-card,
+[data-theme="dark"] .card {
+  background: rgba(26, 32, 48, 0.97);
+  border-color: var(--stroke);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+[data-theme="dark"] .stat-card {
+  background: var(--bg-3);
+}
+[data-theme="dark"] .mini-panel {
+  background: var(--bg-3);
+}
+[data-theme="dark"] .trip-card-large {
+  background: rgba(26, 32, 48, 0.95);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--bg-3);
+  color: var(--text);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] .modal-card,
+[data-theme="dark"] .trip-settings-modal {
+  background: var(--card);
+}
+[data-theme="dark"] .startup-screen {
+  background: #0a0d14;
+}
+[data-theme="dark"] .category-breakdown {
+  background: var(--bg-3);
+}
+[data-theme="dark"] .ai-summary-card {
+  background: var(--bg-3);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] .ai-summary-text { color: var(--text); }
+[data-theme="dark"] .balance-total-card { background: var(--bg-3); }
+[data-theme="dark"] .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .section-card,
+  :root:not([data-theme="light"]) .card {
+    background: rgba(26, 32, 48, 0.97);
+    border-color: var(--stroke);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  }
+  :root:not([data-theme="light"]) .stat-card { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .mini-panel { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .trip-card-large {
+    background: rgba(26, 32, 48, 0.95);
+    border-color: var(--stroke);
+  }
+  :root:not([data-theme="light"]) input,
+  :root:not([data-theme="light"]) select,
+  :root:not([data-theme="light"]) textarea {
+    background: var(--bg-3);
+    color: var(--text);
+    border-color: var(--stroke);
+  }
+  :root:not([data-theme="light"]) .modal-card,
+  :root:not([data-theme="light"]) .trip-settings-modal { background: var(--card); }
+  :root:not([data-theme="light"]) .startup-screen { background: #0a0d14; }
+  :root:not([data-theme="light"]) .category-breakdown { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .ai-summary-card { background: var(--bg-3); border-color: var(--stroke); }
+  :root:not([data-theme="light"]) .ai-summary-text { color: var(--text); }
+  :root:not([data-theme="light"]) .balance-total-card { background: var(--bg-3); }
+  :root:not([data-theme="light"]) .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+}

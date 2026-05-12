@@ -5893,11 +5893,6 @@ export default function SplitPayWebApp() {
                   🇬🇧
                 </button>
               </div>
-              <div className="theme-toggle-row">
-                <button type="button" className={`theme-btn${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme('light')} title="Light">☀️</button>
-                <button type="button" className={`theme-btn${theme === 'auto' ? ' active' : ''}`} onClick={() => setTheme('auto')} title="Auto">⚙️</button>
-                <button type="button" className={`theme-btn${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme('dark')} title="Dark">🌙</button>
-              </div>
             </div>
           </section>
         </main>
@@ -5993,22 +5988,13 @@ export default function SplitPayWebApp() {
                   <div className="lang-picker">
                     <span className="lang-picker-label">{t('language')}</span>
                     <div className="lang-picker-flags">
-                      <button
-                        type="button"
-                        className={`lang-flag-btn${lang === 'sk' ? ' active' : ''}`}
-                        onClick={() => setLang('sk')}
-                        title={t('slovak')}
-                      >
-                        🇸🇰
-                      </button>
-                      <button
-                        type="button"
-                        className={`lang-flag-btn${lang === 'en' ? ' active' : ''}`}
-                        onClick={() => setLang('en')}
-                        title={t('english')}
-                      >
-                        🇬🇧
-                      </button>
+                      <button type="button" className={`lang-flag-btn${lang === 'sk' ? ' active' : ''}`} onClick={() => setLang('sk')} title={t('slovak')}>🇸🇰</button>
+                      <button type="button" className={`lang-flag-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')} title={t('english')}>🇬🇧</button>
+                    </div>
+                    <div className="theme-toggle-row">
+                      <button type="button" className={`theme-btn${theme === 'light' ? ' active' : ''}`} onClick={() => setTheme('light')} title="Svetlý">☀️</button>
+                      <button type="button" className={`theme-btn${theme === 'auto' ? ' active' : ''}`} onClick={() => setTheme('auto')} title="Auto">⚙️</button>
+                      <button type="button" className={`theme-btn${theme === 'dark' ? ' active' : ''}`} onClick={() => setTheme('dark')} title="Tmavý">🌙</button>
                     </div>
                   </div>
               </section>
@@ -6770,7 +6756,7 @@ export default function SplitPayWebApp() {
                       return acc;
                     }, {});
                     const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
-                    if (catEntries.length < 2) return null;
+                    if (catEntries.length < 1) return null;
                     const catMeta: Record<string, { label: string; icon: React.ReactNode }> = {
                       jedlo:     { label: t('categoryFood'),      icon: <Utensils size={13} /> },
                       doprava:   { label: t('categoryTransport'), icon: <Car size={13} /> },
