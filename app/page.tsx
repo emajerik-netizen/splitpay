@@ -4760,17 +4760,66 @@ export default function SplitPayWebApp() {
     const found = currentTrip.expenses.find((item) => item.id === expenseId);
     if (!found) return;
 
+    const tripMembers = currentTrip.members || [];
+    const storedParticipants = (found.participants || []).map(memberNameOf);
+    const storedIds = found.participantIds || [];
+
+    // Resolve a stored participant name+id to the current member display name.
+    // Handles: exact name match, ID match, "Ty" → current user mapping.
+    const resolveToCurrentName = (storedName: string, storedId?: string): string | null => {
+      const byName = tripMembers.find((m) => memberNameOf(m) === storedName);
+      if (byName) return memberNameOf(byName);
+      if (storedId) {
+        const byId = tripMembers.find((m) => typeof m !== 'string' && m.id === storedId);
+        if (byId) return memberNameOf(byId);
+      }
+      if (storedName.toLowerCase() === 'ty') {
+        if (appSession?.userId) {
+          const byUserId = tripMembers.find((m) => typeof m !== 'string' && m.id === appSession.userId);
+          if (byUserId) return memberNameOf(byUserId);
+        }
+        return displayCurrentUserName || 'Ty';
+      }
+      return null;
+    };
+
+    // Build old-name → current-display-name mapping and collect normalized participant list.
+    const oldToNew = new Map<string, string>();
+    const normalizedParticipants: string[] = [];
+    storedParticipants.forEach((storedName, i) => {
+      const currentName = resolveToCurrentName(storedName, storedIds[i]);
+      if (currentName && !normalizedParticipants.includes(currentName)) {
+        normalizedParticipants.push(currentName);
+        oldToNew.set(storedName, currentName);
+        if (storedIds[i]) oldToNew.set(storedIds[i], currentName);
+      }
+    });
+
+    // Re-key participantAmounts and participantWeights to current display names.
+    const remapRecord = (rec: Record<string, any>) => {
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rec)) { out[oldToNew.get(k) ?? k] = v; }
+      return out;
+    };
+
+    const storedPayerName = memberNameOf(found.payer || '');
+    const normalizedPayer = resolveToCurrentName(storedPayerName, found.payerId ?? undefined) ?? storedPayerName;
+    const validPayer = members.includes(normalizedPayer) ? normalizedPayer : members[0] || 'Ty';
+
+    const storedTransferTo = memberNameOf(found.transferTo || '');
+    const normalizedTransferTo = resolveToCurrentName(storedTransferTo, found.transferToId ?? undefined) ?? storedTransferTo;
+
     setEditingExpenseId(expenseId);
     setDraft({
       title: found.title,
       amount: String(found.amount),
       expenseType: found.expenseType === 'transfer' ? 'transfer' : 'expense',
-      payer: memberNameOf(found.payer || ''),
-      transferTo: memberNameOf(found.transferTo || '') || members.find((name) => name !== memberNameOf(found.payer || '')) || '',
-      participants: (found.participants || []).map(memberNameOf),
+      payer: validPayer,
+      transferTo: normalizedTransferTo || members.find((name) => name !== validPayer) || '',
+      participants: normalizedParticipants.length > 0 ? normalizedParticipants : members,
       splitType: found.splitType || 'equal',
-      participantWeights: found.participantWeights || {},
-      participantAmounts: found.participantAmounts || {},
+      participantWeights: remapRecord(found.participantWeights || {}),
+      participantAmounts: remapRecord(found.participantAmounts || {}),
     });
     openTrip(currentTrip.id, 'expenses');
     closeExpenseDetail();
