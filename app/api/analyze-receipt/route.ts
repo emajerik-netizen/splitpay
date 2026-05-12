@@ -8,6 +8,8 @@ export type ReceiptResult = {
   items: ReceiptItem[];
   total: number;
   currency: string;
+  merchant?: string;
+  category?: string;
   error?: string;
 };
 
@@ -38,13 +40,15 @@ export async function POST(req: NextRequest) {
           {
             text: `Extract all line items from this receipt/bill image.
 Return ONLY a JSON object with this exact structure (no markdown, no explanation):
-{"items":[{"name":"item name","price":12.50}],"total":45.00,"currency":"EUR"}
+{"merchant":"Restaurant Name","category":"jedlo","items":[{"name":"item name","price":12.50}],"total":45.00,"currency":"EUR"}
 
 Rules:
+- merchant: name of the restaurant, shop, or business (empty string if unknown)
+- category: one of: jedlo, doprava, ubytovanie, zabava, nakupy, ostatne
 - price must be a number (no currency symbols)
 - If you see a total/suma line, use it as "total"; otherwise sum the items
 - Infer currency from the receipt (EUR, USD, CZK, etc.); default EUR
-- If the image is not a receipt or is unreadable, return: {"items":[],"total":0,"currency":"EUR","error":"Cannot read receipt"}`,
+- If the image is not a receipt or is unreadable, return: {"merchant":"","category":"ostatne","items":[],"total":0,"currency":"EUR","error":"Cannot read receipt"}`,
           },
         ],
       }],

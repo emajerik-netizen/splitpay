@@ -501,6 +501,23 @@ const T = {
     member1: '1 člen',
     membersPlural: 'členov',
     members2to4suffix: 'členovia',
+    closeTripBtn: 'Uzavrieť výlet',
+    reopenTripBtn: 'Znovu otvoriť',
+    tripClosedLabel: 'Uzavretý',
+    closeTripConfirm: 'Naozaj uzavrieť výlet? Výdavky budú read-only a nebude možné ich upravovať.',
+    closingTripMsg: 'Uzatváram výlet...',
+    aiSummaryTitle: 'AI súhrn výletu',
+    aiSummaryGenerating: 'Generujem súhrn...',
+    convertToEurBtn: 'Prepočítať na EUR',
+    convertingMsg: 'Prepočítavam...',
+    convertedMsg: 'Výdavky boli prepočítané na EUR.',
+    categoryFood: 'Jedlo',
+    categoryTransport: 'Doprava',
+    categoryAccom: 'Ubytovanie',
+    categoryFun: 'Zábava',
+    categoryShopping: 'Nákupy',
+    categoryOther: 'Ostatné',
+    categoryBreakdown: 'Výdavky podľa kategórií',
   },
   en: {
     resumingSession: 'Resuming session',
@@ -874,6 +891,23 @@ const T = {
     member1: '1 member',
     membersPlural: 'members',
     members2to4suffix: 'members',
+    closeTripBtn: 'Close trip',
+    reopenTripBtn: 'Reopen',
+    tripClosedLabel: 'Closed',
+    closeTripConfirm: 'Really close the trip? Expenses will be read-only.',
+    closingTripMsg: 'Closing trip...',
+    aiSummaryTitle: 'AI trip summary',
+    aiSummaryGenerating: 'Generating summary...',
+    convertToEurBtn: 'Convert to EUR',
+    convertingMsg: 'Converting...',
+    convertedMsg: 'Expenses converted to EUR.',
+    categoryFood: 'Food',
+    categoryTransport: 'Transport',
+    categoryAccom: 'Accommodation',
+    categoryFun: 'Entertainment',
+    categoryShopping: 'Shopping',
+    categoryOther: 'Other',
+    categoryBreakdown: 'Expenses by category',
   },
 } as const;
 
@@ -920,6 +954,9 @@ type TripExpense = Expense & {
   title: string;
   date?: string | null;
   deletedAt?: string | null;
+  category?: string | null;
+  originalCurrency?: string | null;
+  originalAmount?: number | null;
 };
 
 type TripExpenseRow = {
@@ -946,12 +983,15 @@ type Trip = {
   date: string;
   owner: string;
   ownerId?: string | null;
-  currency: 'EUR' | 'USD' | 'CZK';
+  currency: 'EUR' | 'USD' | 'CZK' | string;
   color: string;
   archived: boolean;
   inviteCode: string;
   deletedAt?: string | null;
   deletedBy?: string | null;
+  status?: 'active' | 'closed';
+  aiSummary?: string | null;
+  closedAt?: string | null;
   members: (Member | string)[];
   expenses: TripExpense[];
   pendingInvites: Invite[];
@@ -1262,6 +1302,16 @@ function withExpandedParticipants(expenses: TripExpense[], members: string[]): T
   });
 }
 
+function inferCategory(title: string): string {
+  const t = (title || '').toLowerCase();
+  if (/jedl|reštaur|pizza|burger|šalát|obed|večera|kaviar|kaviaren|bar\b|pub\b|pivo|vín|wine|food|restaurant|lunch|dinner|café|cafe|coffee|drink|fast.?food|kfc|mcdo|sushi|grill|bistro/.test(t)) return 'jedlo';
+  if (/taxi|uber|vlak|bus\b|autobus|benzín|benzin|parkov|letisk|\blet\b|flight|train|transport|bike|metro|mhd|bolt\b|doprava/.test(t)) return 'doprava';
+  if (/hotel|hostel|airbnb|ubytov|apartm|izba\b|room\b|nocľah|nocl|pension|chatka|chata/.test(t)) return 'ubytovanie';
+  if (/vstupn|concert|kino|zábav|zabav|aktivi|ticket|museum|výlet|vylet|sport|aqua|bazén|bowling|paintball|escape/.test(t)) return 'zabava';
+  if (/nákup|nakup|supermarket|lidl|tesco|billa|kaufland|shopping|market|grocery|obchod|\bdm\b|rossmann|dm\s/.test(t)) return 'nakupy';
+  return 'ostatne';
+}
+
 function sortTripExpensesByNewest(expenses: TripExpense[]) {
   return [...expenses].sort((left, right) => {
     const leftTs = expenseIdTimestamp(left.id) || 0;
@@ -1455,6 +1505,10 @@ export default function SplitPayWebApp() {
   const [receiptCurrency, setReceiptCurrency] = useState('EUR');
   const [receiptError, setReceiptError] = useState('');
   const [receiptImagePreview, setReceiptImagePreview] = useState<string | null>(null);
+  const [receiptMerchant, setReceiptMerchant] = useState('');
+  const [receiptCategory, setReceiptCategory] = useState('');
+  const [isClosingTrip, setIsClosingTrip] = useState(false);
+  const [isCurrencyConverting, setIsCurrencyConverting] = useState(false);
     const [lang, setLang] = useState<Lang>(() => {
       if (typeof window === 'undefined') return 'sk';
       return (window.localStorage.getItem(LANG_KEY) as Lang) || 'sk';
@@ -4686,15 +4740,17 @@ export default function SplitPayWebApp() {
       return null;
     };
     const expense: TripExpense = (() => {
+      const expenseTitle = draft.title.trim() || (draft.expenseType === 'transfer' ? `Transfer ${safePayer} -> ${safeTransferTo}` : '');
       const base = {
         id: makeId(),
-        title: draft.title.trim() || (draft.expenseType === 'transfer' ? `Transfer ${safePayer} -> ${safeTransferTo}` : ''),
+        title: expenseTitle,
         amount,
         date: draft.date || new Date().toISOString().slice(0, 10),
         payer: safePayer,
         participants: draft.expenseType === 'transfer' ? [safeTransferTo] : safeParticipants,
         expenseType: draft.expenseType,
         splitType: draft.expenseType === 'transfer' ? 'equal' : draft.splitType,
+        category: receiptCategory || (draft.expenseType === 'transfer' ? 'ostatne' : inferCategory(expenseTitle)),
       } as Partial<TripExpense>;
 
       const payerId = resolveMemberId(safePayer) || appSession?.userId || null;
@@ -4780,6 +4836,7 @@ export default function SplitPayWebApp() {
   }
 
   function openExpenseModalForCreate() {
+    if (currentTrip?.status === 'closed') return;
     setEditingExpenseId(null);
     const currentUserInMembers = members.find((m) => isSelfName(m)) || 'Ty';
     setDraft({
@@ -4915,7 +4972,7 @@ export default function SplitPayWebApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: b64, mimeType }),
       });
-      let data: { items?: { name: string; price: number }[]; currency?: string; error?: string; detail?: string };
+      let data: { items?: { name: string; price: number }[]; currency?: string; merchant?: string; category?: string; error?: string; detail?: string };
       try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
       if (!res.ok || (data.error && !data.items?.length)) {
         setReceiptError(data.error || `Chyba ${res.status}`);
@@ -4930,8 +4987,14 @@ export default function SplitPayWebApp() {
       }));
       setReceiptItems(items);
       setReceiptCurrency(data.currency || 'EUR');
+      setReceiptMerchant(data.merchant || '');
+      setReceiptCategory(data.category || '');
       setReceiptStep('assign');
-      setDraft((prev) => ({ ...prev, payer: currentPayer }));
+      setDraft((prev) => ({
+        ...prev,
+        payer: currentPayer,
+        title: prev.title || data.merchant || '',
+      }));
     } catch (err) {
       setReceiptError(err instanceof Error ? err.message : (lang === 'sk' ? 'Analýza zlyhala' : 'Analysis failed'));
       setReceiptStep('upload');
@@ -4968,6 +5031,7 @@ export default function SplitPayWebApp() {
     }));
     setReceiptStep(null);
     setReceiptImagePreview(null);
+    // category comes from receipt; keep it so expense save picks it up
   }
 
   function removeExpense(expenseId: string) {
@@ -4981,6 +5045,63 @@ export default function SplitPayWebApp() {
       expenses: trip.expenses.map((e) => e.id === expenseId ? { ...e, deletedAt: now } : e),
     }));
     closeExpenseDetail();
+  }
+
+  async function handleCloseTrip() {
+    if (!currentTrip || !currentTripOwnerIsSelf) return;
+    if (!window.confirm(t('closeTripConfirm'))) return;
+    setIsClosingTrip(true);
+    const activeExpenses = normalizedExpenses.filter((e) => !e.deletedAt);
+    let aiSummary: string | null = null;
+    try {
+      const res = await fetch('/api/trip-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripName: currentTrip.name,
+          members,
+          expenses: activeExpenses.map((e) => ({ title: e.title, amount: e.amount, payer: e.payer || '', category: e.category || '' })),
+          currency: currentTrip.currency,
+          date: currentTrip.date,
+        }),
+      });
+      if (res.ok) { const d = await res.json(); aiSummary = d.summary || null; }
+    } catch { /* summary is optional */ }
+    updateCurrentTrip((trip) => ({ ...trip, status: 'closed', closedAt: new Date().toISOString(), aiSummary }));
+    setIsClosingTrip(false);
+  }
+
+  function handleReopenTrip() {
+    if (!currentTrip || !currentTripOwnerIsSelf) return;
+    updateCurrentTrip((trip) => ({ ...trip, status: 'active', aiSummary: null, closedAt: null }));
+  }
+
+  async function handleConvertToEur() {
+    if (!currentTrip || currentTrip.currency === 'EUR') return;
+    setIsCurrencyConverting(true);
+    try {
+      const res = await fetch(`https://api.frankfurter.app/latest?from=${encodeURIComponent(currentTrip.currency)}&to=EUR`);
+      const data = await res.json() as { rates?: Record<string, number> };
+      const rate = data.rates?.EUR;
+      if (!rate) { setInfoMessage(`Kurz pre ${currentTrip.currency} sa nepodarilo načítať.`); setIsCurrencyConverting(false); return; }
+      updateCurrentTrip((trip) => ({
+        ...trip,
+        currency: 'EUR',
+        expenses: trip.expenses.map((e) => ({
+          ...e,
+          originalCurrency: e.originalCurrency || trip.currency,
+          originalAmount: e.originalAmount ?? e.amount,
+          amount: Math.round(e.amount * rate * 100) / 100,
+          ...(e.participantAmounts ? {
+            participantAmounts: Object.fromEntries(
+              Object.entries(e.participantAmounts).map(([k, v]) => [k, Math.round(Number(v) * rate * 100) / 100])
+            ),
+          } : {}),
+        })),
+      }));
+      setInfoMessage(t('convertedMsg'));
+    } catch { setInfoMessage('Prepočítanie zlyhalo.'); }
+    setIsCurrencyConverting(false);
   }
 
   async function toggleNotifications() {
@@ -6258,6 +6379,7 @@ export default function SplitPayWebApp() {
                              <span>{t('totalMeta')} {money(tripTotal)}</span>
                             <span>{trip.currency}</span>
                              {trip.archived ? <span>{t('archived')}</span> : null}
+                             {trip.status === 'closed' && !trip.archived ? <span className="trip-status-badge trip-status-closed-sm">{t('tripClosedLabel')}</span> : null}
                           </div>
                         </div>
                       </button>
@@ -6516,17 +6638,17 @@ export default function SplitPayWebApp() {
                   <div className="section-head compact-head overview-head">
                     <div>
                         <p className="eyebrow">{t('tripOverview')}</p>
-                        <h2>{t('basicInfo')}</h2>
+                        <h2 style={{display:'flex',alignItems:'center',gap:8}}>
+                          {t('basicInfo')}
+                          {currentTrip.status === 'closed' ? <span className="trip-status-badge trip-status-closed">{t('tripClosedLabel')}</span> : null}
+                        </h2>
                     </div>
-                    <button
-                      type="button"
-                      className="expense-open-modal-btn"
-                      onClick={openExpenseModalForCreate}
-                        title={t('addExpense')}
-                    >
-                      <Plus size={16} />
+                    {currentTrip.status !== 'closed' ? (
+                      <button type="button" className="expense-open-modal-btn" onClick={openExpenseModalForCreate} title={t('addExpense')}>
+                        <Plus size={16} />
                         <span>{t('addExpense')}</span>
-                    </button>
+                      </button>
+                    ) : null}
                   </div>
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
@@ -6538,6 +6660,54 @@ export default function SplitPayWebApp() {
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
+                  {currentTripOwnerIsSelf ? (
+                    <div className="trip-actions-strip">
+                      {currentTrip.status !== 'closed' ? (
+                        <button type="button" className="close-trip-btn" onClick={() => void handleCloseTrip()} disabled={isClosingTrip}>
+                          {isClosingTrip ? t('closingTripMsg') : t('closeTripBtn')}
+                        </button>
+                      ) : (
+                        <button type="button" className="reopen-trip-btn" onClick={handleReopenTrip}>
+                          {t('reopenTripBtn')}
+                        </button>
+                      )}
+                      {currentTrip.currency !== 'EUR' ? (
+                        <button type="button" className="convert-eur-btn" onClick={() => void handleConvertToEur()} disabled={isCurrencyConverting}>
+                          {isCurrencyConverting ? t('convertingMsg') : `${t('convertToEurBtn')} (${currentTrip.currency}→EUR)`}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {currentTrip.status === 'closed' && currentTrip.aiSummary ? (
+                    <div className="ai-summary-card">
+                      <p className="ai-summary-label">{t('aiSummaryTitle')}</p>
+                      <p className="ai-summary-text">{currentTrip.aiSummary}</p>
+                    </div>
+                  ) : null}
+                  {(() => {
+                    const cats = normalizedExpenses.reduce<Record<string, number>>((acc, e) => {
+                      const c = e.category || inferCategory(e.title);
+                      acc[c] = (acc[c] || 0) + e.amount;
+                      return acc;
+                    }, {});
+                    const catEntries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+                    if (catEntries.length < 2) return null;
+                    const catLabel: Record<string, string> = {
+                      jedlo: t('categoryFood'), doprava: t('categoryTransport'), ubytovanie: t('categoryAccom'),
+                      zabava: t('categoryFun'), nakupy: t('categoryShopping'), ostatne: t('categoryOther'),
+                    };
+                    return (
+                      <div className="category-breakdown">
+                        <p className="category-breakdown-title">{t('categoryBreakdown')}</p>
+                        {catEntries.map(([cat, amt]) => (
+                          <div key={cat} className="category-row">
+                            <span className={`category-badge category-${cat}`}>{catLabel[cat] || cat}</span>
+                            <span className="category-amount">{money(amt)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {normalizedExpenses.length > 0 ? (() => {
                     const anyNonZero = Object.values(balances).some((v) => Math.abs(Number(v) || 0) > 0.01);
                     if (!anyNonZero) {
@@ -6600,6 +6770,7 @@ export default function SplitPayWebApp() {
                                 >
                                   {formatMemberName(memberNameOf(expense.payer || ''))}
                                 </button>
+                                {expense.category ? <span className={`category-badge category-${expense.category} category-inline`}>{({jedlo:t('categoryFood'),doprava:t('categoryTransport'),ubytovanie:t('categoryAccom'),zabava:t('categoryFun'),nakupy:t('categoryShopping'),ostatne:t('categoryOther')} as Record<string,string>)[expense.category] || expense.category}</span> : null}
                               </p>
                             </div>
                             <strong>{money(expense.amount)}</strong>
@@ -7044,7 +7215,7 @@ export default function SplitPayWebApp() {
               ) : null}
 
               {showExpenseModal ? (
-                <div className="modal-overlay" role="presentation" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); }}>
+                <div className="modal-overlay" role="presentation" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); setReceiptMerchant(''); setReceiptCategory(''); }}>
                   <section className="section-card modal-card expense-modal-card" role="dialog" aria-modal="true" aria-label={t('addExpenseTitle')} onClick={(event) => event.stopPropagation()}>
                     <div className="modal-head">
                       <div>
@@ -7062,7 +7233,7 @@ export default function SplitPayWebApp() {
                             📷 {lang === 'sk' ? 'Z blocku' : 'Receipt'} <span className="beta-badge">Beta</span>
                           </button>
                         ) : null}
-                        <button type="button" className="ghost" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); }}>{t('close')}</button>
+                        <button type="button" className="ghost" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); setReceiptMerchant(''); setReceiptCategory(''); }}>{t('close')}</button>
                       </div>
                     </div>
 

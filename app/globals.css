@@ -3608,3 +3608,143 @@ button:disabled {
 .receipt-apply-btn:hover {
   opacity: 0.9;
 }
+
+/* ── Trip status badge ── */
+.trip-status-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.55rem;
+  border-radius: 99px;
+  vertical-align: middle;
+}
+.trip-status-closed {
+  background: #fff0e0;
+  color: #b45309;
+  border: 1px solid #f59e0b55;
+}
+.trip-status-closed-sm {
+  background: #fff0e0;
+  color: #b45309;
+  font-size: 0.65rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 99px;
+  font-weight: 700;
+}
+
+/* ── Trip action strip ── */
+.trip-actions-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+.close-trip-btn {
+  background: #fff3e0;
+  color: #b45309;
+  border: 1.5px solid #f59e0b88;
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.close-trip-btn:hover { background: #ffe0b2; }
+.close-trip-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.reopen-trip-btn {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1.5px solid #66bb6a88;
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.reopen-trip-btn:hover { background: #c8e6c9; }
+.convert-eur-btn {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1.5px solid #42a5f588;
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.convert-eur-btn:hover { background: #bbdefb; }
+.convert-eur-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── AI summary card ── */
+.ai-summary-card {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+  border: 1.5px solid #90caf9;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  margin-top: 0.25rem;
+}
+.ai-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1565c0;
+  margin-bottom: 0.35rem;
+}
+.ai-summary-text {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #1e3a5f;
+}
+
+/* ── Category breakdown ── */
+.category-breakdown {
+  background: var(--bg-2, #f4f7ff);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  margin-top: 0.25rem;
+}
+.category-breakdown-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.45rem;
+}
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.3rem;
+}
+.category-row:last-child { margin-bottom: 0; }
+.category-amount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-left: auto;
+}
+
+/* ── Category badges ── */
+.category-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 99px;
+}
+.category-inline {
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+.category-jedlo     { background: #e8f5e9; color: #2e7d32; }
+.category-doprava   { background: #e3f2fd; color: #1565c0; }
+.category-ubytovanie{ background: #f3e5f5; color: #7b1fa2; }
+.category-zabava    { background: #fff3e0; color: #e65100; }
+.category-nakupy    { background: #e0f2f1; color: #00695c; }
+.category-ostatne   { background: #f5f5f5; color: #616161; }
