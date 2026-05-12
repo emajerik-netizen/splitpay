@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -28,17 +29,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unsupported image type' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ items: [], total: 0, currency: 'EUR', error: 'Missing API key — set GEMINI_API_KEY in Vercel' } satisfies ReceiptResult, { status: 500 });
-    }
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const body = {
-      contents: [{
-        parts: [
-          { inline_data: { mime_type: mimeType, data: image } },
-          {
-            text: `Extract all line items from this receipt/bill image.
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mimeType as AllowedType, data: image },
+            },
+            {
+              type: 'text',
+              text: `Extract all line items from this receipt/bill image.
 Return ONLY a JSON object with this exact structure (no markdown, no explanation):
 {"merchant":"Restaurant Name","category":"jedlo","items":[{"name":"item name","price":12.50}],"total":45.00,"currency":"EUR"}
 
@@ -49,25 +55,13 @@ Rules:
 - If you see a total/suma line, use it as "total"; otherwise sum the items
 - Infer currency from the receipt (EUR, USD, CZK, etc.); default EUR
 - If the image is not a receipt or is unreadable, return: {"merchant":"","category":"ostatne","items":[],"total":0,"currency":"EUR","error":"Cannot read receipt"}`,
-          },
-        ],
-      }],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0 },
-    };
+            },
+          ],
+        },
+      ],
+    });
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-    );
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('[analyze-receipt] Gemini error', res.status, errText.slice(0, 200));
-      return NextResponse.json({ items: [], total: 0, currency: 'EUR', error: `Gemini ${res.status}: ${errText.slice(0, 100)}` } satisfies ReceiptResult, { status: 500 });
-    }
-
-    const geminiData = await res.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
       return NextResponse.json({ items: [], total: 0, currency: 'EUR', error: 'Could not parse receipt' } satisfies ReceiptResult);
@@ -83,8 +77,9 @@ Rules:
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[analyze-receipt]', msg);
+    const isApiKey = msg.includes('API key') || msg.includes('auth') || msg.includes('401');
     return NextResponse.json(
-      { items: [], total: 0, currency: 'EUR', error: `Analysis failed: ${msg.slice(0, 120)}` } satisfies ReceiptResult,
+      { items: [], total: 0, currency: 'EUR', error: isApiKey ? 'Missing API key — set ANTHROPIC_API_KEY in Vercel' : `Analysis failed: ${msg.slice(0, 120)}` } satisfies ReceiptResult,
       { status: 500 }
     );
   }
