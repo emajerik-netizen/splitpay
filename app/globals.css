@@ -4193,3 +4193,40 @@ button:disabled {
     border-color: var(--stroke);
   }
 }
+
+/* ── Mark as paid button ── */
+.mark-paid-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: auto;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1f9e47, #177a37);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 8px rgba(31, 158, 71, 0.25);
+  white-space: nowrap;
+}
+
+.mark-paid-btn:hover {
+  background: linear-gradient(135deg, #25b552, #1a8f40);
+}
+
+/* ── Offline banner ── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #92400e;
+  color: #fef3c7;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  letter-spacing: 0.01em;
+}

@@ -326,6 +326,9 @@ const T = {
     settlementAction: 'pošle',
     allSettled: 'Všetko je vyrovnané.',
     balanceTip: 'Pošli kamarátom IBAN alebo sa vyrovnajte v hotovosti.',
+    markAsPaid: 'Zaplatené ✓',
+    paymentRecorded: 'Platba zaznamenaná v histórii.',
+    offlineBanner: 'Ste offline – zobrazujú sa uložené dáta.',
     copyRecipientIbanBtn: 'Kopírovať IBAN príjemcu',
     tripNeedsSettlementTitle: 'Výlet čaká na vyrovnanie',
     tripNeedsSettlementBody: 'Tento výlet skončil pred viac ako týždňom, ale financie ešte nie sú vyrovnané. Dokončite vyrovnania a až potom výlet archivujte.',
@@ -720,6 +723,9 @@ const T = {
     settlementAction: 'sends',
     allSettled: 'Everything is settled.',
     balanceTip: 'Share your IBAN or settle in cash.',
+    markAsPaid: 'Mark as paid ✓',
+    paymentRecorded: 'Payment recorded in history.',
+    offlineBanner: 'You are offline – showing saved data.',
     copyRecipientIbanBtn: 'Copy recipient IBAN',
     tripNeedsSettlementTitle: 'Trip still needs settlement',
     tripNeedsSettlementBody: 'This trip ended more than a week ago, but finances are still not settled. Complete settlements first and archive the trip afterwards.',
@@ -1620,6 +1626,20 @@ export default function SplitPayWebApp() {
     else if (theme === 'light') root.setAttribute('data-theme', 'light');
     else root.removeAttribute('data-theme');
   }, [theme]);
+
+  useEffect(() => {
+    const update = () => setIsOffline(!navigator.onLine);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      void navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
 
   useEffect(() => {
     if (!showStartup) return;
@@ -5135,6 +5155,36 @@ export default function SplitPayWebApp() {
     updateCurrentTrip((trip) => ({ ...trip, status: 'active', aiSummary: null, closedAt: null }));
   }
 
+  function handleMarkAsPaid(fromKey: string, toKey: string, amount: number) {
+    if (!currentTrip) return;
+    const fromName = displayNameForKey(fromKey);
+    const toName = displayNameForKey(toKey);
+    const findId = (key: string, name: string) => {
+      const m = (currentTrip.members || []).find(
+        (mb) => typeof mb !== 'string' && (mb.id === key || memberNameOf(mb) === name)
+      );
+      if (m && typeof m !== 'string') return m.id;
+      if (name === (appSession?.name || '').trim()) return appSession?.userId ?? null;
+      return null;
+    };
+    const expense: TripExpense = {
+      id: makeId(),
+      title: `${fromName} → ${toName}`,
+      amount,
+      date: new Date().toISOString().slice(0, 10),
+      payer: fromName,
+      payerId: findId(fromKey, fromName),
+      participants: [toName],
+      expenseType: 'transfer',
+      splitType: 'equal',
+      transferTo: toName,
+      transferToId: findId(toKey, toName),
+      category: 'ostatne',
+    };
+    updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
+    setInfoMessage(t('paymentRecorded'));
+  }
+
   function updateExpenseCategory(expenseId: string, category: string) {
     updateCurrentTrip((trip) => ({
       ...trip,
@@ -5898,6 +5948,7 @@ export default function SplitPayWebApp() {
         </main>
       ) : (
         <main className="page-wrap app-shell">
+          {isOffline ? <div className="offline-banner">{t('offlineBanner')}</div> : null}
           <div className="profile-fab-wrap" ref={profileMenuWrapRef}>
             <button type="button" className="profile-fab" onClick={() => setProfileOpen((prev) => !prev)}>
               {(appSession?.name || 'U').slice(0, 1).toUpperCase()}
@@ -7256,6 +7307,15 @@ export default function SplitPayWebApp() {
                                       onClick={() => copyIban(recipientIban)}
                                     >
                                       {t('copyRecipientIbanBtn')}
+                                    </button>
+                                  ) : null}
+                                  {isSelfName(fromKey) ? (
+                                    <button
+                                      type="button"
+                                      className="mark-paid-btn"
+                                      onClick={() => handleMarkAsPaid(transfer.from, transfer.to, transfer.amount)}
+                                    >
+                                      {t('markAsPaid')}
                                     </button>
                                   ) : null}
                                   <strong className="balance-amount">{money(transfer.amount)}</strong>

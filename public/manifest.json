@@ -1,13 +1,13 @@
 {
-  "name": "SplitPay Web",
-  "short_name": "SplitPay",
-  "description": "Webova aplikacia na rozdelenie vydavkov a vyrovnanie platieb.",
+  "name": "Split Pay",
+  "short_name": "Split Pay",
+  "description": "Výlety, rozpočet a vyrovnanie bez chaosu.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0f1117",
+  "theme_color": "#2c79f6",
   "icons": [
     {
       "src": "/apple-touch-icon.png",
