@@ -3911,6 +3911,54 @@ button:disabled {
 [data-theme="dark"] .ai-summary-text { color: var(--text); }
 [data-theme="dark"] .balance-total-card { background: var(--bg-3); }
 [data-theme="dark"] .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+[data-theme="dark"] .hero-panel {
+  background: var(--card);
+  border-color: var(--stroke);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .screen-pill {
+  background: var(--bg-3);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] .onboarding-grid .section-card,
+[data-theme="dark"] .action-tile {
+  background: var(--card);
+  border-color: var(--stroke);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .action-tile-create {
+  background: color-mix(in srgb, #1a3020 80%, var(--card));
+  border-color: #2a5035;
+}
+[data-theme="dark"] .action-tile-join {
+  background: color-mix(in srgb, #2a2010 80%, var(--card));
+  border-color: #4a3820;
+}
+[data-theme="dark"] .profile-iban-editor,
+[data-theme="dark"] .support-form {
+  background: var(--bg-3);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] .ghost {
+  background: var(--bg-3);
+  color: var(--accent-strong);
+  border-color: var(--stroke);
+  box-shadow: none;
+}
+[data-theme="dark"] .ghost:hover {
+  background: var(--bg-2);
+}
+[data-theme="dark"] .modal-card {
+  background: var(--card);
+  border-color: var(--stroke);
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--bg-3) !important;
+  color: var(--text) !important;
+  border-color: var(--stroke) !important;
+}
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .section-card,
@@ -3928,16 +3976,52 @@ button:disabled {
   :root:not([data-theme="light"]) input,
   :root:not([data-theme="light"]) select,
   :root:not([data-theme="light"]) textarea {
-    background: var(--bg-3);
-    color: var(--text);
-    border-color: var(--stroke);
+    background: var(--bg-3) !important;
+    color: var(--text) !important;
+    border-color: var(--stroke) !important;
   }
   :root:not([data-theme="light"]) .modal-card,
-  :root:not([data-theme="light"]) .trip-settings-modal { background: var(--card); }
+  :root:not([data-theme="light"]) .trip-settings-modal { background: var(--card); border-color: var(--stroke); }
   :root:not([data-theme="light"]) .startup-screen { background: #0a0d14; }
   :root:not([data-theme="light"]) .category-breakdown { background: var(--bg-3); }
   :root:not([data-theme="light"]) .ai-summary-card { background: var(--bg-3); border-color: var(--stroke); }
   :root:not([data-theme="light"]) .ai-summary-text { color: var(--text); }
   :root:not([data-theme="light"]) .balance-total-card { background: var(--bg-3); }
   :root:not([data-theme="light"]) .success-panel { background: #0d2a1a; border-color: #1a5c2a; }
+  :root:not([data-theme="light"]) .hero-panel {
+    background: var(--card);
+    border-color: var(--stroke);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.3);
+  }
+  :root:not([data-theme="light"]) .screen-pill {
+    background: var(--bg-3);
+    border-color: var(--stroke);
+  }
+  :root:not([data-theme="light"]) .onboarding-grid .section-card,
+  :root:not([data-theme="light"]) .action-tile {
+    background: var(--card);
+    border-color: var(--stroke);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  :root:not([data-theme="light"]) .action-tile-create {
+    background: color-mix(in srgb, #1a3020 80%, var(--card));
+    border-color: #2a5035;
+  }
+  :root:not([data-theme="light"]) .action-tile-join {
+    background: color-mix(in srgb, #2a2010 80%, var(--card));
+    border-color: #4a3820;
+  }
+  :root:not([data-theme="light"]) .profile-iban-editor,
+  :root:not([data-theme="light"]) .support-form {
+    background: var(--bg-3);
+    border-color: var(--stroke);
+  }
+  :root:not([data-theme="light"]) .ghost {
+    background: var(--bg-3);
+    color: var(--accent-strong);
+    border-color: var(--stroke);
+    box-shadow: none;
+  }
+  :root:not([data-theme="light"]) .ghost:hover { background: var(--bg-2); }
+  :root:not([data-theme="light"]) .modal-card { background: var(--card); border-color: var(--stroke); }
 }
