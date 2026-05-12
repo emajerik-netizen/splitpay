@@ -4864,7 +4864,10 @@ export default function SplitPayWebApp() {
         category: receiptCategory || (draft.expenseType === 'transfer' ? 'ostatne' : inferCategory(expenseTitle)),
       } as Partial<TripExpense>;
 
-      const payerId = resolveMemberId(safePayer) || appSession?.userId || null;
+      // Only fall back to appSession.userId when the payer IS the current user.
+      // Using the session UUID as a fallback for a different member would attribute
+      // that member's payment to the current user in computeBalances.
+      const payerId = resolveMemberId(safePayer) || (isSelfName(safePayer) ? appSession?.userId ?? null : null);
 
       if (draft.expenseType === 'transfer') {
         const transferToId = resolveMemberId(safeTransferTo);
