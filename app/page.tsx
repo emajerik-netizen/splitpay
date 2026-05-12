@@ -7425,11 +7425,14 @@ export default function SplitPayWebApp() {
 
                     {/* ── Receipt scanner ── */}
                     {receiptStep ? (
-                      <div className="receipt-scanner">
+                      <div className="ri-scanner">
                         {receiptStep === 'upload' ? (
-                          <div className="receipt-upload-area">
-                            <label className="receipt-upload-label" htmlFor="receipt-file-input">
-                              <span className="receipt-upload-icon">🧾</span>
+                          <>
+                            <div className="ri-scan-pill">
+                              📷 {lang === 'sk' ? 'Skenovať blok' : 'Scan receipt'} · <strong>BETA</strong>
+                            </div>
+                            <label className="ri-scanner-zone" htmlFor="receipt-file-input">
+                              <span className="ri-upload-icon">🧾</span>
                               <strong>{lang === 'sk' ? 'Nahrať fotku blocku' : 'Upload receipt photo'}</strong>
                               <span className="muted">{lang === 'sk' ? 'Klikni alebo presuň sem obrázok' : 'Click or drop image here'}</span>
                             </label>
@@ -7442,23 +7445,33 @@ export default function SplitPayWebApp() {
                               onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleReceiptImage(f); }}
                             />
                             {receiptError ? <p className="receipt-error">{receiptError}</p> : null}
-                          </div>
+                          </>
                         ) : receiptStep === 'analyzing' ? (
-                          <div className="receipt-analyzing">
-                            {receiptImagePreview ? <img src={receiptImagePreview} alt="receipt" className="receipt-preview" /> : null}
-                            <div className="receipt-spinner" />
-                            <p className="muted">{lang === 'sk' ? 'Analyzujem blok...' : 'Analysing receipt...'}</p>
+                          <div className="ri-scanner-area">
+                            {receiptImagePreview ? (
+                              <div className="ri-receipt-preview-wrap">
+                                <img src={receiptImagePreview} alt="receipt" className="ri-receipt-preview" />
+                                <div className="ri-scan-overlay"><div className="ri-scan-line" /></div>
+                              </div>
+                            ) : null}
+                            <div className="ri-analyzing-badge">
+                              <div className="ri-spinner" />
+                              <div>
+                                <div className="ri-analyzing-text">{lang === 'sk' ? 'AI analyzuje blok…' : 'Analysing receipt…'}</div>
+                                <div className="ri-analyzing-sub">{lang === 'sk' ? 'Rozpoznávam položky a ceny' : 'Recognising items and prices'}</div>
+                              </div>
+                            </div>
                           </div>
                         ) : receiptStep === 'assign' ? (
-                          <div className="receipt-assign">
-                            <p className="receipt-assign-hint muted">{lang === 'sk' ? 'Priraď položky členom výletu. "Všetci" = rovnomerne rozdelí medzi všetkých.' : 'Assign items to trip members. "Everyone" = split equally.'}</p>
-                            <div className="receipt-items-list">
+                          <div className="ri-assign">
+                            <p className="ri-assign-hint">{lang === 'sk' ? 'Priraď položky členom výletu. "Všetci" = rovnomerne rozdelí medzi všetkých.' : 'Assign items to trip members. "Everyone" = split equally.'}</p>
+                            <div className="ri-items-list">
                               {receiptItems.map((item, idx) => (
-                                <div className="receipt-item-row" key={idx}>
-                                  <span className="receipt-item-name">{item.name}</span>
-                                  <span className="receipt-item-price">{item.price.toFixed(2)} {receiptCurrency}</span>
+                                <div className="ri-item-row" key={idx}>
+                                  <span className="ri-item-name">{item.name}</span>
+                                  <span className="ri-item-price">{item.price.toFixed(2)} {receiptCurrency}</span>
                                   <select
-                                    className="receipt-item-assign"
+                                    className="ri-item-assign"
                                     value={item.assignedTo}
                                     onChange={(e) => setReceiptItems((prev) => prev.map((it, i) => i === idx ? { ...it, assignedTo: e.target.value } : it))}
                                   >
@@ -7468,8 +7481,7 @@ export default function SplitPayWebApp() {
                                 </div>
                               ))}
                             </div>
-                            {/* Per-member totals preview */}
-                            <div className="receipt-member-totals">
+                            <div className="ri-member-totals">
                               {(() => {
                                 const totals: Record<string,number> = {};
                                 receiptItems.forEach((item) => {
@@ -7480,15 +7492,15 @@ export default function SplitPayWebApp() {
                                   }
                                 });
                                 return Object.entries(totals).map(([m, amt]) => (
-                                  <div key={m} className="receipt-member-total-row">
+                                  <div key={m} className="ri-total-chip">
                                     <span>{m}</span>
                                     <strong>{amt.toFixed(2)} {receiptCurrency}</strong>
                                   </div>
                                 ));
                               })()}
                             </div>
-                            <button type="button" className="receipt-apply-btn" onClick={applyReceiptToDraft}>
-                              {lang === 'sk' ? '✓ Použiť ako výdavok' : '✓ Apply as expense'}
+                            <button type="button" className="ri-cta" onClick={applyReceiptToDraft}>
+                              ✓ {lang === 'sk' ? 'Použiť ako výdavok' : 'Apply as expense'}
                             </button>
                             <button type="button" className="ghost" onClick={() => { setReceiptStep('upload'); setReceiptItems([]); }}>
                               {lang === 'sk' ? '← Nahrať znova' : '← Re-upload'}
