@@ -4875,45 +4875,67 @@ export default function SplitPayWebApp() {
     setShowExpenseModal(true);
   }
 
+  async function compressReceiptImage(file: File): Promise<{ b64: string; mimeType: string }> {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img') as HTMLImageElement;
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1600;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+          else { width = Math.round((width * MAX) / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('canvas')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const b64 = dataUrl.split(',')[1];
+        resolve({ b64, mimeType: 'image/jpeg' });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load')); };
+      img.src = url;
+    });
+  }
+
   async function handleReceiptImage(file: File) {
     setReceiptError('');
     setReceiptStep('analyzing');
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setReceiptImagePreview(dataUrl);
-      // Extract base64 and mime type
-      const [meta, b64] = dataUrl.split(',');
-      const mimeType = meta.match(/:(.*?);/)?.[1] || 'image/jpeg';
-      try {
-        const res = await fetch('/api/analyze-receipt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: b64, mimeType }),
-        });
-        const data = await res.json();
-        if (data.error && !data.items?.length) {
-          setReceiptError(data.error);
-          setReceiptStep('upload');
-          return;
-        }
-        const currentPayer = members.find((m) => isSelfName(m)) || members[0] || 'Ty';
-        const items: ReceiptItem[] = (data.items || []).map((it: { name: string; price: number }) => ({
-          name: it.name,
-          price: Number(it.price) || 0,
-          assignedTo: '__all__',
-        }));
-        setReceiptItems(items);
-        setReceiptCurrency(data.currency || 'EUR');
-        setReceiptStep('assign');
-        // Pre-fill payer in draft
-        setDraft((prev) => ({ ...prev, payer: currentPayer }));
-      } catch {
-        setReceiptError(lang === 'sk' ? 'Analýza zlyhala' : 'Analysis failed');
+    // Show preview from original file
+    const previewUrl = URL.createObjectURL(file);
+    setReceiptImagePreview(previewUrl);
+    try {
+      const { b64, mimeType } = await compressReceiptImage(file);
+      const res = await fetch('/api/analyze-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64, mimeType }),
+      });
+      let data: { items?: { name: string; price: number }[]; currency?: string; error?: string; detail?: string };
+      try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
+      if (!res.ok || (data.error && !data.items?.length)) {
+        setReceiptError(data.error || `Chyba ${res.status}`);
         setReceiptStep('upload');
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+      const currentPayer = members.find((m) => isSelfName(m)) || members[0] || 'Ty';
+      const items: ReceiptItem[] = (data.items || []).map((it) => ({
+        name: it.name,
+        price: Number(it.price) || 0,
+        assignedTo: '__all__',
+      }));
+      setReceiptItems(items);
+      setReceiptCurrency(data.currency || 'EUR');
+      setReceiptStep('assign');
+      setDraft((prev) => ({ ...prev, payer: currentPayer }));
+    } catch (err) {
+      setReceiptError(err instanceof Error ? err.message : (lang === 'sk' ? 'Analýza zlyhala' : 'Analysis failed'));
+      setReceiptStep('upload');
+    }
   }
 
   function applyReceiptToDraft() {

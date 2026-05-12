@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30;
 
 export type ReceiptItem = { name: string; price: number };
 export type ReceiptResult = {
@@ -70,7 +71,12 @@ Rules:
 
     return NextResponse.json(data satisfies ReceiptResult);
   } catch (err) {
-    console.error('[analyze-receipt]', err);
-    return NextResponse.json({ items: [], total: 0, currency: 'EUR', error: 'Analysis failed' } satisfies ReceiptResult, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[analyze-receipt]', msg);
+    const isApiKey = msg.includes('API key') || msg.includes('auth') || msg.includes('401');
+    return NextResponse.json(
+      { items: [], total: 0, currency: 'EUR', error: isApiKey ? 'Missing API key — set ANTHROPIC_API_KEY in Vercel' : `Analysis failed: ${msg.slice(0, 120)}` } satisfies ReceiptResult,
+      { status: 500 }
+    );
   }
 }
