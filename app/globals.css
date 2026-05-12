@@ -3329,3 +3329,87 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+/* ── Offline banner ─────────────────────────────────────────────────────── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #f59f00;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.45rem 1rem;
+}
+
+/* ── Expense form date input ─────────────────────────────────────────────── */
+.expense-date-input {
+  font-size: 0.95rem;
+  color: var(--text-muted, #6b7280);
+}
+
+/* ── Expense date chip in list ───────────────────────────────────────────── */
+.expense-date-chip {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+  background: var(--bg-subtle, #f3f4f6);
+  border-radius: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Expense toolbar (search + sort) ─────────────────────────────────────── */
+.expenses-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  align-items: center;
+}
+
+.expenses-search {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  color: var(--text);
+}
+
+.expenses-sort {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--stroke);
+  background: #fff;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Confirm delete inline ───────────────────────────────────────────────── */
+.confirm-delete-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.confirm-delete-inline .danger-btn {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.55rem;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.confirm-delete-inline .ghost {
+  font-size: 0.85rem;
+}

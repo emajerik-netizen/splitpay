@@ -918,6 +918,7 @@ type Member = {
 type TripExpense = Expense & {
   id: string;
   title: string;
+  date?: string | null;
   deletedAt?: string | null;
 };
 
@@ -959,6 +960,7 @@ type Trip = {
 type ExpenseDraft = {
   title: string;
   amount: string;
+  date: string;
   expenseType: 'expense' | 'transfer';
   payer: string;
   transferTo: string;
@@ -1244,14 +1246,18 @@ function canonicalizeSelfName(trip: Trip, selfKey: string): Trip {
 }
 
 // Expand participants for expenses where only the payer was listed (created before others joined).
+// Only expands when the trip now has more members than just the payer — if there are 2+ members
+// and only the payer is listed, it was almost certainly created before others joined.
+// Does NOT expand for solo trips (1 member) or individual-split expenses (explicit per-person amounts).
 function withExpandedParticipants(expenses: TripExpense[], members: string[]): TripExpense[] {
   return expenses.map((expense) => {
+    if (expense.splitType === 'individual') return expense;
     const raw = expense.participants && expense.participants.length ? expense.participants : members;
     const onlyPayerListed =
+      members.length > 1 &&
       raw.length === 1 &&
       raw[0] &&
       (expense.payer || '').trim().toLowerCase() === memberNameOf(raw[0]).trim().toLowerCase();
-    // Also clear participantIds when expanding so computeBalances uses the name-based list
     return onlyPayerListed ? { ...expense, participants: members, participantIds: [] } : expense;
   });
 }
@@ -1439,6 +1445,10 @@ export default function SplitPayWebApp() {
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
   const [memberAddNotifications, setMemberAddNotifications] = useState<MemberAddNotification[]>([]);
   const [localStateHydrated, setLocalStateHydrated] = useState(false);
+  const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+  const [expenseSortOrder, setExpenseSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [isOffline, setIsOffline] = useState(false);
     const [lang, setLang] = useState<Lang>(() => {
       if (typeof window === 'undefined') return 'sk';
       return (window.localStorage.getItem(LANG_KEY) as Lang) || 'sk';
@@ -1447,6 +1457,7 @@ export default function SplitPayWebApp() {
   const [draft, setDraft] = useState<ExpenseDraft>({
     title: '',
     amount: '',
+    date: new Date().toISOString().slice(0, 10),
     expenseType: 'expense',
     payer: 'Ty',
     transferTo: '',
@@ -3132,12 +3143,16 @@ export default function SplitPayWebApp() {
 
     void refreshTripExpensesFromDb();
     const interval = window.setInterval(() => {
-      void refreshTripExpensesFromDb();
-    }, 2500);
+      if (document.visibilityState === 'visible') void refreshTripExpensesFromDb();
+    }, 5000);
+
+    const onVisible = () => { if (document.visibilityState === 'visible') void refreshTripExpensesFromDb(); };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [canSyncWithDb, currentTrip?.id, dbLoadTick, supabase]);
 
@@ -3251,6 +3266,31 @@ export default function SplitPayWebApp() {
       window.clearTimeout(timeoutId);
     };
   }, [appSession?.userId, canSyncWithDb, currentTrip?.id, currentTrip?.expenses, dbLoadTick, supabase]);
+
+  // Offline indicator
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsOffline(!navigator.onLine);
+    const onOnline = () => setIsOffline(false);
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+  }, []);
+
+  // Cleanup soft-deleted expenses older than 30 days
+  useEffect(() => {
+    if (!dbLoadedRef.current) return;
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    setTrips((prev) => prev.map((trip) => {
+      const cleaned = trip.expenses.filter((e) => {
+        if (!e.deletedAt) return true;
+        return new Date(e.deletedAt).getTime() > cutoff;
+      });
+      if (cleaned.length === trip.expenses.length) return trip;
+      return { ...trip, expenses: cleaned };
+    }));
+  }, [dbLoadTick]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -3540,6 +3580,7 @@ export default function SplitPayWebApp() {
       setDraft({
         title: '',
         amount: '',
+        date: new Date().toISOString().slice(0, 10),
         expenseType: 'expense',
         payer: displayCurrentUserName || 'Ty',
         transferTo: '',
@@ -4643,6 +4684,7 @@ export default function SplitPayWebApp() {
         id: makeId(),
         title: draft.title.trim() || (draft.expenseType === 'transfer' ? `Transfer ${safePayer} -> ${safeTransferTo}` : ''),
         amount,
+        date: draft.date || new Date().toISOString().slice(0, 10),
         payer: safePayer,
         participants: draft.expenseType === 'transfer' ? [safeTransferTo] : safeParticipants,
         expenseType: draft.expenseType,
@@ -4733,11 +4775,11 @@ export default function SplitPayWebApp() {
 
   function openExpenseModalForCreate() {
     setEditingExpenseId(null);
-    // Determine payer: preferably current user if in members, else first member
     const currentUserInMembers = members.find((m) => isSelfName(m)) || 'Ty';
     setDraft({
       title: '',
       amount: '',
+      date: new Date().toISOString().slice(0, 10),
       expenseType: 'expense',
       payer: currentUserInMembers,
       transferTo: '',
@@ -4813,6 +4855,7 @@ export default function SplitPayWebApp() {
     setDraft({
       title: found.title,
       amount: String(found.amount),
+      date: found.date || new Date().toISOString().slice(0, 10),
       expenseType: found.expenseType === 'transfer' ? 'transfer' : 'expense',
       payer: validPayer,
       transferTo: normalizedTransferTo || members.find((name) => name !== validPayer) || '',
@@ -5355,6 +5398,11 @@ export default function SplitPayWebApp() {
 
   return (
     <>
+      {isOffline ? (
+        <div className="offline-banner" role="status">
+          {lang === 'sk' ? 'Ste offline — zmeny sa uložia po obnovení spojenia.' : 'You are offline — changes will sync when reconnected.'}
+        </div>
+      ) : null}
       {showStartup ? (
         <div className="startup-screen" role="status" aria-label="SplitPay startup screen">
           <Image
@@ -6676,31 +6724,70 @@ export default function SplitPayWebApp() {
                   </div>
 
                   <div className="mini-panel expenses-list-panel">
-                      <h3>{t('expenseHistory')}</h3>
-                    <div className="stack-list">
-                        {currentTrip.expenses.filter((e) => !e.deletedAt).length === 0 && currentTrip.expenses.filter((e) => e.deletedAt).length === 0 ? <p className="muted">{t('noRecords')}</p> : null}
-                      {currentTrip.expenses.map((expense) => (
-                        <div
-                          className={`row expense-row expense-row-compact${expense.deletedAt ? ' expense-row-deleted' : ''}`}
-                          key={expense.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => !expense.deletedAt && openExpenseDetail(expense.id)}
-                          onKeyDown={(event) => {
-                            if (!expense.deletedAt && (event.key === 'Enter' || event.key === ' ')) {
-                              event.preventDefault();
-                              openExpenseDetail(expense.id);
-                            }
-                          }}
-                        >
-                          <span className="expense-row-title">
-                            <strong>{expense.title}</strong>
-                            {expense.deletedAt ? <span className="expense-deleted-badge">{lang === 'sk' ? 'zmazaný' : 'deleted'}</span> : null}
-                          </span>
-                          <strong className={expense.deletedAt ? 'muted' : ''}>{money(expense.amount)}</strong>
-                        </div>
-                      ))}
+                    <div className="expenses-toolbar">
+                      <input
+                        className="expenses-search"
+                        type="search"
+                        placeholder={lang === 'sk' ? 'Hľadať...' : 'Search...'}
+                        value={expenseSearchQuery}
+                        onChange={(e) => setExpenseSearchQuery(e.target.value)}
+                      />
+                      <select
+                        className="expenses-sort"
+                        value={expenseSortOrder}
+                        onChange={(e) => setExpenseSortOrder(e.target.value as typeof expenseSortOrder)}
+                      >
+                        <option value="newest">{lang === 'sk' ? 'Najnovšie' : 'Newest'}</option>
+                        <option value="oldest">{lang === 'sk' ? 'Najstaršie' : 'Oldest'}</option>
+                        <option value="highest">{lang === 'sk' ? 'Najvyššia suma' : 'Highest amount'}</option>
+                        <option value="lowest">{lang === 'sk' ? 'Najnižšia suma' : 'Lowest amount'}</option>
+                      </select>
                     </div>
+                    {(() => {
+                      const q = expenseSearchQuery.trim().toLowerCase();
+                      const sorted = [...currentTrip.expenses].sort((a, b) => {
+                        if (expenseSortOrder === 'highest') return b.amount - a.amount;
+                        if (expenseSortOrder === 'lowest') return a.amount - b.amount;
+                        const aDate = a.date || '';
+                        const bDate = b.date || '';
+                        if (expenseSortOrder === 'oldest') return aDate < bDate ? -1 : aDate > bDate ? 1 : 0;
+                        return aDate > bDate ? -1 : aDate < bDate ? 1 : 0;
+                      });
+                      const filtered = q
+                        ? sorted.filter((e) =>
+                            e.title?.toLowerCase().includes(q) ||
+                            memberNameOf(e.payer || '').toLowerCase().includes(q) ||
+                            (e.participants || []).some((p) => memberNameOf(p).toLowerCase().includes(q))
+                          )
+                        : sorted;
+                      if (filtered.length === 0) return <p className="muted">{t('noRecords')}</p>;
+                      return (
+                        <div className="stack-list">
+                          {filtered.map((expense) => (
+                            <div
+                              className={`row expense-row expense-row-compact${expense.deletedAt ? ' expense-row-deleted' : ''}`}
+                              key={expense.id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => !expense.deletedAt && openExpenseDetail(expense.id)}
+                              onKeyDown={(event) => {
+                                if (!expense.deletedAt && (event.key === 'Enter' || event.key === ' ')) {
+                                  event.preventDefault();
+                                  openExpenseDetail(expense.id);
+                                }
+                              }}
+                            >
+                              <span className="expense-row-title">
+                                <strong>{expense.title}</strong>
+                                {expense.date ? <span className="expense-date-chip">{expense.date}</span> : null}
+                                {expense.deletedAt ? <span className="expense-deleted-badge">{lang === 'sk' ? 'zmazaný' : 'deleted'}</span> : null}
+                              </span>
+                              <strong className={expense.deletedAt ? 'muted' : ''}>{money(expense.amount)}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
 
@@ -6887,6 +6974,12 @@ export default function SplitPayWebApp() {
                             : t('expenseNamePlaceholder')
                         }
                       />
+                      <input
+                        type="date"
+                        value={draft.date}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, date: event.target.value }))}
+                        className="expense-date-input"
+                      />
                       {draft.splitType === 'individual' ? (
                         <input
                           value={money(individualTotal)}
@@ -7030,6 +7123,9 @@ export default function SplitPayWebApp() {
                           <strong className="expense-detail-title">{selectedExpense.title}</strong>
                           <span className="expense-detail-amount">{money(selectedExpense.amount)}</span>
                         </div>
+                        {selectedExpense.date ? (
+                          <p className="muted expense-detail-meta">{selectedExpense.date}</p>
+                        ) : null}
                         <p className="muted expense-detail-meta">
                           {t('paidBy')} {formatMemberName(memberNameOf(selectedExpense.payer || ''))}
                         </p>
@@ -7040,9 +7136,21 @@ export default function SplitPayWebApp() {
                           <button type="button" className="ghost" onClick={() => editExpense(selectedExpense.id)}>
                             {t('editBtn')}
                           </button>
-                          <button type="button" className="ghost danger-btn" onClick={() => removeExpense(selectedExpense.id)}>
-                            {t('deleteBtn')}
-                          </button>
+                          {confirmDeleteExpenseId === selectedExpense.id ? (
+                            <div className="confirm-delete-inline">
+                              <span className="muted">{lang === 'sk' ? 'Naozaj zmazať?' : 'Really delete?'}</span>
+                              <button type="button" className="danger-btn" onClick={() => { removeExpense(selectedExpense.id); setConfirmDeleteExpenseId(null); }}>
+                                {lang === 'sk' ? 'Zmazať' : 'Delete'}
+                              </button>
+                              <button type="button" className="ghost" onClick={() => setConfirmDeleteExpenseId(null)}>
+                                {lang === 'sk' ? 'Zrušiť' : 'Cancel'}
+                              </button>
+                            </div>
+                          ) : (
+                            <button type="button" className="ghost danger-btn" onClick={() => setConfirmDeleteExpenseId(selectedExpense.id)}>
+                              {t('deleteBtn')}
+                            </button>
+                          )}
                         </div>
                       </div>
 
