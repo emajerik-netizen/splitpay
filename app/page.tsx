@@ -6565,6 +6565,24 @@ export default function SplitPayWebApp() {
                         />
                         {t('archiveTrip')}
                       </label>
+                      {currentTrip.status !== 'closed' ? (
+                        <button
+                          type="button"
+                          className="close-trip-btn"
+                          disabled={isClosingTrip}
+                          onClick={() => { setShowTripSettingsModal(false); void handleCloseTrip(); }}
+                        >
+                          {isClosingTrip ? t('closingTripMsg') : t('closeTripBtn')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="reopen-trip-btn"
+                          onClick={() => { handleReopenTrip(); setShowTripSettingsModal(false); }}
+                        >
+                          {t('reopenTripBtn')}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="ghost danger-btn"
@@ -6660,22 +6678,11 @@ export default function SplitPayWebApp() {
                       <strong>{money(totalSpent)}</strong>
                     </div>
                   </div>
-                  {currentTripOwnerIsSelf ? (
+                  {currentTripOwnerIsSelf && currentTrip.currency !== 'EUR' ? (
                     <div className="trip-actions-strip">
-                      {currentTrip.status !== 'closed' ? (
-                        <button type="button" className="close-trip-btn" onClick={() => void handleCloseTrip()} disabled={isClosingTrip}>
-                          {isClosingTrip ? t('closingTripMsg') : t('closeTripBtn')}
-                        </button>
-                      ) : (
-                        <button type="button" className="reopen-trip-btn" onClick={handleReopenTrip}>
-                          {t('reopenTripBtn')}
-                        </button>
-                      )}
-                      {currentTrip.currency !== 'EUR' ? (
-                        <button type="button" className="convert-eur-btn" onClick={() => void handleConvertToEur()} disabled={isCurrencyConverting}>
-                          {isCurrencyConverting ? t('convertingMsg') : `${t('convertToEurBtn')} (${currentTrip.currency}→EUR)`}
-                        </button>
-                      ) : null}
+                      <button type="button" className="convert-eur-btn" onClick={() => void handleConvertToEur()} disabled={isCurrencyConverting}>
+                        {isCurrencyConverting ? t('convertingMsg') : `${t('convertToEurBtn')} (${currentTrip.currency}→EUR)`}
+                      </button>
                     </div>
                   ) : null}
                   {currentTrip.status === 'closed' && currentTrip.aiSummary ? (
