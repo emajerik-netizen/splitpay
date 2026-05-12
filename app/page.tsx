@@ -27,6 +27,7 @@ import {
   Users,
   Utensils,
   Cpu,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -538,6 +539,7 @@ const T = {
     categoryKultura: 'Kultúra',
     categoryTech: 'Technika',
     categoryOther: 'Ostatné',
+    categoryTransfer: 'Prevod',
     categoryBreakdown: 'Kategórie výdavkov',
   },
   en: {
@@ -937,6 +939,7 @@ const T = {
     categoryKultura: 'Culture',
     categoryTech: 'Tech',
     categoryOther: 'Other',
+    categoryTransfer: 'Transfer',
     categoryBreakdown: 'Expense categories',
   },
 } as const;
@@ -4865,7 +4868,7 @@ export default function SplitPayWebApp() {
         participants: draft.expenseType === 'transfer' ? [safeTransferTo] : safeParticipants,
         expenseType: draft.expenseType,
         splitType: draft.expenseType === 'transfer' ? 'equal' : draft.splitType,
-        category: receiptCategory || (draft.expenseType === 'transfer' ? 'ostatne' : inferCategory(expenseTitle)),
+        category: receiptCategory || (draft.expenseType === 'transfer' ? 'prevod' : inferCategory(expenseTitle)),
       } as Partial<TripExpense>;
 
       // Only fall back to appSession.userId when the payer IS the current user.
@@ -5223,7 +5226,7 @@ export default function SplitPayWebApp() {
       splitType: 'equal',
       transferTo: toName,
       transferToId: findId(toKey, toName),
-      category: 'ostatne',
+      category: 'prevod',
     };
     updateCurrentTrip((trip) => ({ ...trip, expenses: [expense, ...trip.expenses] }));
     setInfoMessage(t('paymentRecorded'));
@@ -6860,6 +6863,7 @@ export default function SplitPayWebApp() {
                       kultura:   { label: t('categoryKultura'),   icon: <Music size={13} /> },
                       technika:  { label: t('categoryTech'),      icon: <Cpu size={13} /> },
                       ostatne:   { label: t('categoryOther'),     icon: <Package size={13} /> },
+                      prevod:    { label: t('categoryTransfer'),  icon: <ArrowLeftRight size={13} /> },
                     };
                     return (
                       <div className="category-breakdown">
@@ -6941,8 +6945,8 @@ export default function SplitPayWebApp() {
                                   {formatMemberName(memberNameOf(expense.payer || ''))}
                                 </button>
                                 {expense.category ? (() => {
-                                  const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={11}/>, doprava:<Car size={11}/>, ubytovanie:<Bed size={11}/>, zabava:<PartyPopper size={11}/>, nakupy:<ShoppingBag size={11}/>, zdravie:<Heart size={11}/>, sport:<Dumbbell size={11}/>, kultura:<Music size={11}/>, technika:<Cpu size={11}/>, ostatne:<Package size={11}/> };
-                                  const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther') };
+                                  const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={11}/>, doprava:<Car size={11}/>, ubytovanie:<Bed size={11}/>, zabava:<PartyPopper size={11}/>, nakupy:<ShoppingBag size={11}/>, zdravie:<Heart size={11}/>, sport:<Dumbbell size={11}/>, kultura:<Music size={11}/>, technika:<Cpu size={11}/>, ostatne:<Package size={11}/>, prevod:<ArrowLeftRight size={11}/> };
+                                  const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther'), prevod:t('categoryTransfer') };
                                   return <span className={`category-badge category-${expense.category} category-inline`}>{iconMap[expense.category]}{labelMap[expense.category] || expense.category}</span>;
                                 })() : null}
                               </p>
@@ -7715,9 +7719,9 @@ export default function SplitPayWebApp() {
                         </p>
                         {(() => {
                           const cat = selectedExpense.category || inferCategory(selectedExpense.title);
-                          const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={12}/>, doprava:<Car size={12}/>, ubytovanie:<Bed size={12}/>, zabava:<PartyPopper size={12}/>, nakupy:<ShoppingBag size={12}/>, zdravie:<Heart size={12}/>, sport:<Dumbbell size={12}/>, kultura:<Music size={12}/>, technika:<Cpu size={12}/>, ostatne:<Package size={12}/> };
-                          const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther') };
-                          const allCats = ['jedlo','doprava','ubytovanie','zabava','nakupy','zdravie','sport','kultura','technika','ostatne'];
+                          const iconMap: Record<string, React.ReactNode> = { jedlo:<Utensils size={12}/>, doprava:<Car size={12}/>, ubytovanie:<Bed size={12}/>, zabava:<PartyPopper size={12}/>, nakupy:<ShoppingBag size={12}/>, zdravie:<Heart size={12}/>, sport:<Dumbbell size={12}/>, kultura:<Music size={12}/>, technika:<Cpu size={12}/>, ostatne:<Package size={12}/>, prevod:<ArrowLeftRight size={12}/> };
+                          const labelMap: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther'), prevod:t('categoryTransfer') };
+                          const allCats = ['jedlo','doprava','ubytovanie','zabava','nakupy','zdravie','sport','kultura','technika','ostatne','prevod'];
                           return (
                             <div className="expense-category-row">
                               {editingCategoryExpenseId === selectedExpense.id ? (
