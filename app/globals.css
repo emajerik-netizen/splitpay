@@ -4110,7 +4110,20 @@ button:disabled {
 }
 .trip-chat-form { flex-shrink: 0; }
 .trip-chat-author { display: block; font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.7); margin-bottom: 2px; }
-.trip-chat-limit-msg { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 0.6rem 0.9rem 0.8rem; }
+.trip-chat-limit-block { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.6rem 0.9rem 0.8rem; }
+.trip-chat-limit-msg { font-size: 0.82rem; color: var(--muted); text-align: center; }
+.trip-chat-limit-sent { font-size: 0.82rem; color: var(--success, #1d8348); text-align: center; }
+.trip-chat-extension-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.trip-chat-extension-btn:hover { opacity: 0.88; }
 
 .trip-chat-panel {
   border-radius: 1.1rem;

@@ -45,9 +45,7 @@ Aktuálne bilancie (kladné = dostane, záporné = zaplatí):
 ${balLines || '  (všetko vyrovnané)'}`;
     }
 
-    const systemPrompt = `Si asistent výlučne pre výlet "${tripName}".
-Odpovedáš na otázky o tejto destinácii (pamiatky, aktivity, reštaurácie, počasie, tipy) AJ na otázky o financiách výletu (kto platil, kto koľko dlží, prehľad výdavkov).
-Ak sa otázka netýka výletu "${tripName}", cestovania ani financií výletu, odpovedz: "Táto otázka nesúvisí s výletom. Môžem pomôcť s tipmi na destináciu alebo financiami výletu."
+    const systemPrompt = `Si AI asistent pre výlet "${tripName}". Odpovedáš na akékoľvek otázky — destinačné tipy, financie výletu, alebo čokoľvek iné.
 ${contextBlock}
 
 Formátovanie — PRÍSNE PRAVIDLÁ:

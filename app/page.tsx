@@ -470,6 +470,13 @@ const T = {
     inviteAcceptedBody: 'prijal(a) pozvánku do výletu.',
     adminAnnouncementSaveFailed: 'Uloženie admin oznamu zlyhalo.',
     adminAnnouncementSaved: 'Admin oznam bol uložený.',
+    chatExtensionRequest: 'Požiadať o rozšírenie',
+    chatExtensionRequestSent: 'Žiadosť odoslaná. Čaká sa na schválenie.',
+    chatExtensionApprove: 'Schváliť (+10)',
+    chatExtensionRequests: 'Žiadosti o rozšírenie chatu',
+    chatExtensionNoRequests: 'Žiadne čakajúce žiadosti.',
+    chatExtensionNotifTitle: 'Žiadosť o rozšírenie chatu',
+    chatExtensionNotifBody: 'žiada o rozšírenie chatu AI asistenta',
     addAdminRoleFailed: 'Nepodarilo sa pridať admin rolu.',
     removeAdminRoleFailed: 'Nepodarilo sa odobrať admin rolu.',
     userRoleUpdated: 'Rola používateľa bola upravená.',
@@ -870,6 +877,13 @@ const T = {
     inviteAcceptedBody: 'accepted the trip invitation.',
     adminAnnouncementSaveFailed: 'Saving admin announcement failed.',
     adminAnnouncementSaved: 'Admin announcement was saved.',
+    chatExtensionRequest: 'Request extension',
+    chatExtensionRequestSent: 'Request sent. Waiting for admin approval.',
+    chatExtensionApprove: 'Approve (+10)',
+    chatExtensionRequests: 'Chat extension requests',
+    chatExtensionNoRequests: 'No pending requests.',
+    chatExtensionNotifTitle: 'Chat extension request',
+    chatExtensionNotifBody: 'requested a chat AI extension',
     addAdminRoleFailed: 'Failed to add admin role.',
     removeAdminRoleFailed: 'Failed to remove admin role.',
     userRoleUpdated: 'User role has been updated.',
@@ -1031,6 +1045,8 @@ type Trip = {
   expenses: TripExpense[];
   pendingInvites: Invite[];
   chatHistory?: { role: 'user' | 'assistant'; content: string; author?: string }[];
+  chatLimit?: number;
+  chatExtensionRequested?: boolean;
 };
 
 type ExpenseDraft = {
@@ -1593,6 +1609,7 @@ export default function SplitPayWebApp() {
   const lastPersistedExpenseSnapshotRef = useRef<Record<string, string>>({});
   const skipExpenseDbWriteRef = useRef(false);
   const deletedExpenseIdsRef = useRef<Set<string>>(new Set());
+  const notifiedChatExtensionRef = useRef<Set<string>>(new Set());
   const lastErrorMessageTimeRef = useRef<Record<string, number>>({});
   const appliedJoinCodeRef = useRef('');
   const inviteProcessedRef = useRef(false);
@@ -2510,13 +2527,21 @@ export default function SplitPayWebApp() {
         });
       });
 
-      setAdminTrips(
-        [...dedupedTrips.values()].sort((left, right) => {
-          const leftTs = new Date(left.updatedAt || 0).getTime();
-          const rightTs = new Date(right.updatedAt || 0).getTime();
-          return rightTs - leftTs;
-        })
-      );
+      const sortedAdminTrips = [...dedupedTrips.values()].sort((left, right) => {
+        const leftTs = new Date(left.updatedAt || 0).getTime();
+        const rightTs = new Date(right.updatedAt || 0).getTime();
+        return rightTs - leftTs;
+      });
+      setAdminTrips(sortedAdminTrips);
+
+      // Notify admin of new chat extension requests
+      const langPack = T[lang];
+      sortedAdminTrips.filter((trip) => trip.chatExtensionRequested && !trip.archived).forEach((trip) => {
+        if (!notifiedChatExtensionRef.current.has(trip.id)) {
+          notifiedChatExtensionRef.current.add(trip.id);
+          sendNotification(`${trip.name} — ${langPack.chatExtensionNotifTitle}`, { body: langPack.chatExtensionNotifBody });
+        }
+      });
 
       const rawPresenceRows = (presenceRes.data || []) as AdminPresenceRow[];
       const roleMap = new Map((rolesRes.data || []).map((role) => [role.user_id, role.role as AdminRole]));
@@ -3874,6 +3899,21 @@ export default function SplitPayWebApp() {
       setChatLoading(false);
       scrollChatToBottom();
     }
+  }
+
+  function handleChatExtensionRequest() {
+    if (!currentTrip) return;
+    updateCurrentTrip((t) => ({ ...t, chatExtensionRequested: true }));
+  }
+
+  function handleChatExtensionApprove(tripId: string) {
+    const trip = adminTrips.find((t) => t.id === tripId);
+    if (!trip) return;
+    const updatedTrip: Trip = { ...trip, chatLimit: (trip.chatLimit ?? 10) + 10, chatExtensionRequested: false };
+    setAdminTrips((prev) =>
+      prev.map((t) => t.id === tripId ? { ...updatedTrip, sourceUserId: t.sourceUserId, updatedAt: t.updatedAt } : t)
+    );
+    void propagateTripStateImmediately(updatedTrip);
   }
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
@@ -6338,6 +6378,41 @@ export default function SplitPayWebApp() {
                 </div>
               </div>
 
+              {(() => {
+                const extensionRequests = adminTrips.filter((trip) => trip.chatExtensionRequested && !trip.archived);
+                return extensionRequests.length > 0 ? (
+                  <div className="admin-card" style={{ marginTop: '1.5rem' }}>
+                    <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h3 style={{ margin: 0 }}>
+                        {t('chatExtensionRequests')}
+                        <span className="badge" style={{ marginLeft: '8px', background: 'var(--accent)', color: '#fff' }}>{extensionRequests.length}</span>
+                      </h3>
+                    </div>
+                    <div className="stack-list" style={{ marginTop: '0.5rem' }}>
+                      {extensionRequests.map((trip) => (
+                        <div className="row" key={trip.id}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <strong>{trip.name}</strong>
+                            <p className="muted" style={{ fontSize: '0.8rem', margin: '2px 0 0' }}>
+                              {t('tripCode')} {trip.inviteCode} · {memberCountLabel(trip.members.length, lang)}
+                              {trip.chatLimit ? ` · limit: ${trip.chatLimit}` : ''}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="ghost"
+                            style={{ color: 'var(--accent)' }}
+                            onClick={() => handleChatExtensionApprove(trip.id)}
+                          >
+                            {t('chatExtensionApprove')}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               <div className="screen-grid compact-grid admin-grid">
                 <div className="mini-panel">
                   <h3>{t('activeTrips')}</h3>
@@ -6939,7 +7014,7 @@ export default function SplitPayWebApp() {
                         <span className="trip-chat-open-icon">✦</span>
                         <span className="trip-chat-open-label">
                           {lang === 'sk' ? 'AI asistent výletu' : 'Trip AI assistant'}
-                          {qCount > 0 ? <span className="trip-chat-open-count">{qCount}/10</span> : null}
+                          {qCount > 0 ? <span className="trip-chat-open-count">{qCount}/{currentTrip.chatLimit ?? 10}</span> : null}
                         </span>
                         <span className="trip-chat-open-arrow">→</span>
                       </button>
@@ -7514,7 +7589,8 @@ export default function SplitPayWebApp() {
               {showChatModal && currentTrip ? (() => {
                 const hist = currentTrip.chatHistory || [];
                 const qCount = hist.filter((m) => m.role === 'user').length;
-                const limitReached = qCount >= 10;
+                const chatLimit = currentTrip.chatLimit ?? 10;
+                const limitReached = qCount >= chatLimit;
                 return (
                   <div className="modal-overlay" role="presentation" onClick={() => setShowChatModal(false)}>
                     <section className="section-card modal-card trip-chat-modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -7528,7 +7604,7 @@ export default function SplitPayWebApp() {
                         <button type="button" className="ghost" onClick={() => setShowChatModal(false)}>{t('close')}</button>
                       </div>
                       <p className="trip-chat-modal-limit">
-                        {lang === 'sk' ? `Otázky: ${qCount} / 10` : `Questions: ${qCount} / 10`}
+                        {lang === 'sk' ? `Otázky: ${qCount} / ${chatLimit}` : `Questions: ${qCount} / ${chatLimit}`}
                       </p>
                       <div className="trip-chat-messages trip-chat-messages-modal" ref={chatScrollRef}>
                         {hist.length === 0 ? (
@@ -7554,9 +7630,18 @@ export default function SplitPayWebApp() {
                         <div ref={chatEndRef} />
                       </div>
                       {limitReached ? (
-                        <p className="trip-chat-limit-msg">
-                          {lang === 'sk' ? '✋ Limit 10 otázok pre tento výlet bol vyčerpaný.' : '✋ 10-question limit for this trip reached.'}
-                        </p>
+                        <div className="trip-chat-limit-block">
+                          <p className="trip-chat-limit-msg">
+                            {lang === 'sk' ? `Limit ${chatLimit} otázok bol vyčerpaný.` : `${chatLimit}-question limit reached.`}
+                          </p>
+                          {currentTrip.chatExtensionRequested ? (
+                            <p className="trip-chat-limit-sent">{t('chatExtensionRequestSent')}</p>
+                          ) : (
+                            <button type="button" className="trip-chat-extension-btn" onClick={handleChatExtensionRequest}>
+                              {t('chatExtensionRequest')}
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <form className="trip-chat-form" onSubmit={(e) => { e.preventDefault(); void handleChatSend(); }}>
                           <input
