@@ -4090,10 +4090,16 @@ button:disabled {
 .trip-chat-open-count { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
 .trip-chat-open-arrow { color: var(--muted); font-size: 0.95rem; }
 
-.trip-chat-modal-card { display: flex; flex-direction: column; max-height: 80dvh; }
+.trip-chat-modal-card {
+  display: flex;
+  flex-direction: column;
+  height: 90dvh;
+  max-height: 90dvh;
+  overflow: hidden;
+}
 .trip-chat-modal-title { display: flex; align-items: center; gap: 0.4rem; }
 .trip-chat-modal-limit { font-size: 0.75rem; color: var(--muted); font-weight: 600; padding: 0 0.1rem 0.4rem; }
-.trip-chat-messages-modal { flex: 1; min-height: 160px; max-height: 340px; }
+.trip-chat-messages-modal { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
 .trip-chat-author { display: block; font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.7); margin-bottom: 2px; }
 .trip-chat-limit-msg { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 0.6rem 0.9rem 0.8rem; }
 
