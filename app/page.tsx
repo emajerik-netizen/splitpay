@@ -473,6 +473,7 @@ const T = {
     chatExtensionRequest: 'Požiadať o rozšírenie',
     chatExtensionRequestSent: 'Žiadosť odoslaná. Čaká sa na schválenie.',
     chatExtensionApprove: 'Schváliť (+10)',
+    chatExtensionReject: 'Zamietnuť',
     chatExtensionRequests: 'Žiadosti o rozšírenie chatu',
     chatExtensionNoRequests: 'Žiadne čakajúce žiadosti.',
     chatExtensionNotifTitle: 'Žiadosť o rozšírenie chatu',
@@ -880,6 +881,7 @@ const T = {
     chatExtensionRequest: 'Request extension',
     chatExtensionRequestSent: 'Request sent. Waiting for admin approval.',
     chatExtensionApprove: 'Approve (+10)',
+    chatExtensionReject: 'Reject',
     chatExtensionRequests: 'Chat extension requests',
     chatExtensionNoRequests: 'No pending requests.',
     chatExtensionNotifTitle: 'Chat extension request',
@@ -3855,6 +3857,10 @@ export default function SplitPayWebApp() {
     });
   }
 
+  useEffect(() => {
+    if (showChatModal) scrollChatToBottom();
+  }, [showChatModal]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleChatSend() {
     if (!chatInput.trim() || chatLoading || !currentTrip) return;
     const history = currentTrip.chatHistory || [];
@@ -3912,6 +3918,16 @@ export default function SplitPayWebApp() {
     const trip = adminTrips.find((t) => t.id === tripId);
     if (!trip) return;
     const updatedTrip: Trip = { ...trip, chatLimit: (trip.chatLimit ?? 10) + 10, chatExtensionRequested: false };
+    setAdminTrips((prev) =>
+      prev.map((t) => t.id === tripId ? { ...updatedTrip, sourceUserId: t.sourceUserId, updatedAt: t.updatedAt } : t)
+    );
+    void propagateTripStateImmediately(updatedTrip);
+  }
+
+  function handleChatExtensionReject(tripId: string) {
+    const trip = adminTrips.find((t) => t.id === tripId);
+    if (!trip) return;
+    const updatedTrip: Trip = { ...trip, chatExtensionRequested: false };
     setAdminTrips((prev) =>
       prev.map((t) => t.id === tripId ? { ...updatedTrip, sourceUserId: t.sourceUserId, updatedAt: t.updatedAt } : t)
     );
@@ -6400,14 +6416,24 @@ export default function SplitPayWebApp() {
                               {trip.chatLimit ? ` · limit: ${trip.chatLimit}` : ''}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            className="ghost"
-                            style={{ color: 'var(--accent)' }}
-                            onClick={() => handleChatExtensionApprove(trip.id)}
-                          >
-                            {t('chatExtensionApprove')}
-                          </button>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              className="ghost"
+                              style={{ color: 'var(--danger, #c0392b)' }}
+                              onClick={() => handleChatExtensionReject(trip.id)}
+                            >
+                              {t('chatExtensionReject')}
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost"
+                              style={{ color: 'var(--accent)' }}
+                              onClick={() => handleChatExtensionApprove(trip.id)}
+                            >
+                              {t('chatExtensionApprove')}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -7608,7 +7634,7 @@ export default function SplitPayWebApp() {
                       <p className="trip-chat-modal-limit">
                         {lang === 'sk' ? `Otázky: ${qCount} / ${chatLimit}` : `Questions: ${qCount} / ${chatLimit}`}
                       </p>
-                      <div className="trip-chat-messages trip-chat-messages-modal" ref={chatScrollRef}>
+                      <div className="trip-chat-messages-modal" ref={chatScrollRef}>
                         {hist.length === 0 ? (
                           <p className="trip-chat-hint">
                             {lang === 'sk'

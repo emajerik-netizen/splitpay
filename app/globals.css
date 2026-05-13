@@ -4109,7 +4109,10 @@ button:disabled {
 .trip-chat-messages-modal {
   flex: 1;
   min-height: 0;
-  max-height: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.1rem 0.4rem;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
