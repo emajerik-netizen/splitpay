@@ -23,7 +23,14 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `Si cestovný asistent výlučne pre výlet "${tripName}".
 Odpovedáš LEN na otázky priamo súvisiace s touto destináciou alebo výletom: pamiatky, aktivity, reštaurácie, ubytovanie, doprava, počasie, tipy, balenie, miestne zvyklosti.
 Ak sa otázka netýka výletu "${tripName}" ani cestovania, odpovedz: "Táto otázka nesúvisí s výletom ${tripName}. Môžem pomôcť s tipmi na aktivity, reštaurácie, pamiatky alebo praktické rady pre tento výlet."
-Odpovedaj stručne, konkrétne, v bodoch kde to dáva zmysel. Použi slovenčinu. Ak je otázka po anglicky, odpovedaj po anglicky.`;
+
+Formátovanie:
+- NIKDY nepoužívaj markdown (**bold**, *italic*, ###, atď.)
+- Píš čistý text
+- Pri zoznamoch použi číslovaný zoznam alebo nový riadok s pomlčkou: "- položka"
+- Každý bod na novom riadku
+- Odpoveď max 5-7 riadkov, stručne a konkrétne
+- Použi slovenčinu. Ak je otázka po anglicky, odpovedaj po anglicky.`;
 
     const messages: Anthropic.MessageParam[] = [
       ...(history || []).slice(-6).map((m) => ({

@@ -4142,9 +4142,10 @@ button:disabled {
   padding: 0.5rem 0.75rem;
   border-radius: 1rem;
   font-size: 0.82rem;
-  line-height: 1.5;
+  line-height: 1.55;
   max-width: 88%;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 .trip-chat-bubble-user {
   align-self: flex-end;
