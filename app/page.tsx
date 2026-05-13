@@ -3807,6 +3807,16 @@ export default function SplitPayWebApp() {
     return parts.length > 1 ? parts[0] : name;
   };
 
+  const stripMd = (text: string) =>
+    text
+      .replace(/^#{1,6}\s*/gm, '')
+      .replace(/\*\*([\s\S]+?)\*\*/g, '$1')
+      .replace(/\*([\s\S]+?)\*/g, '$1')
+      .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')
+      .replace(/_{2}([\s\S]+?)_{2}/g, '$1')
+      .replace(/_([\s\S]+?)_/g, '$1')
+      .replace(/\[([\s\S]+?)\]\([\s\S]+?\)/g, '$1');
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -7533,7 +7543,7 @@ export default function SplitPayWebApp() {
                             {m.role === 'user' && m.author ? (
                               <span className="trip-chat-author">{firstNameOf(m.author)}</span>
                             ) : null}
-                            {m.content}
+                            {m.role === 'assistant' ? stripMd(m.content) : m.content}
                           </div>
                         ))}
                         {chatLoading ? (
