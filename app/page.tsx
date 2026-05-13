@@ -3865,12 +3865,12 @@ export default function SplitPayWebApp() {
     if (!chatInput.trim() || chatLoading || !currentTrip) return;
     const history = currentTrip.chatHistory || [];
     const userCount = history.filter((m) => m.role === 'user').length;
-    if (userCount >= 10) return;
+    if (userCount >= (currentTrip.chatLimit ?? 10)) return;
     const userMsg = chatInput.trim();
     setChatInput('');
     const author = appSession?.name || appSession?.userId || 'Člen';
-    const withUser = [...history, { role: 'user' as const, content: userMsg, author }];
-    updateCurrentTrip((t) => ({ ...t, chatHistory: withUser }));
+    const newMsg = { role: 'user' as const, content: userMsg, author };
+    updateCurrentTrip((t) => ({ ...t, chatHistory: [...(t.chatHistory || []), newMsg] }));
     setChatLoading(true);
     scrollChatToBottom();
 
