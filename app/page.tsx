@@ -1507,6 +1507,9 @@ export default function SplitPayWebApp() {
   const [inviteChosenSlot, setInviteChosenSlot] = useState('');
   const [inviteCustomName, setInviteCustomName] = useState('');
   const [inviteUseCustom, setInviteUseCustom] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [visitsCount, setVisitsCount] = useState(0);
@@ -3802,6 +3805,31 @@ export default function SplitPayWebApp() {
     const parts = name.trim().split(/\s+/);
     return parts.length > 1 ? parts[0] : name;
   };
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  async function handleChatSend() {
+    if (!chatInput.trim() || chatLoading || !currentTrip) return;
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    const newHistory = [...chatMessages, { role: 'user' as const, content: userMsg }];
+    setChatMessages(newHistory);
+    setChatLoading(true);
+    try {
+      const res = await fetch('/api/trip-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, tripName: currentTrip.name, history: chatMessages }),
+      });
+      const data = await res.json() as { reply?: string; error?: string };
+      setChatMessages([...newHistory, { role: 'assistant', content: data.reply || 'Chyba pri odpovedi.' }]);
+    } catch {
+      setChatMessages([...newHistory, { role: 'assistant', content: 'Chyba spojenia.' }]);
+    } finally {
+      setChatLoading(false);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  }
 
   function updateCurrentTrip(updater: (trip: Trip) => Trip) {
     if (!currentTrip) return;
@@ -6858,6 +6886,50 @@ export default function SplitPayWebApp() {
                       </button>
                     ) : null}
                   </div>
+                  <div className="trip-chat-panel">
+                    <div className="trip-chat-header">
+                      <span className="trip-chat-icon">✦</span>
+                      <span className="trip-chat-title">AI asistent · {currentTrip.name}</span>
+                    </div>
+                    {chatMessages.length > 0 ? (
+                      <div className="trip-chat-messages">
+                        {chatMessages.map((m, i) => (
+                          <div key={i} className={`trip-chat-bubble trip-chat-bubble-${m.role}`}>
+                            {m.content}
+                          </div>
+                        ))}
+                        {chatLoading ? (
+                          <div className="trip-chat-bubble trip-chat-bubble-assistant trip-chat-typing">
+                            <span /><span /><span />
+                          </div>
+                        ) : null}
+                        <div ref={chatEndRef} />
+                      </div>
+                    ) : (
+                      <p className="trip-chat-hint">
+                        {lang === 'sk'
+                          ? `Opýtaj sa na tipy pre "${currentTrip.name}" — pamiatky, reštaurácie, aktivity…`
+                          : `Ask for tips about "${currentTrip.name}" — sights, restaurants, activities…`}
+                      </p>
+                    )}
+                    <form
+                      className="trip-chat-form"
+                      onSubmit={(e) => { e.preventDefault(); void handleChatSend(); }}
+                    >
+                      <input
+                        className="trip-chat-input"
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={lang === 'sk' ? 'Napíš otázku…' : 'Ask anything…'}
+                        disabled={chatLoading}
+                      />
+                      <button type="submit" className="trip-chat-send" disabled={chatLoading || !chatInput.trim()}>
+                        {chatLoading ? '…' : '↑'}
+                      </button>
+                    </form>
+                  </div>
+
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
                         <span>{t('expensesLabel')}</span>
