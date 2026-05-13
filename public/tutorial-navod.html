@@ -2,685 +2,627 @@
 <html lang="sk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Split Pay – Návod</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Split Pay – Ako začať</title>
 <style>
-/* ─── PAGE FRAME ─── */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: linear-gradient(180deg, #08090e 0%, #0f1117 100%);
-  min-height: 100vh;
+/* ── Reset & base ── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  font-family: -apple-system,"SF Pro Display","Segoe UI",sans-serif;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ── Full-screen wrapper ── */
+.tut {
+  width: 100dvw;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
-  color: #e8edf8;
-  padding-bottom: 2.5rem;
-}
-.page-top {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 5px; padding: 2rem 1rem 0.5rem;
-}
-.page-brand {
-  display: flex; align-items: center; gap: 9px;
-}
-.page-brand-icon {
-  width: 36px; height: 36px; border-radius: 9px;
-  background: linear-gradient(135deg,#2c79f6,#1a5cc8);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 5px 14px rgba(44,121,246,.45);
-}
-.page-brand-name { font-size: 18px; font-weight: 900; letter-spacing:.07em; text-transform: uppercase; }
-.page-sub { font-size: 11px; font-weight: 700; color: #7a8aaa; letter-spacing: .1em; text-transform: uppercase; }
-
-/* Step caption */
-.step-cap { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 1.1rem 1.5rem .5rem; min-height: 80px; text-align: center; }
-.step-num { font-size: 11px; font-weight: 800; color: #2c79f6; letter-spacing: .12em; text-transform: uppercase; }
-.step-title { font-size: 22px; font-weight: 900; line-height: 1.2; }
-.step-desc  { font-size: 14px; color: #7a8aaa; line-height: 1.5; }
-
-/* ─── PHONE FRAME ─── */
-.phone-wrap { position: relative; }
-.phone-glow {
-  position: absolute; inset: -40px;
-  background: radial-gradient(ellipse 55% 50% at 50% 55%, rgba(44,121,246,.2) 0%, transparent 70%);
-  pointer-events: none;
-}
-.phone-outer {
-  position: relative; z-index: 1;
-  width: 318px; height: 636px;
-  border-radius: 48px;
-  background: #f0f3fa;
-  border: 2px solid rgba(255,255,255,.12);
-  box-shadow: 0 0 0 1px rgba(44,121,246,.15), 0 40px 80px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.1);
   overflow: hidden;
-}
-.phone-notch { width: 92px; height: 23px; background: #e8ecf5; border-radius: 0 0 14px 14px; margin: 0 auto; }
-.phone-status {
-  display: flex; justify-content: space-between;
-  padding: 3px 22px 3px; font-size: 11px; font-weight: 600; color: #4a5a7a;
-}
-.phone-viewport {
-  position: relative; overflow: hidden;
-  width: 100%; height: calc(100% - 34px);
-}
-/* Scale 390→300px (.769), show 780px tall of real app content */
-.phone-scaler {
-  position: absolute; top: 0; left: 0;
-  width: 390px;
-  transform: scale(0.769);
-  transform-origin: top left;
+  position: relative;
+  /* exact app light bg */
+  background:
+    radial-gradient(circle at 0% 0%, rgba(182,206,255,.85) 0%, transparent 32%),
+    radial-gradient(circle at 100% 90%, rgba(222,233,255,.9) 0%, transparent 26%),
+    linear-gradient(180deg, #f7faff, #e8f0ff 55%, #e8f0ff 100%);
+  color: #0d2559;
 }
 
-/* ─── REAL APP CSS ─── (copied from app/globals.css, light-mode) */
-.app-root {
-  --bg-1: #f7faff;
-  --bg-2: #e8f0ff;
-  --bg-3: #dbe9ff;
-  --card: #ffffff;
-  --text: #0d2559;
-  --muted: #5d7098;
-  --accent: #2c79f6;
-  --accent-strong: #1f67df;
-  --accent-soft: #eef5ff;
-  --stroke: #dce5f5;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(182,206,255,0.9) 0%, transparent 30%),
-    radial-gradient(circle at 100% 85%, rgba(222,233,255,0.95) 0%, transparent 26%),
-    linear-gradient(180deg, #f7faff, #e8f0ff 48%, #e8f0ff 100%);
-  color: var(--text);
-  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
-  font-size: 16px;
-  padding: 1rem;
-  display: flex; flex-direction: column; gap: 1rem;
-  min-height: 780px;
+/* ── Top progress bar ── */
+.prog-track {
+  flex-shrink: 0;
+  height: 3px;
+  background: rgba(44,121,246,.15);
 }
-.app-root input, .app-root select, .app-root button {
-  border: 1px solid var(--stroke);
-  border-radius: 1rem;
-  min-height: 3.3rem;
-  padding: .75rem .95rem;
-  font: inherit;
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2c79f6, #6366f1);
+  transition: width .08s linear;
+  width: 0%;
 }
-.app-root input, .app-root select {
-  background: rgba(255,255,255,.96);
-  color: var(--text);
-  width: 100%;
+
+/* ── Step badge below bar ── */
+.step-badge {
+  flex-shrink: 0;
+  text-align: center;
+  padding: .55rem 1rem 0;
+  font-size: 10.5px; font-weight: 800;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: #2c79f6;
 }
-.app-root button {
-  background: var(--accent);
-  color: #f7f8f6;
-  border-color: transparent;
+
+/* ── Scrollable screen area ── */
+.screens {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
 }
-.app-root .primary-cta {
-  min-height: 3.8rem; font-size: 1.1rem; font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 18px 30px rgba(44,121,246,.25);
-  width: 100%;
+.scr {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 1rem 1rem 0.5rem;
+  display: flex; flex-direction: column; gap: .9rem;
+  opacity: 0;
+  transform: translateX(26px);
+  transition: opacity .42s ease, transform .42s ease;
+  pointer-events: none;
+  -webkit-overflow-scrolling: touch;
 }
-.app-root .ghost {
-  background: color-mix(in srgb, var(--accent-soft) 46%, #fff);
-  color: color-mix(in srgb, var(--accent) 88%, #18335f);
-  border-color: color-mix(in srgb, var(--accent) 34%, var(--stroke));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 6px 12px rgba(44,121,246,.08);
-  font-weight: 700;
+.scr.active  { opacity:1; transform:translateX(0); pointer-events:auto; }
+.scr.leaving { opacity:0; transform:translateX(-26px); transition:opacity .3s ease, transform .3s ease; }
+
+/* ── Bottom bar ── */
+.bottom {
+  flex-shrink: 0;
+  background: rgba(255,255,255,.92);
+  border-top: 1px solid rgba(210,224,248,.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: .65rem 1.2rem calc(.65rem + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
 }
-/* hero-panel */
-.app-root .hero-panel {
+.step-title { font-size: 1rem; font-weight: 900; color: #0d2559; }
+.step-desc  { font-size: .82rem; color: #5d7098; }
+.dots       { display:flex; gap:7px; align-items:center; }
+.dot        { width:7px; height:7px; border-radius:50%; background:rgba(44,121,246,.2); transition:all .3s ease; }
+.dot.on     { background:#2c79f6; width:20px; border-radius:3px; }
+.dot.done   { background:rgba(44,121,246,.42); }
+.tap-hint   { font-size:.72rem; color:#8899bb; }
+
+/* ══════════════════════════════════════════════════════
+   EXACT APP CSS (light mode, from globals.css)
+══════════════════════════════════════════════════════ */
+:root {
+  --bg-1: #f7faff; --bg-2: #e8f0ff; --bg-3: #dbe9ff;
+  --card: #ffffff; --text: #0d2559; --muted: #5d7098;
+  --accent: #2c79f6; --accent-strong: #1f67df;
+  --accent-soft: #eef5ff; --stroke: #dce5f5;
+}
+
+/* hero panel */
+.hero-panel {
   background:
     radial-gradient(circle at 100% 0, rgba(44,121,246,.08) 0%, transparent 32%),
     rgba(255,255,255,.9);
   border: 1px solid rgba(255,255,255,.75);
   border-radius: 1.45rem;
   box-shadow: 0 14px 28px rgba(98,133,199,.1);
-  padding: 1.2rem;
-  display: grid; gap: .8rem;
+  padding: 1.1rem 1.2rem;
+  display: flex; flex-direction: column; gap: .7rem;
 }
-.app-root .hero-top-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-.app-root .hero-brand { display:flex; align-items:center; gap:.65rem; }
-.app-root .hero-app-name { font-size:.75rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); }
-.app-root .hero-title { font-size:2rem; line-height:1.1; margin:0; font-weight:800; }
-.app-root .hero-desc { color:var(--muted); font-size:.9rem; margin:0; }
-.app-root .hero-metrics { display:flex; flex-wrap:wrap; gap:.45rem; }
-.app-root .hero-metrics span {
-  display:inline-flex; align-items:center; gap:.3rem;
-  border-radius:999px; padding:.3rem .65rem; font-size:.78rem; font-weight:600;
-  color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 30%,var(--stroke));
-  background:var(--accent-soft);
+.hero-top-row { display:flex; align-items:center; justify-content:space-between; }
+.hero-brand { display:flex; align-items:center; gap:.6rem; }
+.hero-app-icon {
+  width:40px; height:40px; border-radius:.9rem; background:#fff;
+  border:1px solid rgba(44,121,246,.2); box-shadow:0 6px 14px rgba(31,103,223,.16);
+  display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;
 }
-.app-root .hero-user-row { display:flex; align-items:center; gap:.5rem; padding-top:.75rem; border-top:1px solid var(--stroke); }
-.app-root .hero-user-avatar {
-  width:1.6rem; height:1.6rem; border-radius:999px;
+.hero-app-name { font-size:.73rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); }
+.hero-title    { font-size:1.8rem; line-height:1.08; font-weight:800; margin:0; }
+.hero-desc     { color:var(--muted); font-size:.9rem; margin:0; }
+.hero-metrics  { display:flex; flex-wrap:wrap; gap:.4rem; }
+.hero-metrics span {
+  display:inline-flex; align-items:center; gap:.28rem;
+  border-radius:999px; padding:.28rem .6rem; font-size:.76rem; font-weight:600;
+  color:var(--accent); border:1px solid rgba(44,121,246,.28); background:var(--accent-soft);
+}
+.hero-user-row { display:flex; align-items:center; gap:.45rem; padding-top:.65rem; border-top:1px solid var(--stroke); }
+.hero-user-avatar {
+  width:1.55rem; height:1.55rem; border-radius:999px;
   background:linear-gradient(135deg,var(--accent),var(--accent-strong));
-  color:#fff; font-size:.7rem; font-weight:800;
+  color:#fff; font-size:.68rem; font-weight:800;
   display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
 }
-.app-root .hero-user-name { font-size:.85rem; font-weight:600; color:var(--text); }
-/* Section */
-.app-root .app-section { display:flex; flex-direction:column; gap:.7rem; }
-.app-root .section-head { padding:0 .25rem; display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
-.app-root .section-head h2 { margin:0; font-size:1.75rem; }
-.app-root .eyebrow { text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-size:.75rem; margin-bottom:.5rem; }
-.app-root .trips-quick-actions { display:flex; gap:.45rem; flex-shrink:0; }
-.app-root .trips-quick-btn { display:inline-flex; align-items:center; gap:.3rem; min-height:auto; padding:.45rem .85rem; font-size:.82rem; font-weight:700; border-radius:999px; white-space:nowrap; }
-.app-root .trips-quick-create { background:linear-gradient(135deg,#1f9e47,#177a37); border-color:transparent; color:#fff; box-shadow:0 3px 10px rgba(31,158,71,.28); }
-.app-root .trips-quick-join { background:transparent; color:var(--accent); border-color:color-mix(in srgb,var(--accent) 38%,var(--stroke)); }
-/* Trip card */
-.app-root .trip-card-large {
-  display:grid; overflow:hidden; padding:0; border-radius:1.25rem;
-  border:1px solid color-mix(in srgb, #2c79f6 28%, var(--stroke));
-  background:color-mix(in srgb, #eef5ff 22%, #fff);
-  box-shadow:0 4px 16px rgba(98,133,199,.08);
-  color:var(--text); text-align:left; width:100%;
+.hero-user-name { font-size:.84rem; font-weight:600; }
+
+/* section card */
+.section-card {
+  background:rgba(255,255,255,.95);
+  border:1px solid rgba(210,224,248,.85);
+  border-radius:1.25rem; padding:1rem;
+  box-shadow:0 10px 24px rgba(98,133,199,.08);
 }
-.app-root .trip-card-cover { height:4px; background:linear-gradient(90deg,#2c79f6,rgba(44,121,246,.3)); }
-.app-root .trip-card-body { display:flex; flex-direction:column; gap:.65rem; padding:.85rem 1rem .9rem; }
-.app-root .trip-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
-.app-root .trip-card-top strong { display:block; font-size:1.15rem; font-weight:800; line-height:1.2; }
-.app-root .trip-card-top p { margin:.2rem 0 0; font-size:.82rem; color:var(--muted); }
-.app-root .trip-starts-in { font-size:.82rem; font-weight:600; color:var(--muted); background:color-mix(in srgb,var(--stroke) 60%,transparent); border-radius:999px; padding:.2rem .55rem; }
-.app-root .trip-card-meta { display:flex; flex-wrap:wrap; gap:.4rem; }
-.app-root .trip-card-meta span { border-radius:999px; background:color-mix(in srgb,#2c79f6 10%,#fff); border:1px solid color-mix(in srgb,#2c79f6 18%,var(--stroke)); padding:.25rem .6rem; font-size:.78rem; font-weight:500; }
-/* Section card / modal */
-.app-root .section-card { background:rgba(255,255,255,.95); border:1px solid rgba(210,224,248,.85); border-radius:1.25rem; padding:1rem; box-shadow:0 10px 24px rgba(98,133,199,.08); }
-.app-root .modal-overlay { position:fixed; inset:0; background:rgba(12,28,64,.38); display:flex; align-items:center; justify-content:center; padding:1rem; z-index:50; }
-.app-root .modal-card { background:var(--card); border-color:var(--stroke); border-radius:1.2rem; padding:1.5rem; box-shadow:0 26px 50px rgba(27,47,89,.27); width:min(34rem,100%); color:var(--text); }
-.app-root .modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:.9rem; }
-.app-root .modal-head h2 { margin:0; }
-.app-root .stack { display:flex; flex-direction:column; gap:.6rem; }
-.app-root .field-block { display:flex; flex-direction:column; gap:.45rem; }
-.app-root .field-block span { font-weight:700; color:var(--text); }
-.app-root .onboarding-form { margin-top:.85rem; gap:.6rem; }
-.app-root .onboarding-form input { border-radius:.95rem; border-color:var(--stroke); background:var(--card); }
-.app-root .field-hint { margin:0; font-size:.84rem; color:var(--muted); }
-.app-root .field-label { font-size:.78rem; font-weight:700; color:var(--muted); }
-/* Screen nav pills */
-.app-root .pills-nav { display:flex; gap:.45rem; flex-wrap:wrap; }
-.app-root .screen-pill { flex:0 1 auto; min-height:auto; border-radius:.8rem; padding:.55rem .8rem; background:rgba(255,255,255,.7); border:1px solid var(--stroke); color:var(--text); white-space:nowrap; font-size:.9rem; }
-.app-root .screen-pill.active { background:var(--accent); border-color:var(--accent); color:#f7f8f6; }
-.app-root .screen-pill-inner { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; }
-/* Members */
-.app-root .member-list { display:flex; flex-direction:column; gap:.5rem; margin-top:.75rem; }
-.app-root .member-row { display:flex; align-items:center; gap:.65rem; border:1px solid var(--stroke); background:var(--card); border-radius:.75rem; padding:.5rem .65rem; }
-.app-root .member-avatar { display:grid; place-items:center; width:2rem; height:2rem; border-radius:999px; background:linear-gradient(135deg,var(--accent),var(--accent-strong)); color:#f7f8f6; font-weight:800; font-size:.9rem; flex-shrink:0; }
-.app-root .member-name { flex:1; font-size:.95rem; font-weight:700; color:var(--text); }
-.app-root .member-sub { font-size:.82rem; color:var(--muted); }
-.app-root .inline-form { display:flex; gap:.6rem; }
-.app-root .compact-form input, .app-root .compact-form button { min-height:3rem; padding:.65rem .85rem; font-size:.95rem; border-radius:.95rem; }
-/* Invite code box */
-.app-root .invite-code-box {
-  display:grid; grid-template-columns:minmax(0,1fr) auto;
+.modal-card { border-radius:1.2rem; padding:1.3rem; box-shadow:0 26px 50px rgba(27,47,89,.22); }
+
+/* app section (trips) */
+.app-section  { display:flex; flex-direction:column; gap:.65rem; }
+.section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; padding:0 .2rem; }
+.section-head h2 { margin:0; font-size:1.65rem; }
+.eyebrow { text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-size:.74rem; margin:0 0 .4rem; }
+
+/* trips quick actions */
+.trips-quick-actions { display:flex; gap:.4rem; flex-shrink:0; }
+.trips-quick-btn {
+  display:inline-flex; align-items:center; gap:.28rem; min-height:auto;
+  padding:.42rem .78rem; font-size:.8rem; font-weight:700; border-radius:999px;
+  white-space:nowrap; border:1px solid transparent; cursor:pointer; font-family:inherit;
+}
+.trips-quick-create { background:linear-gradient(135deg,#1f9e47,#177a37); color:#fff; box-shadow:0 3px 10px rgba(31,158,71,.28); }
+.trips-quick-join   { background:transparent; color:var(--accent); border-color:rgba(44,121,246,.38); }
+
+/* trip card */
+.trip-card-large {
+  overflow:hidden; border-radius:1.25rem; border:1px solid rgba(44,121,246,.28);
+  background:rgba(238,245,255,.55); box-shadow:0 4px 14px rgba(44,121,246,.08);
+}
+.trip-card-cover { height:4px; background:linear-gradient(90deg,#2c79f6,rgba(44,121,246,.3)); }
+.trip-card-body  { padding:.8rem .95rem .85rem; display:flex; flex-direction:column; gap:.5rem; }
+.trip-card-top   { display:flex; align-items:flex-start; justify-content:space-between; gap:.7rem; }
+.trip-card-top strong { display:block; font-size:1.1rem; font-weight:800; line-height:1.2; }
+.trip-card-top p { margin:.18rem 0 0; font-size:.8rem; color:var(--muted); }
+.trip-starts-in  { font-size:.8rem; font-weight:600; color:var(--muted); background:rgba(220,229,245,.6); border-radius:999px; padding:.18rem .5rem; white-space:nowrap; }
+.trip-card-meta  { display:flex; flex-wrap:wrap; gap:.35rem; }
+.trip-card-meta span { border-radius:999px; background:rgba(44,121,246,.08); border:1px solid rgba(44,121,246,.18); padding:.22rem .55rem; font-size:.76rem; font-weight:500; }
+
+/* modal overlay */
+.modal-overlay {
+  position:absolute; inset:0; background:rgba(12,28,64,.35);
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:1.2rem 1rem; z-index:10;
+  pointer-events:none;
+}
+.modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:.9rem; }
+.modal-head h2 { margin:0; }
+
+/* ghost button */
+.ghost {
+  background:rgba(238,245,255,.75); color:rgba(44,121,246,.9);
+  border:1px solid rgba(44,121,246,.3); border-radius:1rem;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85);
+  font-weight:700; font-size:.88rem; font-family:inherit;
+  padding:.4rem .8rem; cursor:pointer; min-height:auto;
+}
+
+/* form */
+.stack { display:flex; flex-direction:column; gap:.6rem; }
+.field-block { display:flex; flex-direction:column; gap:.42rem; }
+.field-block > span { font-weight:700; color:var(--text); font-size:.93rem; }
+.field-label { font-size:.78rem; font-weight:700; color:var(--muted); }
+input, select {
+  background:rgba(255,255,255,.96); color:var(--text);
+  border:1px solid var(--stroke); border-radius:1rem;
+  min-height:3.1rem; padding:.7rem .9rem;
+  font:inherit; font-size:.95rem; width:100%;
+}
+.inp-focus  { border-color:rgba(44,121,246,.45)!important; background:rgba(238,245,255,.7)!important; }
+.inp-filled { border-color:rgba(44,121,246,.35)!important; background:rgba(238,245,255,.5)!important; }
+.primary-cta {
+  display:block; width:100%; min-height:3.5rem; padding:.7rem .9rem;
+  font:inherit; font-size:1rem; font-weight:800; text-align:center;
+  background:linear-gradient(135deg,#2c79f6,#1f67df);
+  color:#f7f8f6; border:1px solid transparent; border-radius:1rem;
+  box-shadow:0 14px 28px rgba(44,121,246,.25); cursor:pointer;
+}
+.cta-dim    { opacity:.45; }
+.cta-tap    { transform:scale(.97); opacity:.8; }
+
+/* screen pills nav */
+.pills-nav { display:flex; gap:.42rem; overflow-x:auto; padding-bottom:.1rem; }
+.pills-nav::-webkit-scrollbar { display:none; }
+.screen-pill {
+  flex-shrink:0; border-radius:.78rem; padding:.5rem .75rem;
+  background:rgba(255,255,255,.72); border:1px solid var(--stroke);
+  color:var(--text); white-space:nowrap; font-size:.88rem; font-family:inherit;
+  cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; min-height:auto;
+}
+.screen-pill.active { background:var(--accent); border-color:var(--accent); color:#f7f8f6; }
+
+/* member list */
+.member-list { display:flex; flex-direction:column; gap:.48rem; }
+.member-row  { display:flex; align-items:center; gap:.62rem; border:1px solid var(--stroke); background:var(--card); border-radius:.75rem; padding:.5rem .65rem; }
+.member-avatar { display:grid; place-items:center; width:2rem; height:2rem; border-radius:999px; background:linear-gradient(135deg,var(--accent),var(--accent-strong)); color:#f7f8f6; font-weight:800; font-size:.88rem; flex-shrink:0; }
+.member-name   { font-size:.93rem; font-weight:700; }
+.member-sub    { font-size:.8rem; color:var(--muted); }
+
+/* inline form */
+.inline-form { display:flex; gap:.5rem; }
+.inline-form input { flex:1; min-height:3rem; }
+.inline-form button { flex-shrink:0; min-height:3rem; padding:.6rem .9rem; font-family:inherit; border-radius:.95rem; font-size:.93rem; font-weight:700; background:var(--accent); color:#f7f8f6; border:1px solid transparent; cursor:pointer; }
+
+/* invite code box */
+.invite-code-box {
+  display:grid; grid-template-columns:1fr auto;
   grid-template-areas:"label code" "actions actions";
-  gap:.75rem; border-radius:.95rem;
-  background:color-mix(in srgb,var(--accent-soft) 26%,#fff);
-  border:1px solid color-mix(in srgb,var(--accent) 26%,var(--stroke));
-  padding:.78rem .85rem;
+  gap:.65rem; border-radius:.95rem;
+  background:rgba(238,245,255,.7); border:1px solid rgba(44,121,246,.26);
+  padding:.75rem .85rem;
 }
-.app-root .invite-code-box .icb-label { color:var(--muted); font-size:.85rem; grid-area:label; align-self:center; }
-.app-root .invite-code-box .icb-code { font-size:1.04rem; font-weight:800; letter-spacing:.02em; grid-area:code; justify-self:end; }
-.app-root .share-buttons { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.45rem; grid-area:actions; }
-.app-root .share-action-btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:.36rem;
-  border-radius:.82rem; min-height:2.48rem;
-  border-color:color-mix(in srgb,var(--accent) 42%,var(--stroke));
-  background:color-mix(in srgb,var(--accent-soft) 44%,#fff);
-  color:color-mix(in srgb,var(--accent) 86%,#18335f);
-  font-weight:700; font-size:.82rem; padding:.58rem .62rem;
+.icb-label   { color:var(--muted); font-size:.83rem; grid-area:label; align-self:center; }
+.icb-code    { font-size:1.05rem; font-weight:800; letter-spacing:.02em; grid-area:code; justify-self:end; }
+.share-btns  { display:flex; gap:.4rem; grid-area:actions; }
+.share-btn {
+  flex:1; min-height:2.4rem; font-size:.78rem; font-weight:700;
+  border-radius:.8rem; padding:.5rem .55rem;
+  background:rgba(238,245,255,.85); color:rgba(44,121,246,.9);
+  border:1px solid rgba(44,121,246,.35); font-family:inherit;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
 }
-/* Expense tab */
-.app-root .expense-row-compact {
-  display:flex; align-items:center; gap:.8rem; cursor:pointer; padding:.5rem .8rem;
-  border-radius:.7rem; border:1px solid var(--stroke); justify-content:space-between;
-}
-.app-root .exp-icon { font-size:1.3rem; }
-.app-root .exp-name { font-size:.95rem; font-weight:700; flex:1; }
-.app-root .exp-meta { font-size:.78rem; color:var(--muted); }
-.app-root .exp-amt { font-size:.95rem; font-weight:700; white-space:nowrap; }
-.app-root .expense-open-modal-btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:.35rem;
-  min-height:2.35rem; padding:.48rem .82rem; font-size:.86rem; font-weight:700;
-  border-radius:.82rem; border:1px solid color-mix(in srgb,var(--accent) 45%,var(--stroke));
-  background:color-mix(in srgb,var(--accent-soft) 52%,#fff);
-  color:color-mix(in srgb,var(--accent) 88%,#16325e);
-}
-/* mini-panel */
-.app-root .mini-panel { background:#f4f8ff; border:1px solid color-mix(in srgb,var(--accent) 22%,var(--stroke)); border-radius:1rem; padding:.75rem .9rem; }
+.share-btn.copied { background:#ecfdf3; color:#166534; border-color:#86efac; }
+
+/* mini panel */
+.mini-panel { background:#f4f8ff; border:1px solid rgba(44,121,246,.22); border-radius:1rem; padding:.75rem .9rem; }
+
 /* success */
-.app-root .success-banner { background:#ecfdf3; border:1px solid #86efac; border-radius:1rem; padding:1rem 1.2rem; color:#166534; display:flex; flex-direction:column; align-items:center; gap:.5rem; text-align:center; }
-
-/* ─── SCREEN SWITCHING ─── */
-.app-screen {
-  position: absolute; top: 0; left: 0;
-  width: 390px;
-  opacity: 0; transform: translateX(22px);
-  transition: opacity .42s ease, transform .42s ease;
-  pointer-events: none;
+.success-banner {
+  background:#ecfdf3; border:1px solid #86efac; border-radius:1rem;
+  padding:1.1rem 1.2rem; color:#166534;
+  display:flex; flex-direction:column; align-items:center; gap:.45rem; text-align:center;
 }
-.app-screen.active { opacity:1; transform:translateX(0); pointer-events:auto; }
-.app-screen.exit   { opacity:0; transform:translateX(-22px); transition: opacity .3s ease, transform .3s ease; }
 
-/* ─── TYPING / ANIMATE UTILITIES ─── */
+/* ── Animations ── */
 .fi { opacity:0; }
-.fi.show { animation: fadeUp .36s ease both; }
+.fi.show { animation: fadeUp .35s ease both; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-.chip-pop { animation: chipPop .38s cubic-bezier(.34,1.56,.64,1) both; }
+.chip-pop { animation:chipPop .38s cubic-bezier(.34,1.56,.64,1) both; }
 @keyframes chipPop { from{opacity:0;transform:scale(.45)} to{opacity:1;transform:scale(1)} }
-.tap-anim { transform:scale(.95)!important; opacity:.8!important; transition: transform .12s, opacity .12s !important; }
-.pulse-glow { animation: pulseGlow 1.7s ease-in-out infinite; }
-@keyframes pulseGlow {
-  0%,100% { box-shadow: 0 3px 10px rgba(31,158,71,.28); }
-  50% { box-shadow: 0 5px 22px rgba(31,158,71,.6); transform: translateY(-2px); }
+.btn-pulse { animation:btnPulse 1.8s ease-in-out infinite; }
+@keyframes btnPulse {
+  0%,100%{box-shadow:0 3px 10px rgba(31,158,71,.28);}
+  50%{box-shadow:0 5px 24px rgba(31,158,71,.6);transform:translateY(-2px);}
 }
-
-/* ─── NAVIGATION ─── */
-.nav-area { display:flex; flex-direction:column; align-items:center; gap:14px; padding:1.1rem 1rem 0; }
-.prog-track { width:260px; height:3px; background:#2a3550; border-radius:2px; overflow:hidden; }
-.prog-fill { height:100%; background:linear-gradient(90deg,#2c79f6,#6366f1); border-radius:2px; transition:width .08s linear; width:0%; }
-.dots { display:flex; gap:22px; align-items:flex-start; }
-.dot-item { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
-.dot { width:8px; height:8px; border-radius:50%; background:#2a3550; transition:all .3s ease; }
-.dot-item.on .dot  { background:#2c79f6; width:22px; border-radius:4px; box-shadow:0 0 10px rgba(44,121,246,.5); }
-.dot-item.done .dot{ background:rgba(44,121,246,.42); }
-.dot-lbl { font-size:9.5px; color:#7a8aaa; text-align:center; max-width:58px; line-height:1.3; opacity:0; transition:opacity .3s; }
-.dot-item.on .dot-lbl { opacity:1; color:#6ba3f5; }
-.nav-btns { display:flex; gap:10px; }
-.nbtn { background:#1a2030; border:1px solid #2a3550; border-radius:10px; padding:8px 22px; color:#e8edf8; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; }
-.nbtn:hover { background:#1e2535; }
-.nbtn:disabled { opacity:.28; cursor:default; }
-.nbtn.pri { background:linear-gradient(135deg,#2c79f6,#1f67df); border-color:transparent; color:#fff; box-shadow:0 4px 14px rgba(44,121,246,.35); }
 </style>
 </head>
 <body>
+<div class="tut" id="tut">
 
-<div class="page-top">
-  <div class="page-brand">
-    <div class="page-brand-icon">🧾</div>
-    <span class="page-brand-name">Split Pay</span>
-  </div>
-  <div class="page-sub">Návod · 5 krokov</div>
-</div>
-
-<div class="step-cap">
-  <div class="step-num"  id="sBadge">Krok 1 z 5</div>
-  <div class="step-title" id="sTitle">Otvor aplikáciu</div>
-  <div class="step-desc"  id="sDesc">Klepni na Nový výlet</div>
-</div>
-
-<div class="phone-wrap">
-  <div class="phone-glow"></div>
-  <div class="phone-outer">
-    <div class="phone-notch"></div>
-    <div class="phone-status"><span>9:41</span><span>🔋</span></div>
-    <div class="phone-viewport">
-      <div class="phone-scaler">
-
-        <!-- ══ S1: Home ══ -->
-        <div class="app-screen active" id="s1">
-          <div class="app-root">
-            <section class="hero hero-panel">
-              <div class="hero-top-row">
-                <div class="hero-brand">
-                  <div style="width:48px;height:48px;border-radius:1rem;background:#fff;border:1px solid rgba(44,121,246,.22);box-shadow:0 8px 16px rgba(31,103,223,.18);display:flex;align-items:center;justify-content:center;font-size:26px">🧾</div>
-                  <span class="hero-app-name">SPLIT PAY</span>
-                </div>
-              </div>
-              <h1 class="hero-title">Tvoje výlety</h1>
-              <p class="hero-desc">Vytvor výlet, pozvi ľudí a drž výdavky pod kontrolou.</p>
-              <div class="hero-metrics">
-                <span>🔗 Rýchle pozvánky</span>
-                <span>👥 Fér rozdelenie</span>
-                <span>💰 Okamžitá bilancia</span>
-              </div>
-              <div class="hero-user-row">
-                <span class="hero-user-avatar">M</span>
-                <span class="hero-user-name">Martin</span>
-              </div>
-            </section>
-            <section class="app-section">
-              <div class="section-head trips-section-head">
-                <div>
-                  <p class="eyebrow">Prehľad</p>
-                  <h2>Moje výlety</h2>
-                </div>
-                <div class="trips-quick-actions">
-                  <button class="trips-quick-btn trips-quick-create" id="s1newBtn">＋ Nový výlet</button>
-                  <button class="trips-quick-btn trips-quick-join">🔗 Pridaj sa</button>
-                </div>
-              </div>
-              <div style="text-align:center;padding:2.5rem 1rem;color:var(--muted)">
-                <div style="font-size:3.2rem;margin-bottom:.5rem;opacity:.4">✈️</div>
-                <p style="font-size:.95rem">Zatiaľ žiadny výlet.</p>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <!-- ══ S2: Nový výlet modal ══ -->
-        <div class="app-screen" id="s2">
-          <div class="app-root" style="position:relative;min-height:780px">
-            <!-- dimmed background -->
-            <section class="hero hero-panel" style="opacity:.35;pointer-events:none">
-              <div class="hero-top-row">
-                <div class="hero-brand">
-                  <div style="width:48px;height:48px;border-radius:1rem;background:#fff;display:flex;align-items:center;justify-content:center;font-size:26px">🧾</div>
-                  <span class="hero-app-name">SPLIT PAY</span>
-                </div>
-              </div>
-              <h1 class="hero-title">Tvoje výlety</h1>
-            </section>
-            <!-- overlay -->
-            <div style="position:absolute;inset:0;background:rgba(12,28,64,.38);display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;z-index:50">
-              <section class="section-card modal-card" style="width:100%">
-                <div class="modal-head">
-                  <div>
-                    <p class="eyebrow">Výlet</p>
-                    <h2>Vytvoriť výlet</h2>
-                  </div>
-                  <button class="ghost" style="min-height:auto;padding:.4rem .8rem;font-size:.88rem">Zavrieť</button>
-                </div>
-                <form class="stack onboarding-form">
-                  <label class="field-block">
-                    <span>Názov výletu</span>
-                    <input type="text" id="s2name" placeholder="Napr. Tatry víkend" autocomplete="off">
-                  </label>
-                  <label class="field-block">
-                    <span>Dátum</span>
-                    <input type="text" id="s2date" placeholder="dd.mm.yyyy" autocomplete="off">
-                  </label>
-                  <button class="primary-cta fi" id="s2btn" type="button">Vytvoriť výlet</button>
-                  <p class="field-hint">Po vytvorení dostaneš kód na zdieľanie.</p>
-                </form>
-              </section>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══ S3: Členovia ══ -->
-        <div class="app-screen" id="s3">
-          <div class="app-root">
-            <div class="pills-nav">
-              <button class="screen-pill"><span class="screen-pill-inner">↗ Prehľad</span></button>
-              <button class="screen-pill active"><span class="screen-pill-inner">👥 Členovia</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">🔗 Pozvánky</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">🧾 Výdavky</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">⚖ Bilancia</span></button>
-            </div>
-            <section class="section-card">
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;margin-bottom:.9rem">
-                <div>
-                  <p class="eyebrow">Výlet</p>
-                  <h2 style="margin:0;font-size:1.6rem">Členovia</h2>
-                </div>
-              </div>
-              <form class="inline-form compact-form">
-                <input type="text" id="s3inp" placeholder="Meno člena" autocomplete="off" style="flex:1">
-                <button type="button" style="flex-shrink:0;min-height:3rem;padding:.65rem .85rem;font-size:.95rem;border-radius:.95rem">Pridať</button>
-              </form>
-              <div class="member-list" id="s3list">
-                <div class="member-row">
-                  <div class="member-avatar">M</div>
-                  <div>
-                    <div class="member-name">Martin</div>
-                    <div class="member-sub">Organizátor · Ty</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <!-- ══ S4: Pozvánky ══ -->
-        <div class="app-screen" id="s4">
-          <div class="app-root">
-            <div class="pills-nav">
-              <button class="screen-pill"><span class="screen-pill-inner">↗ Prehľad</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">👥 Členovia</span></button>
-              <button class="screen-pill active"><span class="screen-pill-inner">🔗 Pozvánky</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">🧾 Výdavky</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">⚖ Bilancia</span></button>
-            </div>
-            <section class="section-card">
-              <p class="eyebrow">Zdieľanie</p>
-              <h2 style="margin:0 0 .9rem;font-size:1.6rem">Pozvánky a prístupy</h2>
-              <div class="invite-code-box" style="margin-bottom:.85rem">
-                <span class="icb-label">Pozvi členov pomocou kódu:</span>
-                <strong class="icb-code">ABCD1234</strong>
-                <div class="share-buttons">
-                  <button class="share-action-btn" id="copyBtn" type="button">📋 Kopírovať</button>
-                  <button class="share-action-btn" type="button">💬 SMS</button>
-                  <button class="share-action-btn" type="button">📧 Email</button>
-                  <button class="share-action-btn" type="button">🔗 Link</button>
-                </div>
-              </div>
-              <div class="mini-panel" style="margin-bottom:.7rem">
-                <p style="margin:0;font-size:.88rem;color:#1f3562"><strong>Tenerife 2025</strong> · 3 členovia</p>
-                <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem">
-                  <span style="border-radius:999px;background:color-mix(in srgb,#2c79f6 10%,#fff);border:1px solid color-mix(in srgb,#2c79f6 18%,#dce5f5);padding:.25rem .6rem;font-size:.78rem;font-weight:500">✓ Martin</span>
-                  <span style="border-radius:999px;background:color-mix(in srgb,#2c79f6 10%,#fff);border:1px solid color-mix(in srgb,#2c79f6 18%,#dce5f5);padding:.25rem .6rem;font-size:.78rem;font-weight:500">✓ Katka</span>
-                  <span style="border-radius:999px;background:color-mix(in srgb,#2c79f6 10%,#fff);border:1px solid color-mix(in srgb,#2c79f6 18%,#dce5f5);padding:.25rem .6rem;font-size:.78rem;font-weight:500">✓ Tomáš</span>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <!-- ══ S5: Pridať výdavok ══ -->
-        <div class="app-screen" id="s5">
-          <div class="app-root" style="position:relative;min-height:780px">
-            <div class="pills-nav" style="opacity:.3;pointer-events:none">
-              <button class="screen-pill"><span class="screen-pill-inner">↗ Prehľad</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">👥 Členovia</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">🔗 Pozvánky</span></button>
-              <button class="screen-pill active"><span class="screen-pill-inner">🧾 Výdavky</span></button>
-              <button class="screen-pill"><span class="screen-pill-inner">⚖ Bilancia</span></button>
-            </div>
-            <!-- overlay -->
-            <div style="position:absolute;inset:0;background:rgba(12,28,64,.38);display:flex;align-items:flex-start;justify-content:center;padding:1.2rem 1rem;z-index:50">
-              <section class="section-card modal-card" style="width:100%">
-                <div class="modal-head">
-                  <div>
-                    <p class="eyebrow">Nový výdavok</p>
-                    <h2>Pridať výdavok</h2>
-                  </div>
-                  <button class="ghost" style="min-height:auto;padding:.4rem .8rem;font-size:.88rem">Zavrieť</button>
-                </div>
-                <form class="stack" style="gap:.6rem">
-                  <label class="field-block">
-                    <span>Názov</span>
-                    <input type="text" id="s5name" placeholder="Napr. Večera v reštaurácii" autocomplete="off">
-                  </label>
-                  <label class="field-block">
-                    <div class="field-label">Suma</div>
-                    <input type="text" id="s5amt" placeholder="0,00" autocomplete="off">
-                  </label>
-                  <div class="field-label">Platil</div>
-                  <select id="s5payer">
-                    <option>Martin</option>
-                    <option>Katka</option>
-                    <option>Tomáš</option>
-                  </select>
-                  <button class="primary-cta fi" id="s5btn" type="button">✓ Pridať výdavok</button>
-                </form>
-                <div class="success-banner fi" id="s5ok" style="display:none;margin-top:.75rem">
-                  <div style="font-size:2rem">✅</div>
-                  <strong style="font-size:1rem">Výdavok pridaný!</strong>
-                  <span style="font-size:.88rem;opacity:.8">Večera pri mori · 45,80 €<br>rozdelené medzi 3 členov</span>
-                </div>
-              </section>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /phone-scaler -->
-    </div><!-- /phone-viewport -->
-  </div><!-- /phone-outer -->
-</div><!-- /phone-wrap -->
-
-<!-- Navigation -->
-<div class="nav-area">
+  <!-- progress bar -->
   <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
-  <div class="dots" id="dotsRow">
-    <div class="dot-item on" data-i="0"><div class="dot"></div><div class="dot-lbl">Domov</div></div>
-    <div class="dot-item" data-i="1"><div class="dot"></div><div class="dot-lbl">Nový výlet</div></div>
-    <div class="dot-item" data-i="2"><div class="dot"></div><div class="dot-lbl">Členovia</div></div>
-    <div class="dot-item" data-i="3"><div class="dot"></div><div class="dot-lbl">Pozvánka</div></div>
-    <div class="dot-item" data-i="4"><div class="dot"></div><div class="dot-lbl">Výdavok</div></div>
+
+  <!-- step badge -->
+  <div class="step-badge" id="sBadge">Krok 1 z 5</div>
+
+  <!-- ───────────── SCREENS ───────────── -->
+  <div class="screens" id="screens">
+
+    <!-- S1: Domov -->
+    <div class="scr active" id="s1">
+      <section class="hero-panel">
+        <div class="hero-top-row">
+          <div class="hero-brand">
+            <div class="hero-app-icon">🧾</div>
+            <span class="hero-app-name">SPLIT PAY</span>
+          </div>
+        </div>
+        <h1 class="hero-title">Tvoje výlety</h1>
+        <p class="hero-desc">Vytvor výlet, pozvi ľudí a drž výdavky pod kontrolou.</p>
+        <div class="hero-metrics">
+          <span>🔗 Rýchle pozvánky</span>
+          <span>👥 Fér rozdelenie</span>
+          <span>💰 Okamžitá bilancia</span>
+        </div>
+        <div class="hero-user-row">
+          <span class="hero-user-avatar">M</span>
+          <span class="hero-user-name">Martin</span>
+        </div>
+      </section>
+
+      <section class="app-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Prehľad</p>
+            <h2>Moje výlety</h2>
+          </div>
+          <div class="trips-quick-actions">
+            <button class="trips-quick-btn trips-quick-create btn-pulse" id="s1btn">＋ Nový výlet</button>
+            <button class="trips-quick-btn trips-quick-join">🔗 Pridaj sa</button>
+          </div>
+        </div>
+        <div style="text-align:center;padding:2rem 1rem;color:#5d7098">
+          <div style="font-size:3rem;opacity:.35;margin-bottom:.5rem">✈️</div>
+          <p style="font-size:.92rem">Zatiaľ žiadny výlet.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- S2: Nový výlet -->
+    <div class="scr" id="s2">
+      <section class="hero-panel" style="opacity:.3;pointer-events:none;flex-shrink:0">
+        <div class="hero-top-row">
+          <div class="hero-brand">
+            <div class="hero-app-icon">🧾</div>
+            <span class="hero-app-name">SPLIT PAY</span>
+          </div>
+        </div>
+        <h1 class="hero-title">Tvoje výlety</h1>
+      </section>
+      <div class="modal-overlay" style="position:relative;inset:auto;background:transparent;padding:0;pointer-events:auto">
+        <section class="section-card modal-card" style="width:100%">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">Výlet</p>
+              <h2>Vytvoriť výlet</h2>
+            </div>
+            <button class="ghost" type="button">Zavrieť</button>
+          </div>
+          <form class="stack" style="gap:.65rem" onsubmit="return false">
+            <label class="field-block">
+              <span>Názov výletu</span>
+              <input type="text" id="s2name" placeholder="Napr. Tatry víkend" class="inp-focus" autocomplete="off">
+            </label>
+            <label class="field-block">
+              <span>Dátum</span>
+              <input type="text" id="s2date" placeholder="dd.mm.yyyy" autocomplete="off">
+            </label>
+            <button type="button" class="primary-cta cta-dim fi" id="s2btn">Vytvoriť výlet →</button>
+            <p style="font-size:.83rem;color:#5d7098;margin:0">Po vytvorení dostaneš kód na zdieľanie.</p>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <!-- S3: Členovia -->
+    <div class="scr" id="s3">
+      <div class="pills-nav">
+        <button class="screen-pill">↗ Prehľad</button>
+        <button class="screen-pill active">👥 Členovia</button>
+        <button class="screen-pill">🔗 Pozvánky</button>
+        <button class="screen-pill">🧾 Výdavky</button>
+        <button class="screen-pill">⚖ Bilancia</button>
+      </div>
+      <section class="section-card">
+        <p class="eyebrow">Tím</p>
+        <h2 style="margin:0 0 .85rem;font-size:1.55rem">Členovia výletu</h2>
+        <form class="inline-form" onsubmit="return false">
+          <input type="text" id="s3inp" placeholder="Meno člena" autocomplete="off">
+          <button type="button">Pridať</button>
+        </form>
+        <div class="member-list" id="s3list" style="margin-top:.75rem">
+          <div class="member-row">
+            <div class="member-avatar">M</div>
+            <div><div class="member-name">Martin</div><div class="member-sub">Organizátor · Ty</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- S4: Pozvánky -->
+    <div class="scr" id="s4">
+      <div class="pills-nav">
+        <button class="screen-pill">↗ Prehľad</button>
+        <button class="screen-pill">👥 Členovia</button>
+        <button class="screen-pill active">🔗 Pozvánky</button>
+        <button class="screen-pill">🧾 Výdavky</button>
+        <button class="screen-pill">⚖ Bilancia</button>
+      </div>
+      <section class="section-card">
+        <p class="eyebrow">Zdieľanie</p>
+        <h2 style="margin:0 0 .3rem;font-size:1.55rem">Pozvánky</h2>
+        <p style="font-size:.85rem;color:#5d7098;margin:0 0 .85rem">Zdieľaj odkaz. Kamaráti vstúpia a pridajú výdavky.</p>
+        <div class="invite-code-box" style="margin-bottom:.8rem">
+          <span class="icb-label">Kód pozvánky</span>
+          <strong class="icb-code">ABCD1234</strong>
+          <div class="share-btns">
+            <button class="share-btn" id="copyBtn" type="button">📋 Kopírovať</button>
+            <button class="share-btn" type="button">💬 SMS</button>
+            <button class="share-btn" type="button">📧 Email</button>
+          </div>
+        </div>
+        <div class="mini-panel">
+          <p style="font-size:.85rem;font-weight:700;margin:0 0 .5rem;color:#1f3562">Tenerife 2025 · 3 členovia</p>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <span style="border-radius:999px;background:rgba(44,121,246,.08);border:1px solid rgba(44,121,246,.18);padding:.22rem .55rem;font-size:.76rem;font-weight:500">✓ Martin</span>
+            <span style="border-radius:999px;background:rgba(44,121,246,.08);border:1px solid rgba(44,121,246,.18);padding:.22rem .55rem;font-size:.76rem;font-weight:500">✓ Katka</span>
+            <span style="border-radius:999px;background:rgba(44,121,246,.08);border:1px solid rgba(44,121,246,.18);padding:.22rem .55rem;font-size:.76rem;font-weight:500">✓ Tomáš</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- S5: Pridať výdavok -->
+    <div class="scr" id="s5">
+      <div class="pills-nav" style="opacity:.3;pointer-events:none;flex-shrink:0">
+        <button class="screen-pill">↗ Prehľad</button>
+        <button class="screen-pill">👥 Členovia</button>
+        <button class="screen-pill">🔗 Pozvánky</button>
+        <button class="screen-pill active">🧾 Výdavky</button>
+        <button class="screen-pill">⚖ Bilancia</button>
+      </div>
+      <section class="section-card modal-card">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Tenerife 2025</p>
+            <h2>Pridať výdavok</h2>
+          </div>
+          <button class="ghost" type="button">Zavrieť</button>
+        </div>
+        <form class="stack" style="gap:.62rem" onsubmit="return false">
+          <label class="field-block">
+            <span>Názov</span>
+            <input type="text" id="s5name" placeholder="Napr. Večera v reštaurácii" class="inp-focus" autocomplete="off">
+          </label>
+          <label class="field-block">
+            <span>Suma</span>
+            <input type="text" id="s5amt" placeholder="0,00" autocomplete="off">
+          </label>
+          <div class="field-label">Platil</div>
+          <select><option>Martin</option><option>Katka</option><option>Tomáš</option></select>
+          <button type="button" class="primary-cta cta-dim fi" id="s5btn">✓ Pridať výdavok</button>
+        </form>
+        <div class="success-banner fi" id="s5ok" style="display:none;margin-top:.75rem">
+          <div style="font-size:1.8rem">✅</div>
+          <strong style="font-size:.95rem">Výdavok pridaný!</strong>
+          <span style="font-size:.85rem;opacity:.85">Večera pri mori · 45,80 €<br>rozdelené medzi 3 členov</span>
+        </div>
+      </section>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- bottom bar -->
+  <div class="bottom">
+    <div class="step-title"  id="sTitle">Otvor aplikáciu</div>
+    <div class="step-desc"   id="sDesc">Klepni na tlačidlo Nový výlet</div>
+    <div class="dots" id="dots">
+      <div class="dot on"  data-i="0"></div>
+      <div class="dot"     data-i="1"></div>
+      <div class="dot"     data-i="2"></div>
+      <div class="dot"     data-i="3"></div>
+      <div class="dot"     data-i="4"></div>
+    </div>
+    <div class="tap-hint">Ťukni kdekoľvek pre pokračovanie</div>
   </div>
-  <div class="nav-btns">
-    <button class="nbtn" id="prevBtn" disabled>← Späť</button>
-    <button class="nbtn pri" id="nextBtn">Ďalej →</button>
-  </div>
-</div>
+
+</div><!-- /tut -->
 
 <script>
 const STEPS=[
-  {badge:'Krok 1 z 5',title:'Otvor aplikáciu',    desc:'Klepni na tlačidlo Nový výlet'},
-  {badge:'Krok 2 z 5',title:'Vyplň údaje výletu', desc:'Pomenuj výlet a nastav dátum'},
-  {badge:'Krok 3 z 5',title:'Pridaj členov',       desc:'Napíš mená spolucestujúcich'},
-  {badge:'Krok 4 z 5',title:'Pošli pozvánku',      desc:'Zdieľaj kód alebo odkaz'},
-  {badge:'Krok 5 z 5',title:'Pridaj výdavok',      desc:'Zadaj výdavok a rozdeľ náklady'},
+  {badge:'Krok 1 z 5',title:'Otvor aplikáciu',     desc:'Klepni na tlačidlo Nový výlet'},
+  {badge:'Krok 2 z 5',title:'Vyplň údaje výletu',  desc:'Zadaj názov výletu a dátum'},
+  {badge:'Krok 3 z 5',title:'Pridaj členov',        desc:'Napíš mená spolucestujúcich'},
+  {badge:'Krok 4 z 5',title:'Pošli pozvánku',       desc:'Zdieľaj kód alebo odkaz'},
+  {badge:'Krok 5 z 5',title:'Pridaj výdavok',       desc:'Zadaj výdavok a rozdeľ náklady'},
 ];
-const DURATION=7000;
+const DUR=6500;
 let cur=0, timers=[], progRaf=null, progStart=null;
 
-function delay(fn,ms){const t=setTimeout(fn,ms);timers.push(t);return t;}
-function clearTimers(){timers.forEach(t=>clearTimeout(t));timers=[];}
+function after(fn,ms){const t=setTimeout(fn,ms);timers.push(t);}
+function clearAll(){timers.forEach(clearTimeout);timers=[];if(progRaf)cancelAnimationFrame(progRaf);}
 
-function typeInto(id,text,speed,done){
-  const el=document.getElementById(id);
-  if(!el)return;
-  el.value='';
-  let i=0;
+function typeInto(id,text,speed,cb){
+  const el=document.getElementById(id);if(!el)return;
+  el.value='';let i=0;
   function tick(){
     el.value+=text[i++];
     if(i<text.length){const t=setTimeout(tick,speed);timers.push(t);}
-    else if(done)done();
+    else if(cb)cb();
   }
   tick();
 }
 
 function animSlide(idx){
   if(idx===0){
-    delay(()=>{
-      const b=document.getElementById('s1newBtn');
-      if(b){b.classList.add('pulse-glow');}
-    },600);
-    delay(()=>{
-      const b=document.getElementById('s1newBtn');
-      if(b){b.classList.remove('pulse-glow');b.classList.add('tap-anim');}
-    },4500);
+    after(()=>{const b=document.getElementById('s1btn');if(b)b.classList.add('btn-pulse');},400);
+    after(()=>{const b=document.getElementById('s1btn');if(b){b.classList.remove('btn-pulse');b.classList.add('cta-tap');}},4600);
   }
   if(idx===1){
-    delay(()=>{
-      typeInto('s2name','Tenerife 2025',75,()=>{
-        delay(()=>{
-          typeInto('s2date','15.06.2025',60,()=>{
-            delay(()=>{
-              const btn=document.getElementById('s2btn');
-              if(btn)btn.classList.add('show');
-              delay(()=>{if(btn)btn.classList.add('tap-anim');},1200);
-            },300);
+    after(()=>{
+      typeInto('s2name','Tenerife 2025',78,()=>{
+        const n=document.getElementById('s2name');
+        if(n){n.classList.remove('inp-focus');n.classList.add('inp-filled');}
+        after(()=>{
+          typeInto('s2date','15.06.2025',62,()=>{
+            const d=document.getElementById('s2date');
+            if(d){d.classList.add('inp-filled');}
+            after(()=>{
+              const b=document.getElementById('s2btn');
+              if(b){b.classList.remove('cta-dim');b.classList.add('show');}
+              after(()=>{if(b)b.classList.add('cta-tap');},1300);
+            },280);
           });
-        },300);
+        },280);
       });
-    },500);
+    },480);
   }
   if(idx===2){
-    const names=['Katka','Tomáš'];
+    const names=[['Katka','K'],['Tomáš','T']];
     let ni=0;
     const list=document.getElementById('s3list');
-    function addMember(){
+    function addNext(){
       if(ni>=names.length)return;
-      const name=names[ni++];
+      const[name,init]=names[ni++];
       typeInto('s3inp',name,80,()=>{
-        delay(()=>{
+        after(()=>{
           const row=document.createElement('div');
           row.className='member-row chip-pop';
-          row.innerHTML=`<div class="member-avatar">${name[0]}</div><div><div class="member-name">${name}</div></div>`;
-          list.appendChild(row);
+          row.innerHTML=`<div class="member-avatar">${init}</div><div><div class="member-name">${name}</div></div>`;
+          if(list)list.appendChild(row);
           document.getElementById('s3inp').value='';
-          delay(addMember,550);
-        },220);
+          after(addNext,520);
+        },200);
       });
     }
-    delay(addMember,500);
+    after(addNext,480);
   }
   if(idx===3){
-    delay(()=>{
-      const btn=document.getElementById('copyBtn');
-      if(btn){btn.textContent='✓ Skopírované!';btn.style.background='linear-gradient(135deg,#1f9e47,#177a37)';btn.style.color='#fff';btn.style.borderColor='transparent';}
-    },2200);
+    after(()=>{
+      const b=document.getElementById('copyBtn');
+      if(b){b.classList.add('copied');b.textContent='✓ Skopírované!';}
+    },2000);
   }
   if(idx===4){
-    delay(()=>{
+    after(()=>{
       typeInto('s5name','Večera pri mori',70,()=>{
-        delay(()=>{
-          typeInto('s5amt','45,80',60,()=>{
-            delay(()=>{
-              const btn=document.getElementById('s5btn');
-              if(btn)btn.classList.add('show');
-              delay(()=>{
-                if(btn)btn.classList.add('tap-anim');
-                delay(()=>{
-                  if(btn)btn.style.display='none';
+        const n=document.getElementById('s5name');
+        if(n){n.classList.remove('inp-focus');n.classList.add('inp-filled');}
+        after(()=>{
+          typeInto('s5amt','45,80',65,()=>{
+            const a=document.getElementById('s5amt');if(a)a.classList.add('inp-filled');
+            after(()=>{
+              const b=document.getElementById('s5btn');
+              if(b){b.classList.remove('cta-dim');b.classList.add('show');}
+              after(()=>{
+                if(b)b.classList.add('cta-tap');
+                after(()=>{
+                  if(b)b.style.display='none';
                   const ok=document.getElementById('s5ok');
                   if(ok){ok.style.display='flex';ok.style.flexDirection='column';ok.classList.add('show');}
-                },380);
+                },360);
               },1400);
-            },300);
+            },260);
           });
-        },300);
+        },260);
       });
-    },450);
+    },430);
   }
 }
 
 function resetSlide(idx){
-  if(idx===0){
-    const b=document.getElementById('s1newBtn');
-    if(b){b.classList.remove('pulse-glow','tap-anim');}
-  }
+  if(idx===0){const b=document.getElementById('s1btn');if(b)b.classList.remove('btn-pulse','cta-tap');}
   if(idx===1){
-    const n=document.getElementById('s2name');if(n)n.value='';
-    const d=document.getElementById('s2date');if(d)d.value='';
-    const b=document.getElementById('s2btn');if(b){b.classList.remove('show','tap-anim');}
+    const n=document.getElementById('s2name');if(n){n.value='';n.className='inp-focus';}
+    const d=document.getElementById('s2date');if(d){d.value='';d.className='';}
+    const b=document.getElementById('s2btn');if(b){b.className='primary-cta cta-dim fi';}
   }
   if(idx===2){
     const inp=document.getElementById('s3inp');if(inp)inp.value='';
     const list=document.getElementById('s3list');
-    if(list){
-      const extra=[...list.querySelectorAll('.member-row:not(:first-child)')];
-      extra.forEach(e=>e.remove());
-    }
+    if(list)[...list.querySelectorAll('.member-row:not(:first-child)')].forEach(e=>e.remove());
   }
   if(idx===3){
-    const b=document.getElementById('copyBtn');
-    if(b){b.textContent='📋 Kopírovať';b.style.background='';b.style.color='';b.style.borderColor='';}
+    const b=document.getElementById('copyBtn');if(b){b.classList.remove('copied');b.textContent='📋 Kopírovať';}
   }
   if(idx===4){
-    const n=document.getElementById('s5name');if(n)n.value='';
-    const a=document.getElementById('s5amt');if(a)a.value='';
-    const b=document.getElementById('s5btn');if(b){b.classList.remove('show','tap-anim');b.style.display='';}
-    const ok=document.getElementById('s5ok');if(ok){ok.style.display='none';ok.classList.remove('show');}
+    const n=document.getElementById('s5name');if(n){n.value='';n.className='inp-focus';}
+    const a=document.getElementById('s5amt');if(a){a.value='';a.className='';}
+    const b=document.getElementById('s5btn');if(b){b.className='primary-cta cta-dim fi';b.style.display='';}
+    const ok=document.getElementById('s5ok');if(ok){ok.style.display='none';ok.className='success-banner fi';}
   }
 }
 
 function goTo(next){
-  if(next===cur&&next!==0)return;
-  clearTimers();
-  if(progRaf)cancelAnimationFrame(progRaf);
-  const oldEl=document.getElementById('s'+(cur+1));
-  const newEl=document.getElementById('s'+(next+1));
-  oldEl.classList.add('exit');oldEl.classList.remove('active');
-  setTimeout(()=>oldEl.classList.remove('exit'),360);
+  clearAll();
+  const old=document.getElementById('s'+(cur+1));
+  const nw =document.getElementById('s'+(next+1));
+  old.classList.add('leaving');old.classList.remove('active');
+  setTimeout(()=>old.classList.remove('leaving'),340);
   resetSlide(next);
-  newEl.classList.add('active');
+  nw.classList.add('active');
   cur=next;
-  updateUI();
-  startProg();
-  animSlide(next);
+  updateUI();startProg();animSlide(next);
 }
 
 function updateUI(){
@@ -688,21 +630,18 @@ function updateUI(){
   document.getElementById('sBadge').textContent=s.badge;
   document.getElementById('sTitle').textContent=s.title;
   document.getElementById('sDesc').textContent=s.desc;
-  document.querySelectorAll('.dot-item').forEach((el,i)=>{
-    el.classList.toggle('on',i===cur);
+  document.querySelectorAll('.dot').forEach((el,i)=>{
+    el.classList.toggle('on',  i===cur);
     el.classList.toggle('done',i<cur);
   });
-  document.getElementById('prevBtn').disabled=cur===0;
-  document.getElementById('nextBtn').textContent=cur===STEPS.length-1?'↺ Znova':'Ďalej →';
 }
 
 function startProg(){
-  if(progRaf)cancelAnimationFrame(progRaf);
   progStart=performance.now();
   const fill=document.getElementById('progFill');
   fill.style.width='0%';
   function tick(ts){
-    const pct=Math.min(((ts-progStart)/DURATION)*100,100);
+    const pct=Math.min(((ts-progStart)/DUR)*100,100);
     fill.style.width=pct+'%';
     if(pct<100){progRaf=requestAnimationFrame(tick);}
     else{goTo((cur+1)%STEPS.length);}
@@ -710,12 +649,28 @@ function startProg(){
   progRaf=requestAnimationFrame(tick);
 }
 
-document.getElementById('nextBtn').addEventListener('click',()=>goTo(cur===STEPS.length-1?0:cur+1));
-document.getElementById('prevBtn').addEventListener('click',()=>{if(cur>0)goTo(cur-1);});
-document.querySelectorAll('.dot-item').forEach(el=>el.addEventListener('click',()=>goTo(+el.dataset.i)));
+/* tap anywhere on the screen area to advance */
+document.getElementById('screens').addEventListener('click',()=>{
+  goTo((cur+1)%STEPS.length);
+});
 
-animSlide(0);
-startProg();
+/* swipe left/right */
+let touchX=0;
+document.getElementById('screens').addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;},{passive:true});
+document.getElementById('screens').addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-touchX;
+  if(Math.abs(dx)>50){
+    if(dx<0)goTo((cur+1)%STEPS.length);
+    else if(cur>0)goTo(cur-1);
+  }
+},{passive:true});
+
+/* dot nav */
+document.querySelectorAll('.dot').forEach(el=>el.addEventListener('click',e=>{
+  e.stopPropagation();goTo(+el.dataset.i);
+}));
+
+animSlide(0);startProg();
 </script>
 </body>
 </html>
