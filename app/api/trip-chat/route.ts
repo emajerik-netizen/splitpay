@@ -74,13 +74,13 @@ Formátovanie — PRÍSNE PRAVIDLÁ:
 
     const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
     const reply = raw
-      .replace(/^#{1,6}\s*/gm, '')        // # heading na začiatku riadku
-      .replace(/\*\*(.+?)\*\*/gs, '$1')   // **bold** → bold
-      .replace(/\*(.+?)\*/gs, '$1')       // *italic* → italic
-      .replace(/`{1,3}([^`]*)`{1,3}/g, '$1') // `code` a ```code```
-      .replace(/_{2}(.+?)_{2}/gs, '$1')   // __bold__
-      .replace(/_(.+?)_/gs, '$1')         // _italic_
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1') // [link](url) → link
+      .replace(/^#{1,6}\s*/gm, '')               // # heading na začiatku riadku
+      .replace(/\*\*([\s\S]+?)\*\*/g, '$1')      // **bold** → bold
+      .replace(/\*([\s\S]+?)\*/g, '$1')           // *italic* → italic
+      .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')     // `code` a ```code```
+      .replace(/_{2}([\s\S]+?)_{2}/g, '$1')      // __bold__
+      .replace(/_([\s\S]+?)_/g, '$1')             // _italic_
+      .replace(/\[([\s\S]+?)\]\([\s\S]+?\)/g, '$1') // [link](url) → link
       .trim();
     return NextResponse.json({ reply });
   } catch (err) {
