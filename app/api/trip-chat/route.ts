@@ -47,7 +47,13 @@ Formátovanie:
       messages,
     });
 
-    const reply = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    const reply = raw
+      .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold** → bold
+      .replace(/\*(.+?)\*/g, '$1')        // *italic* → italic
+      .replace(/#{1,6}\s*/g, '')          // ### heading → plain
+      .replace(/`(.+?)`/g, '$1')          // `code` → plain
+      .trim();
     return NextResponse.json({ reply });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
