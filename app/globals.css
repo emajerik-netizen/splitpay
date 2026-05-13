@@ -4091,13 +4091,19 @@ button:disabled {
 .trip-chat-open-arrow { color: var(--muted); font-size: 0.95rem; }
 
 .trip-chat-modal-card {
+  /* fully self-contained — does NOT extend .modal-card */
+  width: min(34rem, calc(100vw - 2rem));
+  height: 90dvh;
   display: flex;
   flex-direction: column;
-  height: 90dvh;
-  max-height: 90dvh;
   overflow: hidden;
-  padding-bottom: 0;
+  background: var(--card, #fff);
+  border: 1px solid rgba(210, 224, 248, 0.85);
+  border-radius: 1.2rem;
+  box-shadow: 0 26px 50px rgba(27, 47, 89, 0.27);
+  padding: 1rem 1rem 0;
 }
+.trip-chat-modal-card .modal-head { flex-shrink: 0; }
 .trip-chat-modal-title { display: flex; align-items: center; gap: 0.4rem; }
 .trip-chat-modal-limit { font-size: 0.75rem; color: var(--muted); font-weight: 600; padding: 0 0.1rem 0.4rem; flex-shrink: 0; }
 .trip-chat-messages-modal {
@@ -4407,6 +4413,7 @@ button:disabled {
 [data-theme="dark"] .startup-screen {
   background: #0a0d14;
 }
+[data-theme="dark"] .trip-chat-modal-card { background: var(--card); border-color: var(--stroke); }
 [data-theme="dark"] .trip-chat-open-btn { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); }
 [data-theme="dark"] .trip-chat-open-btn:hover { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
 [data-theme="dark"] .trip-chat-panel { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke)); }
@@ -4510,6 +4517,7 @@ button:disabled {
   :root:not([data-theme="light"]) .modal-card,
   :root:not([data-theme="light"]) .trip-settings-modal { background: var(--card); border-color: var(--stroke); }
   :root:not([data-theme="light"]) .startup-screen { background: #0a0d14; }
+  :root:not([data-theme="light"]) .trip-chat-modal-card { background: var(--card); border-color: var(--stroke); }
   :root:not([data-theme="light"]) .trip-chat-open-btn { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); }
   :root:not([data-theme="light"]) .trip-chat-open-btn:hover { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
   :root:not([data-theme="light"]) .trip-chat-panel { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke)); }

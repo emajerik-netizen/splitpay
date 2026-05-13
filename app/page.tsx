@@ -3846,11 +3846,13 @@ export default function SplitPayWebApp() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   function scrollChatToBottom() {
-    setTimeout(() => {
-      if (chatScrollRef.current) {
-        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-      }
-    }, 60);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      });
+    });
   }
 
   async function handleChatSend() {
@@ -7593,7 +7595,7 @@ export default function SplitPayWebApp() {
                 const limitReached = qCount >= chatLimit;
                 return (
                   <div className="modal-overlay" role="presentation" onClick={() => setShowChatModal(false)}>
-                    <section className="section-card modal-card trip-chat-modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                    <section className="trip-chat-modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
                       <div className="modal-head">
                         <div>
                           <p className="eyebrow">AI asistent</p>
