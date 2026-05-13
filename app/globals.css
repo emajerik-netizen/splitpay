@@ -4070,6 +4070,33 @@ button:disabled {
 }
 
 /* ── Trip AI chat ── */
+.trip-chat-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--stroke));
+  background: color-mix(in srgb, var(--accent-soft) 30%, #fff);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.trip-chat-open-btn:hover { background: color-mix(in srgb, var(--accent-soft) 50%, #fff); }
+.trip-chat-open-icon { font-size: 0.85rem; color: var(--accent); flex-shrink: 0; }
+.trip-chat-open-label { flex: 1; font-size: 0.85rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.5rem; }
+.trip-chat-open-count { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+.trip-chat-open-arrow { color: var(--muted); font-size: 0.95rem; }
+
+.trip-chat-modal-card { display: flex; flex-direction: column; max-height: 80dvh; }
+.trip-chat-modal-title { display: flex; align-items: center; gap: 0.4rem; }
+.trip-chat-modal-limit { font-size: 0.75rem; color: var(--muted); font-weight: 600; padding: 0 0.1rem 0.4rem; }
+.trip-chat-messages-modal { flex: 1; min-height: 160px; max-height: 340px; }
+.trip-chat-author { display: block; font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.7); margin-bottom: 2px; }
+.trip-chat-limit-msg { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 0.6rem 0.9rem 0.8rem; }
+
 .trip-chat-panel {
   border-radius: 1.1rem;
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--stroke));
@@ -4351,6 +4378,8 @@ button:disabled {
 [data-theme="dark"] .startup-screen {
   background: #0a0d14;
 }
+[data-theme="dark"] .trip-chat-open-btn { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); }
+[data-theme="dark"] .trip-chat-open-btn:hover { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
 [data-theme="dark"] .trip-chat-panel { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke)); }
 [data-theme="dark"] .trip-chat-header { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
 [data-theme="dark"] .trip-chat-bubble-assistant { background: var(--card); border-color: var(--stroke); }
@@ -4452,6 +4481,8 @@ button:disabled {
   :root:not([data-theme="light"]) .modal-card,
   :root:not([data-theme="light"]) .trip-settings-modal { background: var(--card); border-color: var(--stroke); }
   :root:not([data-theme="light"]) .startup-screen { background: #0a0d14; }
+  :root:not([data-theme="light"]) .trip-chat-open-btn { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); }
+  :root:not([data-theme="light"]) .trip-chat-open-btn:hover { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
   :root:not([data-theme="light"]) .trip-chat-panel { background: color-mix(in srgb, var(--accent-soft) 18%, var(--card)); border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke)); }
   :root:not([data-theme="light"]) .trip-chat-header { background: color-mix(in srgb, var(--accent-soft) 30%, var(--card)); }
   :root:not([data-theme="light"]) .trip-chat-bubble-assistant { background: var(--card); border-color: var(--stroke); }

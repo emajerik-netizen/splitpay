@@ -1030,6 +1030,7 @@ type Trip = {
   members: (Member | string)[];
   expenses: TripExpense[];
   pendingInvites: Invite[];
+  chatHistory?: { role: 'user' | 'assistant'; content: string; author?: string }[];
 };
 
 type ExpenseDraft = {
@@ -1507,7 +1508,7 @@ export default function SplitPayWebApp() {
   const [inviteChosenSlot, setInviteChosenSlot] = useState('');
   const [inviteCustomName, setInviteCustomName] = useState('');
   const [inviteUseCustom, setInviteUseCustom] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -3810,24 +3811,29 @@ export default function SplitPayWebApp() {
 
   async function handleChatSend() {
     if (!chatInput.trim() || chatLoading || !currentTrip) return;
+    const history = currentTrip.chatHistory || [];
+    const userCount = history.filter((m) => m.role === 'user').length;
+    if (userCount >= 10) return;
     const userMsg = chatInput.trim();
     setChatInput('');
-    const newHistory = [...chatMessages, { role: 'user' as const, content: userMsg }];
-    setChatMessages(newHistory);
+    const author = appSession?.name || appSession?.userId || 'Člen';
+    const withUser = [...history, { role: 'user' as const, content: userMsg, author }];
+    updateCurrentTrip((t) => ({ ...t, chatHistory: withUser }));
     setChatLoading(true);
     try {
       const res = await fetch('/api/trip-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, tripName: currentTrip.name, history: chatMessages }),
+        body: JSON.stringify({ message: userMsg, tripName: currentTrip.name, history }),
       });
       const data = await res.json() as { reply?: string; error?: string };
-      setChatMessages([...newHistory, { role: 'assistant', content: data.reply || 'Chyba pri odpovedi.' }]);
+      const reply = data.reply || (lang === 'sk' ? 'Chyba pri odpovedi.' : 'Reply error.');
+      updateCurrentTrip((t) => ({ ...t, chatHistory: [...(t.chatHistory || []), { role: 'assistant' as const, content: reply }] }));
     } catch {
-      setChatMessages([...newHistory, { role: 'assistant', content: 'Chyba spojenia.' }]);
+      updateCurrentTrip((t) => ({ ...t, chatHistory: [...(t.chatHistory || []), { role: 'assistant' as const, content: lang === 'sk' ? 'Chyba spojenia.' : 'Connection error.' }] }));
     } finally {
       setChatLoading(false);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
     }
   }
 
@@ -6886,49 +6892,20 @@ export default function SplitPayWebApp() {
                       </button>
                     ) : null}
                   </div>
-                  <div className="trip-chat-panel">
-                    <div className="trip-chat-header">
-                      <span className="trip-chat-icon">✦</span>
-                      <span className="trip-chat-title">AI asistent · {currentTrip.name}</span>
-                    </div>
-                    {chatMessages.length > 0 ? (
-                      <div className="trip-chat-messages">
-                        {chatMessages.map((m, i) => (
-                          <div key={i} className={`trip-chat-bubble trip-chat-bubble-${m.role}`}>
-                            {m.content}
-                          </div>
-                        ))}
-                        {chatLoading ? (
-                          <div className="trip-chat-bubble trip-chat-bubble-assistant trip-chat-typing">
-                            <span /><span /><span />
-                          </div>
-                        ) : null}
-                        <div ref={chatEndRef} />
-                      </div>
-                    ) : (
-                      <p className="trip-chat-hint">
-                        {lang === 'sk'
-                          ? `Opýtaj sa na tipy pre "${currentTrip.name}" — pamiatky, reštaurácie, aktivity…`
-                          : `Ask for tips about "${currentTrip.name}" — sights, restaurants, activities…`}
-                      </p>
-                    )}
-                    <form
-                      className="trip-chat-form"
-                      onSubmit={(e) => { e.preventDefault(); void handleChatSend(); }}
-                    >
-                      <input
-                        className="trip-chat-input"
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={lang === 'sk' ? 'Napíš otázku…' : 'Ask anything…'}
-                        disabled={chatLoading}
-                      />
-                      <button type="submit" className="trip-chat-send" disabled={chatLoading || !chatInput.trim()}>
-                        {chatLoading ? '…' : '↑'}
+                  {(() => {
+                    const hist = currentTrip.chatHistory || [];
+                    const qCount = hist.filter((m) => m.role === 'user').length;
+                    return (
+                      <button type="button" className="trip-chat-open-btn" onClick={() => setShowChatModal(true)}>
+                        <span className="trip-chat-open-icon">✦</span>
+                        <span className="trip-chat-open-label">
+                          {lang === 'sk' ? 'AI asistent výletu' : 'Trip AI assistant'}
+                          {qCount > 0 ? <span className="trip-chat-open-count">{qCount}/10</span> : null}
+                        </span>
+                        <span className="trip-chat-open-arrow">→</span>
                       </button>
-                    </form>
-                  </div>
+                    );
+                  })()}
 
                   <div className="stat-grid overview-stat-grid">
                     <div className="stat-card overview-stat-card">
@@ -7494,6 +7471,73 @@ export default function SplitPayWebApp() {
                   </div>
                 </section>
               ) : null}
+
+              {showChatModal && currentTrip ? (() => {
+                const hist = currentTrip.chatHistory || [];
+                const qCount = hist.filter((m) => m.role === 'user').length;
+                const limitReached = qCount >= 10;
+                return (
+                  <div className="modal-overlay" role="presentation" onClick={() => setShowChatModal(false)}>
+                    <section className="section-card modal-card trip-chat-modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                      <div className="modal-head">
+                        <div>
+                          <p className="eyebrow">AI asistent</p>
+                          <h2 className="trip-chat-modal-title">
+                            <span className="trip-chat-icon">✦</span> {currentTrip.name}
+                          </h2>
+                        </div>
+                        <button type="button" className="ghost" onClick={() => setShowChatModal(false)}>{t('close')}</button>
+                      </div>
+                      <p className="trip-chat-modal-limit">
+                        {lang === 'sk' ? `Otázky: ${qCount} / 10` : `Questions: ${qCount} / 10`}
+                      </p>
+                      <div className="trip-chat-messages trip-chat-messages-modal">
+                        {hist.length === 0 ? (
+                          <p className="trip-chat-hint">
+                            {lang === 'sk'
+                              ? `Opýtaj sa na tipy pre „${currentTrip.name}" — pamiatky, reštaurácie, aktivity, počasie…`
+                              : `Ask for tips about "${currentTrip.name}" — sights, food, activities, weather…`}
+                          </p>
+                        ) : null}
+                        {hist.map((m, i) => (
+                          <div key={i} className={`trip-chat-bubble trip-chat-bubble-${m.role}`}>
+                            {m.role === 'user' && m.author ? (
+                              <span className="trip-chat-author">{firstNameOf(m.author)}</span>
+                            ) : null}
+                            {m.content}
+                          </div>
+                        ))}
+                        {chatLoading ? (
+                          <div className="trip-chat-bubble trip-chat-bubble-assistant trip-chat-typing">
+                            <span /><span /><span />
+                          </div>
+                        ) : null}
+                        <div ref={chatEndRef} />
+                      </div>
+                      {limitReached ? (
+                        <p className="trip-chat-limit-msg">
+                          {lang === 'sk' ? '✋ Limit 10 otázok pre tento výlet bol vyčerpaný.' : '✋ 10-question limit for this trip reached.'}
+                        </p>
+                      ) : (
+                        <form className="trip-chat-form" onSubmit={(e) => { e.preventDefault(); void handleChatSend(); }}>
+                          <input
+                            className="trip-chat-input"
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            placeholder={lang === 'sk' ? 'Napíš otázku…' : 'Ask anything…'}
+                            disabled={chatLoading}
+                            autoFocus
+                          />
+                          <button type="submit" className="trip-chat-send" disabled={chatLoading || !chatInput.trim()}>
+                            {chatLoading ? '…' : '↑'}
+                          </button>
+                        </form>
+                      )}
+                    </section>
+                  </div>
+                );
+              })() : null}
 
               {showExpenseModal ? (
                 <div className="modal-overlay" role="presentation" onClick={() => { setShowExpenseModal(false); setReceiptStep(null); setReceiptImagePreview(null); setReceiptMerchant(''); setReceiptCategory(''); }}>
