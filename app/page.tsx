@@ -1552,6 +1552,11 @@ export default function SplitPayWebApp() {
   const [spamLogModal, setSpamLogModal] = useState<SpamLogEntry | null>(null);
   const [adminAuthUsers, setAdminAuthUsers] = useState<AdminAuthUser[]>([]);
   const [deletedAccounts, setDeletedAccounts] = useState<DeletedAccountEntry[]>([]);
+  const [adminSections, setAdminSections] = useState<Record<string, boolean>>({
+    stats: false, announcement: false, users: false, chatExtensions: false,
+    trips: false, unverified: false, deletedAccounts: false, spamLog: false,
+  });
+  const toggleAdminSection = (key: string) => setAdminSections((prev) => ({ ...prev, [key]: !prev[key] }));
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [globalAnnouncement, setGlobalAnnouncement] = useState('');
@@ -6283,290 +6288,330 @@ export default function SplitPayWebApp() {
                 <p className="muted">{t('adminCenterDesc')}</p>
               </div>
 
-              <div className="stat-grid">
-                <div className="stat-card">
-                  <span>{t('totalVisits')}</span>
-                  <strong>{visitsCount}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>{t('visits24h')}</span>
-                  <strong>{visits24hCount}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>{t('activeUsers5m')}</span>
-                  <strong>{activeUsersCount}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>{t('usersInSystem')}</span>
-                  <strong>{totalUsersSeen}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>{t('storedTripStates')}</span>
-                  <strong>{totalTripsStored}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>{t('panelLoad')}</span>
-                  <strong>{adminLoading ? t('loading') : t('done')}</strong>
-                </div>
+              {/* ── Stats ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('stats')}>
+                  <h3>{lang === 'sk' ? 'Štatistiky' : 'Statistics'}</h3>
+                  <span className={`admin-section-chevron${adminSections.stats ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.stats ? (
+                  <div className="stat-grid">
+                    <div className="stat-card">
+                      <span>{t('totalVisits')}</span>
+                      <strong>{visitsCount}</strong>
+                    </div>
+                    <div className="stat-card">
+                      <span>{t('visits24h')}</span>
+                      <strong>{visits24hCount}</strong>
+                    </div>
+                    <div className="stat-card">
+                      <span>{t('activeUsers5m')}</span>
+                      <strong>{activeUsersCount}</strong>
+                    </div>
+                    <div className="stat-card">
+                      <span>{t('usersInSystem')}</span>
+                      <strong>{totalUsersSeen}</strong>
+                    </div>
+                    <div className="stat-card">
+                      <span>{t('storedTripStates')}</span>
+                      <strong>{totalTripsStored}</strong>
+                    </div>
+                    <div className="stat-card">
+                      <span>{t('panelLoad')}</span>
+                      <strong>{adminLoading ? t('loading') : t('done')}</strong>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="screen-grid compact-grid admin-grid">
-                <div className="mini-panel">
-                  <h3>{t('adminAnnouncementForAll')}</h3>
-                  <textarea
-                    className="admin-textarea"
-                    value={announcementText}
-                    onChange={(event) => setAnnouncementText(event.target.value)}
-                    placeholder={t('adminAnnouncementPlaceholder')}
-                  />
-                  <label className="archived-toggle">
-                    <input
-                      type="checkbox"
-                      checked={announcementEnabled}
-                      onChange={(event) => setAnnouncementEnabled(event.target.checked)}
-                    />
-                    {t('showAnnouncementInApp')}
-                  </label>
-                  <button type="button" onClick={saveAdminAnnouncement}>{t('saveAnnouncement')}</button>
-                </div>
-
-                <div className="mini-panel">
-                  <h3>{t('topUsersVisits')}</h3>
-                  <div className="stack-list">
-                    {topUsers.length === 0 ? <p className="muted">{t('noDataYet')}</p> : null}
-                    {topUsers.map((user) => (
-                      <div className="row" key={user.email}>
-                        <span>{user.email}</span>
-                        <strong>{user.visits}</strong>
+              {/* ── Announcement & Top Users ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('announcement')}>
+                  <h3>{lang === 'sk' ? 'Oznámenie & aktivita' : 'Announcement & activity'}</h3>
+                  <span className={`admin-section-chevron${adminSections.announcement ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.announcement ? (
+                  <div className="screen-grid compact-grid admin-grid">
+                    <div className="mini-panel">
+                      <h3>{t('adminAnnouncementForAll')}</h3>
+                      <textarea
+                        className="admin-textarea"
+                        value={announcementText}
+                        onChange={(event) => setAnnouncementText(event.target.value)}
+                        placeholder={t('adminAnnouncementPlaceholder')}
+                      />
+                      <label className="archived-toggle">
+                        <input
+                          type="checkbox"
+                          checked={announcementEnabled}
+                          onChange={(event) => setAnnouncementEnabled(event.target.checked)}
+                        />
+                        {t('showAnnouncementInApp')}
+                      </label>
+                      <button type="button" onClick={saveAdminAnnouncement}>{t('saveAnnouncement')}</button>
+                    </div>
+                    <div className="mini-panel">
+                      <h3>{t('topUsersVisits')}</h3>
+                      <div className="stack-list">
+                        {topUsers.length === 0 ? <p className="muted">{t('noDataYet')}</p> : null}
+                        {topUsers.map((user) => (
+                          <div className="row" key={user.email}>
+                            <span>{user.email}</span>
+                            <strong>{user.visits}</strong>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                ) : null}
               </div>
 
-              <div className="screen-grid compact-grid admin-grid">
-                <div className="mini-panel">
-                  <h3>{t('activeUsersRoles')}</h3>
-                  <div className="stack-list">
-                    {adminPresence.length === 0 ? <p className="muted">{t('noUsersYet')}</p> : null}
-                    {adminPresence.map((user) => {
-                      const authUser = adminAuthUsers.find((u) => u.id === user.user_id);
-                      const isVerified = authUser ? (!!authUser.email_confirmed_at || !!authUser.is_oauth) : null;
-                      return (
-                      <div className="row" key={user.user_id}>
-                        <div>
-                          <strong>{user.user_name}</strong>
-                          <p>{user.user_email}</p>
-                          <p className="muted" style={{ fontSize: '0.78rem' }}>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>
-                        </div>
-                        <div className="expense-actions">
-                          {isVerified === true ? (
-                            <span className="pill" style={{ background: 'var(--success-bg, #d4edda)', color: 'var(--success, #155724)', fontSize: '0.75rem' }}>✓ {t('emailVerified')}</span>
-                          ) : isVerified === false ? (
-                            <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem' }}>⚠ {t('emailUnverified')}</span>
-                          ) : null}
-                          <span className="pill">{user.role === 'admin' ? t('roleAdmin') : t('roleUser')}</span>
-                          {user.user_id !== appSession?.userId ? (
-                            <button
-                              type="button"
-                              className="ghost"
-                              onClick={() => toggleUserRole(user.user_id, user.role === 'admin' ? 'user' : 'admin')}
-                            >
-                              {user.role === 'admin' ? t('demoteToUser') : t('promoteToAdmin')}
-                            </button>
-                          ) : null}
-                        </div>
+              {/* ── Users ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('users')}>
+                  <h3>{lang === 'sk' ? `Používatelia (${adminPresence.length})` : `Users (${adminPresence.length})`}</h3>
+                  <span className={`admin-section-chevron${adminSections.users ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.users ? (
+                  <div className="screen-grid compact-grid admin-grid">
+                    <div className="mini-panel">
+                      <h3>{t('activeUsersRoles')}</h3>
+                      <div className="stack-list">
+                        {adminPresence.length === 0 ? <p className="muted">{t('noUsersYet')}</p> : null}
+                        {adminPresence.map((user) => {
+                          const authUser = adminAuthUsers.find((u) => u.id === user.user_id);
+                          const isVerified = authUser ? (!!authUser.email_confirmed_at || !!authUser.is_oauth) : null;
+                          return (
+                            <div className="row" key={user.user_id}>
+                              <div>
+                                <strong>{user.user_name}</strong>
+                                <p>{user.user_email}</p>
+                                <p className="muted" style={{ fontSize: '0.78rem' }}>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>
+                              </div>
+                              <div className="expense-actions">
+                                {isVerified === true ? (
+                                  <span className="pill" style={{ background: 'var(--success-bg, #d4edda)', color: 'var(--success, #155724)', fontSize: '0.75rem' }}>✓ {t('emailVerified')}</span>
+                                ) : isVerified === false ? (
+                                  <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem' }}>⚠ {t('emailUnverified')}</span>
+                                ) : null}
+                                <span className="pill">{user.role === 'admin' ? t('roleAdmin') : t('roleUser')}</span>
+                                {user.user_id !== appSession?.userId ? (
+                                  <button
+                                    type="button"
+                                    className="ghost"
+                                    onClick={() => toggleUserRole(user.user_id, user.role === 'admin' ? 'user' : 'admin')}
+                                  >
+                                    {user.role === 'admin' ? t('demoteToUser') : t('promoteToAdmin')}
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mini-panel">
-                  <h3>{t('recentVisitsTitle')}</h3>
-                  <div className="stack-list">
-                    {recentVisits.length === 0 ? <p className="muted">{t('noVisitsYet')}</p> : null}
-                    {recentVisits.map((visit) => (
-                      <div className="row" key={visit.id}>
-                        <span>{visit.user_email}</span>
-                        <strong>{formatDateTime(visit.visited_at)}</strong>
+                    </div>
+                    <div className="mini-panel">
+                      <h3>{t('recentVisitsTitle')}</h3>
+                      <div className="stack-list">
+                        {recentVisits.length === 0 ? <p className="muted">{t('noVisitsYet')}</p> : null}
+                        {recentVisits.map((visit) => (
+                          <div className="row" key={visit.id}>
+                            <span>{visit.user_email}</span>
+                            <strong>{formatDateTime(visit.visited_at)}</strong>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                ) : null}
               </div>
 
+              {/* ── Chat Extension Requests ── */}
               {(() => {
                 const extensionRequests = adminTrips.filter((trip) => trip.chatExtensionRequested && !trip.archived);
-                return extensionRequests.length > 0 ? (
-                  <div className="admin-card" style={{ marginTop: '1.5rem' }}>
-                    <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <h3 style={{ margin: 0 }}>
+                if (extensionRequests.length === 0) return null;
+                return (
+                  <div className="admin-section">
+                    <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('chatExtensions')}>
+                      <h3>
                         {t('chatExtensionRequests')}
-                        <span className="badge" style={{ marginLeft: '8px', background: 'var(--accent)', color: '#fff' }}>{extensionRequests.length}</span>
+                        <span className="badge" style={{ background: 'var(--accent)', color: '#fff' }}>{extensionRequests.length}</span>
                       </h3>
-                    </div>
-                    <div className="stack-list" style={{ marginTop: '0.5rem' }}>
-                      {extensionRequests.map((trip) => (
-                        <div className="row" key={trip.id}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <strong>{trip.name}</strong>
-                            <p className="muted" style={{ fontSize: '0.8rem', margin: '2px 0 0' }}>
-                              {t('tripCode')} {trip.inviteCode} · {memberCountLabel(trip.members.length, lang)}
-                              {trip.chatLimit ? ` · limit: ${trip.chatLimit}` : ''}
-                            </p>
+                      <span className={`admin-section-chevron${adminSections.chatExtensions ? ' open' : ''}`}>›</span>
+                    </button>
+                    {adminSections.chatExtensions ? (
+                      <div className="stack-list">
+                        {extensionRequests.map((trip) => (
+                          <div className="row" key={trip.id}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <strong>{trip.name}</strong>
+                              <p className="muted" style={{ fontSize: '0.8rem', margin: '2px 0 0' }}>
+                                {t('tripCode')} {trip.inviteCode} · {memberCountLabel(trip.members.length, lang)}
+                                {trip.chatLimit ? ` · limit: ${trip.chatLimit}` : ''}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button type="button" className="ghost" style={{ color: 'var(--danger, #c0392b)' }} onClick={() => handleChatExtensionReject(trip.id)}>
+                                {t('chatExtensionReject')}
+                              </button>
+                              <button type="button" className="ghost" style={{ color: 'var(--accent)' }} onClick={() => handleChatExtensionApprove(trip.id)}>
+                                {t('chatExtensionApprove')}
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.4rem' }}>
-                            <button
-                              type="button"
-                              className="ghost"
-                              style={{ color: 'var(--danger, #c0392b)' }}
-                              onClick={() => handleChatExtensionReject(trip.id)}
-                            >
-                              {t('chatExtensionReject')}
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost"
-                              style={{ color: 'var(--accent)' }}
-                              onClick={() => handleChatExtensionApprove(trip.id)}
-                            >
-                              {t('chatExtensionApprove')}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null;
+                );
               })()}
 
-              <div className="screen-grid compact-grid admin-grid">
-                <div className="mini-panel">
-                  <h3>{t('activeTrips')}</h3>
-                  <div className="stack-list">
-                    {adminTrips.filter((t) => !t.archived).length === 0 ? (
-                      <p className="muted">{t('noActiveTrips')}</p>
-                    ) : null}
-                    {adminTrips
-                      .filter((t) => !t.archived)
-                      .map((trip) => (
-                        <div className="row" key={trip.id}>
-                          <div>
-                            <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}
-                          >
-                            {t('openBtn')}
-                          </button>
-                        </div>
-                      ))}
+              {/* ── Trips ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('trips')}>
+                  <h3>
+                    {lang === 'sk' ? 'Výlety' : 'Trips'}
+                    <span className="badge">{adminTrips.filter((tr) => !tr.archived).length}</span>
+                  </h3>
+                  <span className={`admin-section-chevron${adminSections.trips ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.trips ? (
+                  <div className="screen-grid compact-grid admin-grid">
+                    <div className="mini-panel">
+                      <h3>{t('activeTrips')}</h3>
+                      <div className="stack-list">
+                        {adminTrips.filter((t) => !t.archived).length === 0 ? (
+                          <p className="muted">{t('noActiveTrips')}</p>
+                        ) : null}
+                        {adminTrips
+                          .filter((t) => !t.archived)
+                          .map((trip) => (
+                            <div className="row" key={trip.id}>
+                              <div>
+                                <strong>{trip.name}</strong>
+                                <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
+                              </div>
+                              <button type="button" className="ghost" onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}>
+                                {t('openBtn')}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="mini-panel">
+                      <h3>{t('archivedTrips')}</h3>
+                      <div className="stack-list">
+                        {adminTrips.filter((t) => t.archived).length === 0 ? (
+                          <p className="muted">{t('noArchivedTrips')}</p>
+                        ) : null}
+                        {adminTrips
+                          .filter((t) => t.archived)
+                          .map((trip) => (
+                            <div className="row" key={trip.id}>
+                              <div>
+                                <strong>{trip.name}</strong>
+                                <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
+                              </div>
+                              <button type="button" className="ghost" onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}>
+                                {t('openBtn')}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="mini-panel">
-                  <h3>{t('archivedTrips')}</h3>
-                  <div className="stack-list">
-                    {adminTrips.filter((t) => t.archived).length === 0 ? (
-                      <p className="muted">{t('noArchivedTrips')}</p>
-                    ) : null}
-                    {adminTrips
-                      .filter((t) => t.archived)
-                      .map((trip) => (
-                        <div className="row" key={trip.id}>
-                          <div>
-                            <strong>{trip.name}</strong>
-                            <p className="muted">{memberCountLabel(trip.members.length, lang)} · {t('tripCode')} {trip.inviteCode}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() => openTrip(trip.id, 'overview', trip.inviteCode)}
-                          >
-                            {t('openBtn')}
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                ) : null}
               </div>
 
-              {/* Unverified registrations */}
+              {/* ── Unverified Registrations ── */}
               {(() => {
                 const unverified = adminAuthUsers
                   .filter((u) => !u.email_confirmed_at && !u.is_oauth)
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
                 return (
-                  <div className="admin-card" style={{ marginTop: '1.5rem' }}>
-                    <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <h3 style={{ margin: 0 }}>
+                  <div className="admin-section">
+                    <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('unverified')}>
+                      <h3>
                         {t('adminUnverifiedTitle')}
-                        {unverified.length > 0 ? <span className="badge" style={{ marginLeft: '8px', background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)' }}>{unverified.length}</span> : null}
+                        {unverified.length > 0 ? <span className="badge" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)' }}>{unverified.length}</span> : null}
                       </h3>
-                    </div>
-                    {unverified.length === 0 ? (
-                      <p className="muted" style={{ marginTop: '0.5rem' }}>{t('adminUnverifiedEmpty')}</p>
-                    ) : (
-                      <div className="stack-list" style={{ marginTop: '0.5rem' }}>
-                        {unverified.map((u) => (
-                          <div className="row" key={u.id} style={{ padding: '6px 0' }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: '0.88rem' }}>{u.email}</span>
-                              <p className="muted" style={{ fontSize: '0.75rem', margin: '2px 0 0' }}>
-                                {t('adminUnverifiedRegistered')} {new Date(u.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
-                                {u.last_sign_in_at ? ` · ${t('adminUnverifiedLastLogin')} ${new Date(u.last_sign_in_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}` : ''}
-                              </p>
+                      <span className={`admin-section-chevron${adminSections.unverified ? ' open' : ''}`}>›</span>
+                    </button>
+                    {adminSections.unverified ? (
+                      unverified.length === 0 ? (
+                        <p className="muted">{t('adminUnverifiedEmpty')}</p>
+                      ) : (
+                        <div className="stack-list">
+                          {unverified.map((u) => (
+                            <div className="row" key={u.id} style={{ padding: '6px 0' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: '0.88rem' }}>{u.email}</span>
+                                <p className="muted" style={{ fontSize: '0.75rem', margin: '2px 0 0' }}>
+                                  {t('adminUnverifiedRegistered')} {new Date(u.created_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+                                  {u.last_sign_in_at ? ` · ${t('adminUnverifiedLastLogin')} ${new Date(u.last_sign_in_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}` : ''}
+                                </p>
+                              </div>
+                              <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                ⚠ {t('emailUnverified')}
+                              </span>
                             </div>
-                            <span className="pill" style={{ background: 'var(--warn-bg, #fff3cd)', color: 'var(--warn, #856404)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                              ⚠ {t('emailUnverified')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )
+                    ) : null}
                   </div>
                 );
               })()}
 
-              {/* Deleted accounts log */}
-              <div className="admin-card" style={{ marginTop: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 0.5rem' }}>
-                  {t('adminDeletedAccountsTitle')}
-                  {deletedAccounts.length > 0 ? <span className="badge" style={{ marginLeft: '8px' }}>{deletedAccounts.length}</span> : null}
-                </h3>
-                {deletedAccounts.length === 0 ? (
-                  <p className="muted">{t('adminDeletedAccountsEmpty')}</p>
-                ) : (
-                  <div className="stack-list">
-                    {deletedAccounts.map((entry) => (
-                      <div className="row" key={entry.id} style={{ padding: '6px 0' }}>
-                        <span style={{ fontSize: '0.88rem' }}>{entry.email}</span>
-                        <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                          {new Date(entry.deleted_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* ── Deleted Accounts ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('deletedAccounts')}>
+                  <h3>
+                    {t('adminDeletedAccountsTitle')}
+                    {deletedAccounts.length > 0 ? <span className="badge">{deletedAccounts.length}</span> : null}
+                  </h3>
+                  <span className={`admin-section-chevron${adminSections.deletedAccounts ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.deletedAccounts ? (
+                  deletedAccounts.length === 0 ? (
+                    <p className="muted">{t('adminDeletedAccountsEmpty')}</p>
+                  ) : (
+                    <div className="stack-list">
+                      {deletedAccounts.map((entry) => (
+                        <div className="row" key={entry.id} style={{ padding: '6px 0' }}>
+                          <span style={{ fontSize: '0.88rem' }}>{entry.email}</span>
+                          <span className="muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {new Date(entry.deleted_at).toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-GB')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : null}
               </div>
 
-              <div className="admin-card" style={{ marginTop: '1.5rem' }}>
-                <div className="admin-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <h3 style={{ margin: 0 }}>{t('adminSpamLog')} {spamLog.length > 0 ? <span className="badge">{spamLog.length}</span> : null}</h3>
+              {/* ── Spam Log ── */}
+              <div className="admin-section">
+                <button type="button" className="admin-section-hd" onClick={() => toggleAdminSection('spamLog')}>
+                  <h3>
+                    {t('adminSpamLog')}
+                    {spamLog.length > 0 ? <span className="badge">{spamLog.length}</span> : null}
+                  </h3>
+                  <span className={`admin-section-chevron${adminSections.spamLog ? ' open' : ''}`}>›</span>
+                </button>
+                {adminSections.spamLog ? (
+                  <>
                   {spamLog.length > 0 ? (
-                    <button type="button" className="ghost danger-btn" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={clearSpamLog}>
-                      {t('adminSpamLogClearAll')}
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="button" className="ghost danger-btn" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={clearSpamLog}>
+                        {t('adminSpamLogClearAll')}
+                      </button>
+                    </div>
                   ) : null}
-                </div>
-                {spamLog.length === 0 ? (
-                  <p className="muted" style={{ marginTop: '0.5rem' }}>{t('adminSpamLogEmpty')}</p>
-                ) : (
-                  <div className="stack-list" style={{ marginTop: '0.5rem' }}>
+                  {spamLog.length === 0 ? (
+                    <p className="muted">{t('adminSpamLogEmpty')}</p>
+                  ) : (
+                  <div className="stack-list">
                     {spamLog.map((entry) => (
                       <button
                         key={entry.id}
@@ -6599,7 +6644,9 @@ export default function SplitPayWebApp() {
                       </button>
                     ))}
                   </div>
-                )}
+                  )}
+                  </>
+                ) : null}
               </div>
 
               <div className="admin-actions">
