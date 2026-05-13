@@ -3808,6 +3808,15 @@ export default function SplitPayWebApp() {
   };
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  function scrollChatToBottom() {
+    setTimeout(() => {
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
+    }, 60);
+  }
 
   async function handleChatSend() {
     if (!chatInput.trim() || chatLoading || !currentTrip) return;
@@ -3820,11 +3829,31 @@ export default function SplitPayWebApp() {
     const withUser = [...history, { role: 'user' as const, content: userMsg, author }];
     updateCurrentTrip((t) => ({ ...t, chatHistory: withUser }));
     setChatLoading(true);
+    scrollChatToBottom();
+
+    // Build trip context for AI
+    const expensesSummary = normalizedExpenses.slice(0, 30).map((e) => ({
+      title: e.title,
+      amount: e.amount,
+      payer: e.payer || '',
+      date: e.date || '',
+      category: e.category || '',
+    }));
+    const memberNames = members;
+    const balanceSummary = Object.entries(balances)
+      .filter(([, v]) => Math.abs(v) > 0.01)
+      .map(([k, v]) => ({ name: displayNameForKey(k), balance: Math.round(v * 100) / 100 }));
+
     try {
       const res = await fetch('/api/trip-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, tripName: currentTrip.name, history }),
+        body: JSON.stringify({
+          message: userMsg,
+          tripName: currentTrip.name,
+          history,
+          tripContext: { members: memberNames, expenses: expensesSummary, balances: balanceSummary, currency: currentTrip.currency, totalSpent },
+        }),
       });
       const data = await res.json() as { reply?: string; error?: string };
       const reply = data.reply || (lang === 'sk' ? 'Chyba pri odpovedi.' : 'Reply error.');
@@ -3833,7 +3862,7 @@ export default function SplitPayWebApp() {
       updateCurrentTrip((t) => ({ ...t, chatHistory: [...(t.chatHistory || []), { role: 'assistant' as const, content: lang === 'sk' ? 'Chyba spojenia.' : 'Connection error.' }] }));
     } finally {
       setChatLoading(false);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+      scrollChatToBottom();
     }
   }
 
@@ -7491,7 +7520,7 @@ export default function SplitPayWebApp() {
                       <p className="trip-chat-modal-limit">
                         {lang === 'sk' ? `Otázky: ${qCount} / 10` : `Questions: ${qCount} / 10`}
                       </p>
-                      <div className="trip-chat-messages trip-chat-messages-modal">
+                      <div className="trip-chat-messages trip-chat-messages-modal" ref={chatScrollRef}>
                         {hist.length === 0 ? (
                           <p className="trip-chat-hint">
                             {lang === 'sk'

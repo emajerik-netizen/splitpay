@@ -8,10 +8,17 @@ export type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, tripName, history } = (await req.json()) as {
+    const { message, tripName, history, tripContext } = (await req.json()) as {
       message: string;
       tripName: string;
       history?: ChatMessage[];
+      tripContext?: {
+        members: string[];
+        expenses: { title: string; amount: number; payer: string; date: string; category: string }[];
+        balances: { name: string; balance: number }[];
+        currency: string;
+        totalSpent: number;
+      };
     };
 
     if (!message?.trim()) {
@@ -20,17 +27,35 @@ export async function POST(req: NextRequest) {
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const systemPrompt = `Si cestovný asistent výlučne pre výlet "${tripName}".
-Odpovedáš LEN na otázky priamo súvisiace s touto destináciou alebo výletom: pamiatky, aktivity, reštaurácie, ubytovanie, doprava, počasie, tipy, balenie, miestne zvyklosti.
-Ak sa otázka netýka výletu "${tripName}" ani cestovania, odpovedz: "Táto otázka nesúvisí s výletom ${tripName}. Môžem pomôcť s tipmi na aktivity, reštaurácie, pamiatky alebo praktické rady pre tento výlet."
+    let contextBlock = '';
+    if (tripContext) {
+      const expLines = tripContext.expenses.map(
+        (e) => `  - ${e.title}: ${e.amount} ${tripContext.currency} (platil: ${e.payer || '?'}, ${e.date || ''}, kategória: ${e.category || '?'})`
+      ).join('\n');
+      const balLines = tripContext.balances.map(
+        (b) => `  - ${b.name}: ${b.balance > 0 ? '+' : ''}${b.balance} ${tripContext.currency}`
+      ).join('\n');
+      contextBlock = `
+Údaje výletu (použi ich pri otázkach o výdavkoch, členoch, bilanciách):
+Členovia: ${tripContext.members.join(', ')}
+Celková útrata: ${tripContext.totalSpent} ${tripContext.currency}
+Výdavky:
+${expLines || '  (žiadne)'}
+Aktuálne bilancie (kladné = dostane, záporné = zaplatí):
+${balLines || '  (všetko vyrovnané)'}`;
+    }
 
-Formátovanie:
-- NIKDY nepoužívaj markdown (**bold**, *italic*, ###, atď.)
-- Píš čistý text
-- Pri zoznamoch použi číslovaný zoznam alebo nový riadok s pomlčkou: "- položka"
-- Každý bod na novom riadku
-- Odpoveď max 5-7 riadkov, stručne a konkrétne
-- Použi slovenčinu. Ak je otázka po anglicky, odpovedaj po anglicky.`;
+    const systemPrompt = `Si asistent výlučne pre výlet "${tripName}".
+Odpovedáš na otázky o tejto destinácii (pamiatky, aktivity, reštaurácie, počasie, tipy) AJ na otázky o financiách výletu (kto platil, kto koľko dlží, prehľad výdavkov).
+Ak sa otázka netýka výletu "${tripName}", cestovania ani financií výletu, odpovedz: "Táto otázka nesúvisí s výletom. Môžem pomôcť s tipmi na destináciu alebo financiami výletu."
+${contextBlock}
+
+Formátovanie — PRÍSNE PRAVIDLÁ:
+- NIKDY nepoužívaj markdown: žiadne **, *, ###, \`, atď.
+- Píš len čistý text
+- Každý bod zoznamu na novom riadku s pomlčkou: "- položka"
+- Max 6-8 riadkov, stručne a konkrétne
+- Slovenčina, ak otázka v angličtine → po anglicky`;
 
     const messages: Anthropic.MessageParam[] = [
       ...(history || []).slice(-6).map((m) => ({
