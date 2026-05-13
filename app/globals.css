@@ -4189,7 +4189,7 @@ button:disabled {
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--stroke));
   background: #fff;
   padding: 0.45rem 0.85rem;
-  font-size: 0.82rem;
+  font-size: 16px;
   color: var(--text);
   font-family: inherit;
   outline: none;
