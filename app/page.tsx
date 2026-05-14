@@ -4455,8 +4455,9 @@ export default function SplitPayWebApp() {
       });
       setSelfAvatarUrl(url);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err ? String((err as {message: unknown}).message) : String(err));
       console.error('Photo upload error:', err);
-      setInfoMessage(lang === 'sk' ? 'Nahrávanie fotky zlyhalo.' : 'Photo upload failed.');
+      setInfoMessage(`${lang === 'sk' ? 'Chyba' : 'Error'}: ${msg}`);
     } finally {
       setUploadingPhoto(false);
     }
