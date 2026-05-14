@@ -55,6 +55,13 @@ function expenseCountLabel(count: number, l: Lang = 'sk') {
   return `${count} ${count === 1 ? 'expense' : 'expenses'}`;
 }
 
+async function sha256hex(message: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const AVATAR_EMOJIS = ['🦊','🐱','🐶','🐻','🦁','🐼','🐨','🐯','🦋','🐸','🦄','🐺','🦉','🦅','🐬','🌊','🌵','🌺','⭐','🎸','🚀','🎯','🎮','💎','🔮','🍕','🍦','🏔️','🎭','🌈','🔥','❄️'];
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -1512,6 +1519,10 @@ export default function SplitPayWebApp() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [selfIban, setSelfIban] = useState('');
   const [savingIban, setSavingIban] = useState(false);
+  const [gravatarHash, setGravatarHash] = useState<string | null>(null);
+  const [gravatarFailed, setGravatarFailed] = useState(false);
+  const [selfAvatarEmoji, setSelfAvatarEmoji] = useState<string | null>(null);
+  const [savingEmoji, setSavingEmoji] = useState(false);
   const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
   const [memberIbanByName, setMemberIbanByName] = useState<Record<string, string>>({});
   const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
@@ -1910,6 +1921,12 @@ export default function SplitPayWebApp() {
   }, [appSession?.userId, supabase]);
 
   useEffect(() => {
+    if (!appSession?.email) { setGravatarHash(null); return; }
+    setGravatarFailed(false);
+    sha256hex(appSession.email.trim().toLowerCase()).then(setGravatarHash);
+  }, [appSession?.email]);
+
+  useEffect(() => {
     if (!profileOpen) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
@@ -2016,6 +2033,7 @@ export default function SplitPayWebApp() {
         : null;
 
       setAppSession(nextSession);
+      setSelfAvatarEmoji(typeof data.session?.user?.user_metadata?.avatar_emoji === 'string' ? data.session.user.user_metadata.avatar_emoji : null);
       setAuthResolved(true);
     });
 
@@ -2037,6 +2055,7 @@ export default function SplitPayWebApp() {
         : null;
 
       setAppSession(nextSession);
+      setSelfAvatarEmoji(typeof session?.user?.user_metadata?.avatar_emoji === 'string' ? session.user.user_metadata.avatar_emoji : null);
       setAuthResolved(true);
     });
 
@@ -4335,6 +4354,17 @@ export default function SplitPayWebApp() {
     }
   }
 
+  async function saveAvatarEmoji(emoji: string | null) {
+    if (!supabase) return;
+    setSavingEmoji(true);
+    try {
+      await supabase.auth.updateUser({ data: { avatar_emoji: emoji } });
+      setSelfAvatarEmoji(emoji);
+    } finally {
+      setSavingEmoji(false);
+    }
+  }
+
   async function resolveMemberProfile(memberName: string, options?: { silent?: boolean }) {
     if (!supabase) return null;
 
@@ -6151,13 +6181,46 @@ export default function SplitPayWebApp() {
           {isOffline ? <div className="offline-banner">{t('offlineBanner')}</div> : null}
           <div className="profile-fab-wrap" ref={profileMenuWrapRef}>
             <button type="button" className="profile-fab" onClick={() => setProfileOpen((prev) => !prev)}>
-              {(appSession?.name || 'U').slice(0, 1).toUpperCase()}
+              {selfAvatarEmoji ? (
+                <span style={{fontSize:'1.25rem',lineHeight:1}}>{selfAvatarEmoji}</span>
+              ) : gravatarHash && !gravatarFailed ? (
+                <img
+                  src={`https://gravatar.com/avatar/${gravatarHash}?d=404&s=80`}
+                  className="profile-fab-gravatar"
+                  onError={() => setGravatarFailed(true)}
+                  alt=""
+                />
+              ) : (
+                (appSession?.name || 'U').slice(0, 1).toUpperCase()
+              )}
             </button>
             {profileOpen ? (
               <section className="profile-menu section-card">
-                  <h3>{t('myProfile')}</h3>
+                <h3>{t('myProfile')}</h3>
                 <p className="muted">{appSession?.name}</p>
                 <p className="muted">{appSession?.email}</p>
+                <div className="emoji-picker-section">
+                  <p className="emoji-picker-label">{lang === 'sk' ? 'Profilový avatar' : 'Profile avatar'}</p>
+                  <div className="emoji-picker-grid">
+                    {AVATAR_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={`emoji-btn${selfAvatarEmoji === emoji ? ' emoji-btn-active' : ''}`}
+                        onClick={() => saveAvatarEmoji(selfAvatarEmoji === emoji ? null : emoji)}
+                        disabled={savingEmoji}
+                        aria-label={emoji}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  {selfAvatarEmoji ? (
+                    <button type="button" className="ghost" style={{marginTop:'0.35rem',fontSize:'0.8rem',minHeight:'1.8rem',padding:'0.2rem 0.55rem'}} onClick={() => saveAvatarEmoji(null)}>
+                      {lang === 'sk' ? '✕ Odstrániť avatar' : '✕ Remove avatar'}
+                    </button>
+                  ) : null}
+                </div>
                 <div className="profile-iban-editor">
                   <label className="field-block">
                     <span>{t('ibanLabel')}</span>
@@ -6171,7 +6234,7 @@ export default function SplitPayWebApp() {
                     {t('saveIbanBtn')}
                   </button>
                 </div>
-                  <button type="button" className="ghost" onClick={goToTripsHome}>{t('myTrips')}</button>
+                <button type="button" className="ghost" onClick={goToTripsHome}>{t('myTrips')}</button>
                   {isAdmin ? <button type="button" className="ghost" onClick={goToAdmin}>{t('adminSection')}</button> : null}
                 <button type="button" className="ghost" onClick={toggleNotifications}>
                     {notificationsEnabled ? t('notificationsOn') : t('notificationsOff')}
