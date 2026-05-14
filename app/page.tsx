@@ -7053,6 +7053,20 @@ export default function SplitPayWebApp() {
 
                     const userBalance = lookupBalanceFor(appSession?.name ?? null);
 
+                    const archiveDaysLeft = (() => {
+                      if (trip.archived || !activeExpenses.length) return null;
+                      const isFullySettled = Object.values(tripBalances).every((v) => Math.abs(Number(v)) < 0.01);
+                      if (!isFullySettled) return null;
+                      let latestTs = 0;
+                      for (const e of activeExpenses) {
+                        const ts = expenseIdTimestamp(e.id);
+                        if (ts && ts > latestTs) latestTs = ts;
+                      }
+                      if (!latestTs) return null;
+                      const daysLeft = Math.ceil(7 - (Date.now() - latestTs) / 86400000);
+                      return daysLeft >= 0 && daysLeft <= 3 ? daysLeft : null;
+                    })();
+
                     return (
                       <button
                         key={trip.id}
@@ -7072,6 +7086,11 @@ export default function SplitPayWebApp() {
                           <div className="trip-card-top">
                             <div>
                               <strong>{trip.name}</strong>
+                              {archiveDaysLeft !== null ? (
+                                <span className={`trip-archive-badge${archiveDaysLeft === 0 ? ' trip-archive-badge--today' : archiveDaysLeft === 1 ? ' trip-archive-badge--soon' : ''}`}>
+                                  🗂 {archiveDaysLeft === 0 ? 'archivuje sa dnes' : archiveDaysLeft === 1 ? 'archivuje sa zajtra' : `archivuje sa za ${archiveDaysLeft} dni`}
+                                </span>
+                              ) : null}
                               <p>{formatTripDate(trip.date, lang)}</p>
                             </div>
                             {
@@ -7186,8 +7205,26 @@ export default function SplitPayWebApp() {
                   <div className="hero-brand compact-brand">
                     <Image src="/icon.png" alt="Split Pay" width={44} height={44} className="hero-app-icon" />
                     <div>
-                        <p className="eyebrow">{t('tripDetail')}</p>
+                      <p className="eyebrow">{t('tripDetail')}</p>
                       <h1>{currentTrip.name}</h1>
+                      {(() => {
+                        if (currentTrip.archived || !currentTrip.expenses.length) return null;
+                        if (settlements.length > 0) return null;
+                        let latestTs = 0;
+                        for (const e of currentTrip.expenses) {
+                          if (e.deletedAt) continue;
+                          const ts = expenseIdTimestamp(e.id);
+                          if (ts && ts > latestTs) latestTs = ts;
+                        }
+                        if (!latestTs) return null;
+                        const daysLeft = Math.ceil(7 - (Date.now() - latestTs) / 86400000);
+                        if (daysLeft < 0 || daysLeft > 3) return null;
+                        return (
+                          <span className={`trip-archive-badge${daysLeft === 0 ? ' trip-archive-badge--today' : daysLeft === 1 ? ' trip-archive-badge--soon' : ''}`}>
+                            🗂 {daysLeft === 0 ? 'archivuje sa dnes' : daysLeft === 1 ? 'archivuje sa zajtra' : `archivuje sa za ${daysLeft} dni`}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   <p>
