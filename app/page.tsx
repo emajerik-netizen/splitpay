@@ -2597,6 +2597,27 @@ export default function SplitPayWebApp() {
       setAdminPresence(presenceRows);
       setTotalUsersSeen(new Set(presenceRows.map((row) => row.user_id)).size);
 
+      const adminIds = presenceRows.map((r) => r.user_id).filter(Boolean);
+      if (adminIds.length) {
+        supabaseClient
+          .from('user_profiles')
+          .select('user_name, avatar_emoji, avatar_url')
+          .in('user_id', adminIds)
+          .then(({ data: avData }) => {
+            if (!avData) return;
+            const emojiMap: Record<string, string> = {};
+            const urlMap: Record<string, string> = {};
+            for (const r of avData as Array<{ user_name: string; avatar_emoji: string | null; avatar_url: string | null }>) {
+              if (!r.user_name) continue;
+              const key = r.user_name.trim().toLowerCase();
+              if (r.avatar_emoji) emojiMap[key] = r.avatar_emoji;
+              if (r.avatar_url) urlMap[key] = r.avatar_url;
+            }
+            setMemberAvatarEmojis((prev) => ({ ...prev, ...emojiMap }));
+            setMemberAvatarUrls((prev) => ({ ...prev, ...urlMap }));
+          });
+      }
+
       const now = Date.now();
       const active = presenceRows.filter((row) => {
         const timestamp = new Date(row.last_seen).getTime();
@@ -6588,9 +6609,20 @@ export default function SplitPayWebApp() {
                         {adminPresence.map((user) => {
                           const authUser = adminAuthUsers.find((u) => u.id === user.user_id);
                           const isVerified = authUser ? (!!authUser.email_confirmed_at || !!authUser.is_oauth) : null;
+                          const isOnline = Date.now() - new Date(user.last_seen).getTime() < 5 * 60 * 1000;
+                          const av = getAvatarData(user.user_name);
                           return (
                             <div className="row" key={user.user_id}>
-                              <div>
+                              <div className="admin-user-av-wrap">
+                                <div
+                                  className="member-avatar"
+                                  style={av.photo ? {overflow:'hidden',padding:0,background:'transparent',flexShrink:0} : av.emoji ? {fontSize:'1.05rem',background:'var(--accent-soft)',flexShrink:0} : {flexShrink:0}}
+                                >
+                                  {av.photo ? <img src={av.photo} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="" /> : av.emoji ?? user.user_name.slice(0,1).toUpperCase()}
+                                </div>
+                                {isOnline ? <span className="online-dot" title="Online" /> : null}
+                              </div>
+                              <div style={{flex:1,minWidth:0}}>
                                 <strong>{user.user_name}</strong>
                                 <p>{user.user_email}</p>
                                 <p className="muted" style={{ fontSize: '0.78rem' }}>{t('lastSeen')} {formatDateTime(user.last_seen)}</p>

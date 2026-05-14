@@ -5275,6 +5275,26 @@ button:disabled {
 :root:not([data-theme="light"]) .invite-status-waiting { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
 :root:not([data-theme="light"]) .invite-status-accepted { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
 
+/* ── Admin user avatar + online dot ─────────────────── */
+.admin-user-av-wrap {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.1rem;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid var(--card, #ffffff);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+}
+
 /* ── Profile photo upload ────────────────────────────── */
 .profile-photo-upload-row {
   display: flex;
