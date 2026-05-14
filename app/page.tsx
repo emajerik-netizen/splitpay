@@ -30,6 +30,8 @@ import {
   ArrowLeftRight,
   CheckCircle2,
   Sparkles,
+  Clock,
+  BarChart2,
 } from 'lucide-react';
 import { Expense, computeBalances, settleDebts } from '@/lib/splitLogic';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -263,6 +265,9 @@ const T = {
     invitesTab: 'Pozvánky',
     expensesTab: 'Výdavky',
     balanceTab: 'Bilancia',
+    activityTab: 'Aktivita',
+    statsTab: 'Štatistiky',
+    noExpensesYet: 'Zatiaľ žiadne výdavky.',
     tripOverview: 'Prehľad výletu',
     basicInfo: 'Základné informácie',
     addExpense: 'Pridať výdavok',
@@ -671,6 +676,9 @@ const T = {
     invitesTab: 'Invites',
     expensesTab: 'Expenses',
     balanceTab: 'Balance',
+    activityTab: 'Activity',
+    statsTab: 'Statistics',
+    noExpensesYet: 'No expenses yet.',
     tripOverview: 'Trip Overview',
     basicInfo: 'Basic Information',
     addExpense: 'Add Expense',
@@ -1153,7 +1161,7 @@ type PendingVerification = {
 };
 
 type AppScreen = 'trips' | 'trip-detail' | 'admin';
-type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances';
+type TripDetailScreen = 'overview' | 'members' | 'invites' | 'expenses' | 'balances' | 'activity' | 'stats';
 
 type StaleTripWarning = {
   tripId: string;
@@ -1165,6 +1173,8 @@ function detailScreenFromPath(value?: string): TripDetailScreen {
   if (value === 'invites') return 'invites';
   if (value === 'expenses') return 'expenses';
   if (value === 'balances') return 'balances';
+  if (value === 'activity') return 'activity';
+  if (value === 'stats') return 'stats';
   return 'overview';
 }
 
@@ -7062,6 +7072,26 @@ export default function SplitPayWebApp() {
                       <span>{t('balanceTab')}</span>
                   </span>
                 </button>
+                <button
+                  type="button"
+                  className={activeDetailScreen === 'activity' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'activity')}
+                >
+                  <span className="screen-pill-inner">
+                    <Clock size={15} aria-hidden="true" />
+                    <span>{t('activityTab')}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={activeDetailScreen === 'stats' ? 'screen-pill active' : 'screen-pill'}
+                  onClick={() => openTrip(currentTrip.id, 'stats')}
+                >
+                  <span className="screen-pill-inner">
+                    <BarChart2 size={15} aria-hidden="true" />
+                    <span>{t('statsTab')}</span>
+                  </span>
+                </button>
               </section>
 
               {activeDetailScreen === 'overview' ? (
@@ -7457,31 +7487,63 @@ export default function SplitPayWebApp() {
                           )
                         : sorted;
                       if (filtered.length === 0) return <p className="muted">{t('noRecords')}</p>;
-                      return (
-                        <div className="stack-list">
-                          {filtered.map((expense) => (
-                            <div
-                              className="row expense-row expense-row-compact"
-                              key={expense.id}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => openExpenseDetail(expense.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault();
-                                  openExpenseDetail(expense.id);
-                                }
-                              }}
-                            >
-                              <span className="expense-row-title">
-                                <strong>{expense.title}</strong>
-                                {expense.date ? <span className="expense-date-chip">{expense.date}</span> : null}
-                              </span>
-                              <strong>{money(expense.amount)}</strong>
+                      const expIconMap: Record<string, React.ReactNode> = {
+                        jedlo: <Utensils size={14} />, doprava: <Car size={14} />, ubytovanie: <Bed size={14} />,
+                        zabava: <PartyPopper size={14} />, nakupy: <ShoppingBag size={14} />, zdravie: <Heart size={14} />,
+                        sport: <Dumbbell size={14} />, kultura: <Music size={14} />, technika: <Cpu size={14} />,
+                        ostatne: <Package size={14} />, prevod: <ArrowLeftRight size={14} />,
+                      };
+                      const isDateSort = expenseSortOrder === 'newest' || expenseSortOrder === 'oldest';
+                      const rows: React.ReactNode[] = [];
+                      let prevDateLabel: string | null = null;
+                      filtered.forEach((expense) => {
+                        if (isDateSort && expense.date) {
+                          const label = new Date(expense.date).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                          if (label !== prevDateLabel) {
+                            rows.push(<div className="date-group-header" key={`dh-${expense.date}-${expense.id}`}>{label}</div>);
+                            prevDateLabel = label;
+                          }
+                        }
+                        const cat = expense.expenseType === 'transfer' ? 'prevod' : (expense.category || 'ostatne');
+                        const payerName = formatMemberName(memberNameOf(expense.payer || ''));
+                        const participantCount = (expense.participants || []).length;
+                        const perPerson = expense.splitType === 'equal' && participantCount > 1
+                          ? `${money(expense.amount / participantCount)}/os`
+                          : null;
+                        rows.push(
+                          <div
+                            className="exp-row-v2"
+                            key={expense.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => openExpenseDetail(expense.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                openExpenseDetail(expense.id);
+                              }
+                            }}
+                          >
+                            <div className={`exp-cat-icon category-${cat}`}>
+                              {expIconMap[cat] || <Package size={14} />}
                             </div>
-                          ))}
-                        </div>
-                      );
+                            <div className="exp-info">
+                              <div className="exp-row-title">{expense.title}</div>
+                              <div className="exp-meta-row">
+                                <span className="exp-payer-chip">{payerName}</span>
+                                {participantCount > 1 ? (
+                                  <span className="exp-split-count">· {participantCount} {lang === 'sk' ? 'ľudí' : 'people'}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="exp-right">
+                              <div className="exp-amount">{money(expense.amount)}</div>
+                              {perPerson ? <div className="exp-per-person">{perPerson}</div> : null}
+                            </div>
+                          </div>
+                        );
+                      });
+                      return <div className="stack-list">{rows}</div>;
                     })()}
                   </div>
 
@@ -7660,6 +7722,205 @@ export default function SplitPayWebApp() {
                   </div>
                 </section>
               ) : null}
+
+              {activeDetailScreen === 'activity' ? (() => {
+                const iconMap: Record<string, React.ReactNode> = {
+                  jedlo: <Utensils size={14} />, doprava: <Car size={14} />, ubytovanie: <Bed size={14} />,
+                  zabava: <PartyPopper size={14} />, nakupy: <ShoppingBag size={14} />, zdravie: <Heart size={14} />,
+                  sport: <Dumbbell size={14} />, kultura: <Music size={14} />, technika: <Cpu size={14} />,
+                  ostatne: <Package size={14} />, prevod: <ArrowLeftRight size={14} />,
+                };
+                const bgMap: Record<string, string> = {
+                  jedlo: '#fff8e7', doprava: '#fef2f2', ubytovanie: '#eef5ff',
+                  zabava: '#fef9c3', nakupy: '#f5f3ff', zdravie: '#fce7f3',
+                  sport: '#f0fdf4', kultura: '#fff3e0', technika: '#e0f7fa',
+                  ostatne: '#f4f4f5', prevod: '#ecfdf3',
+                };
+                const sorted = [...(currentTrip.expenses || [])]
+                  .filter((e) => !e.deletedAt)
+                  .sort((a, b) => {
+                    const da = a.date ? new Date(a.date).getTime() : 0;
+                    const db = b.date ? new Date(b.date).getTime() : 0;
+                    return db - da;
+                  });
+                return (
+                  <section className="screen-window section-card screen-single full-window">
+                    <div className="section-head compact-head">
+                      <p className="eyebrow">{t('activityTab')}</p>
+                      <h2>{currentTrip.name}</h2>
+                    </div>
+                    {sorted.length === 0 ? (
+                      <p className="muted">{t('noExpensesYet')}</p>
+                    ) : (
+                      <div className="stack-list">
+                        {sorted.map((exp) => {
+                          const isTransfer = exp.expenseType === 'transfer';
+                          const cat = isTransfer ? 'prevod' : (exp.category || 'ostatne');
+                          const payerDisplay = formatMemberName(exp.payer || '');
+                          const toDisplay = exp.transferTo ? formatMemberName(exp.transferTo) : '';
+                          const dateStr = exp.date
+                            ? new Date(exp.date).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short' })
+                            : '';
+                          return (
+                            <div className="activity-feed-row" key={exp.id}>
+                              <div
+                                className="activity-feed-icon"
+                                style={{ background: bgMap[cat] || '#f4f4f5' }}
+                              >
+                                {iconMap[cat] || <Package size={14} />}
+                              </div>
+                              <div className="activity-feed-body">
+                                <div className="activity-feed-title">
+                                  <strong>{payerDisplay}</strong>
+                                  {isTransfer
+                                    ? <> → <strong>{toDisplay}</strong></>
+                                    : <> pridal výdavok</>}
+                                </div>
+                                <div className="activity-feed-meta">
+                                  <span className={isTransfer ? 'activity-chip activity-chip-paid' : 'activity-chip activity-chip-added'}>
+                                    {exp.title}
+                                  </span>
+                                  <span className="activity-chip-amount">{eur(exp.amount)}</span>
+                                </div>
+                                {dateStr ? <div className="activity-feed-time">{dateStr}</div> : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                );
+              })() : null}
+
+              {activeDetailScreen === 'stats' ? (() => {
+                const catLabelMap: Record<string, string> = {
+                  jedlo: t('categoryFood'), doprava: t('categoryTransport'), ubytovanie: t('categoryAccom'),
+                  zabava: t('categoryFun'), nakupy: t('categoryShopping'), zdravie: t('categoryHealth'),
+                  sport: t('categorySport'), kultura: t('categoryKultura'), technika: t('categoryTech'),
+                  ostatne: t('categoryOther'),
+                };
+                const catIconMap: Record<string, React.ReactNode> = {
+                  jedlo: <Utensils size={12} />, doprava: <Car size={12} />, ubytovanie: <Bed size={12} />,
+                  zabava: <PartyPopper size={12} />, nakupy: <ShoppingBag size={12} />, zdravie: <Heart size={12} />,
+                  sport: <Dumbbell size={12} />, kultura: <Music size={12} />, technika: <Cpu size={12} />,
+                  ostatne: <Package size={12} />,
+                };
+                const catColorMap: Record<string, string> = {
+                  jedlo: '#f59e0b', doprava: '#ef4444', ubytovanie: '#2c79f6',
+                  zabava: '#8b5cf6', nakupy: '#ec4899', zdravie: '#ef4444',
+                  sport: '#16a34a', kultura: '#f97316', technika: '#06b6d4', ostatne: '#9ca3af',
+                };
+                const activeExps = normalizedExpenses.filter((e) => !e.deletedAt && e.expenseType !== 'transfer');
+                const total = activeExps.reduce((s, e) => s + e.amount, 0);
+
+                const catTotals: Record<string, number> = {};
+                activeExps.forEach((e) => {
+                  const c = e.category || 'ostatne';
+                  catTotals[c] = (catTotals[c] || 0) + e.amount;
+                });
+                const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+                const maxCat = sortedCats[0]?.[1] || 1;
+
+                const topExp = [...activeExps].sort((a, b) => b.amount - a.amount)[0] || null;
+
+                const memberTotals: Record<string, number> = {};
+                activeExps.forEach((e) => {
+                  const key = e.payer || '';
+                  if (key) memberTotals[key] = (memberTotals[key] || 0) + e.amount;
+                });
+                const sortedMembers = Object.entries(memberTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                const maxMember = sortedMembers[0]?.[1] || 1;
+                const memberColors = ['#2c79f6', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+                return (
+                  <section className="screen-window section-card screen-single full-window">
+                    <div className="section-head compact-head">
+                      <p className="eyebrow">{t('statsTab')}</p>
+                      <h2>{currentTrip.name}</h2>
+                    </div>
+
+                    {/* Hero total */}
+                    <div className="hero-panel" style={{ marginBottom: '0.5rem' }}>
+                      <p className="eyebrow">{t('categoryBreakdown').replace('výdavkov', '').trim() || 'Celková útrata'}</p>
+                      <div className="stats-hero-total">{eur(total)}</div>
+                      <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                        {activeExps.length} výdavkov · {members.length} členov
+                      </p>
+                    </div>
+
+                    {/* Category breakdown */}
+                    {sortedCats.length > 0 ? (
+                      <div className="section-card" style={{ padding: '0.7rem 0.9rem' }}>
+                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>{t('categoryBreakdown')}</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
+                          {sortedCats.map(([cat, amt]) => (
+                            <div className="cat-bar-row" key={cat}>
+                              <span className="cat-bar-label">
+                                {catIconMap[cat] || <Package size={12} />}
+                                {catLabelMap[cat] || cat}
+                              </span>
+                              <div className="cat-bar-track">
+                                <div
+                                  className="cat-bar-fill"
+                                  style={{ width: `${Math.round((amt / maxCat) * 100)}%`, background: catColorMap[cat] || '#9ca3af' }}
+                                />
+                              </div>
+                              <span className="cat-bar-val">{eur(amt)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Top expense */}
+                    {topExp ? (
+                      <div className="section-card" style={{ padding: '0.7rem 0.9rem' }}>
+                        <p className="muted" style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.45rem' }}>
+                          Najvyšší výdavok
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          <span className={`category-badge category-${topExp.category || 'ostatne'}`} style={{ width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', flexShrink: 0 }}>
+                            {catIconMap[topExp.category || 'ostatne'] || <Package size={12} />}
+                          </span>
+                          <span style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {topExp.title}
+                          </span>
+                          <strong style={{ fontSize: '1rem', color: 'var(--accent)', flexShrink: 0 }}>{eur(topExp.amount)}</strong>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Member ranking */}
+                    {sortedMembers.length > 0 ? (
+                      <div className="section-card" style={{ padding: '0.7rem 0.9rem' }}>
+                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>Kto zaplatil najviac</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.38rem' }}>
+                          {sortedMembers.map(([payer, amt], idx) => {
+                            const displayName = formatMemberName(payer);
+                            const initial = displayName.charAt(0).toUpperCase();
+                            const pct = Math.round((amt / maxMember) * 100);
+                            const color = memberColors[idx] || '#9ca3af';
+                            return (
+                              <div key={payer} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', width: '1rem', flexShrink: 0 }}>{idx + 1}.</span>
+                                <span style={{ width: '1.55rem', height: '1.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#fff', background: `linear-gradient(135deg,${color},${color}bb)`, flexShrink: 0 }}>{initial}</span>
+                                <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                                <div style={{ width: '4rem', height: '0.4rem', background: 'var(--stroke)', borderRadius: '99px', overflow: 'hidden', flexShrink: 0 }}>
+                                  <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${color},${color}99)`, borderRadius: '99px' }} />
+                                </div>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', width: '3.8rem', textAlign: 'right', flexShrink: 0 }}>{eur(amt)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {activeExps.length === 0 ? <p className="muted">{t('noExpensesYet')}</p> : null}
+                  </section>
+                );
+              })() : null}
 
               {showChatModal && currentTrip ? (() => {
                 const hist = currentTrip.chatHistory || [];
@@ -8172,48 +8433,129 @@ export default function SplitPayWebApp() {
         </div>
       ) : null}
 
-      {memberProfile ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setMemberProfile(null)}>
-          <section
-            className="section-card modal-card support-modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('memberProfileTitle')}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-head">
-              <div>
-                <p className="eyebrow">{t('memberProfileTitle')}</p>
-                <h2>{memberProfile.name}</h2>
-              </div>
-              <button type="button" className="ghost" onClick={() => setMemberProfile(null)}>{t('close')}</button>
-            </div>
+      {memberProfile ? (() => {
+        const memberColors = ['#2c79f6', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#f97316'];
+        const avatarColor = memberColors[memberProfile.name.charCodeAt(0) % memberColors.length];
+        const initial = memberProfile.name.charAt(0).toUpperCase();
 
-            <div className="support-form">
-              <label className="field-block">
-                <span>{t('name')}</span>
-                <input value={memberProfile.name} readOnly />
-              </label>
-              <label className="field-block">
-                <span>{t('email')}</span>
-                <input value={memberProfile.email || ''} readOnly />
-              </label>
-              <label className="field-block">
-                <span>{t('ibanLabel')}</span>
-                <input value={memberProfile.iban || ''} placeholder={t('ibanNotSet')} readOnly />
-              </label>
-              <button
-                type="button"
-                className="ghost"
-                disabled={!memberProfile.iban}
-                onClick={() => copyIban(memberProfile.iban)}
-              >
-                {t('copyIbanBtn')}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+        const memberPaidTotal = normalizedExpenses
+          .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' && e.payer === memberProfile.name)
+          .reduce((s, e) => s + e.amount, 0);
+
+        const memberBalanceEntry = Object.entries(balances).find(
+          ([k]) => k === memberProfile.name || k === memberProfile.userId
+        );
+        const rawBalance = memberBalanceEntry ? memberBalanceEntry[1] : null;
+
+        const memberInTrips = trips.filter((t) =>
+          t.members.some((m) =>
+            typeof m === 'string' ? m === memberProfile.name : m.name === memberProfile.name || (m.id && m.id === memberProfile.userId)
+          )
+        );
+
+        return (
+          <div className="modal-overlay" role="presentation" onClick={() => setMemberProfile(null)}>
+            <section
+              className="section-card modal-card support-modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('memberProfileTitle')}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="modal-head">
+                <div>
+                  <p className="eyebrow">{t('memberProfileTitle')}</p>
+                </div>
+                <button type="button" className="ghost" onClick={() => setMemberProfile(null)}>{t('close')}</button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {/* Hero */}
+                <div className="member-profile-hero">
+                  <div
+                    className="member-profile-av"
+                    style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)` }}
+                  >
+                    {initial}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ fontSize: '1.05rem', fontWeight: 800, display: 'block' }}>{memberProfile.name}</strong>
+                    {memberProfile.email ? <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.15rem' }}>{memberProfile.email}</p> : null}
+                    {memberProfile.iban ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', marginTop: '0.3rem', fontSize: '0.68rem', fontWeight: 700, background: 'var(--accent-soft)', color: 'var(--accent)', borderRadius: '999px', padding: '0.12rem 0.5rem' }}>
+                        💳 IBAN
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                {currentTrip ? (
+                  <div className="member-profile-stats">
+                    <div className="member-profile-stat">
+                      <div className="member-profile-stat-val" style={{ color: 'var(--accent)' }}>{eur(memberPaidTotal)}</div>
+                      <div className="member-profile-stat-lbl">zaplatil</div>
+                    </div>
+                    <div className="member-profile-stat">
+                      {rawBalance !== null ? (
+                        <>
+                          <div className="member-profile-stat-val" style={{ color: rawBalance < 0 ? '#16a34a' : rawBalance > 0 ? '#c0392b' : 'var(--text)' }}>
+                            {eur(Math.abs(rawBalance))}
+                          </div>
+                          <div className="member-profile-stat-lbl">{rawBalance < 0 ? 'dostane' : rawBalance > 0 ? 'dlhuje' : 'vyrovnaný'}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="member-profile-stat-val">—</div>
+                          <div className="member-profile-stat-lbl">bilancia</div>
+                        </>
+                      )}
+                    </div>
+                    <div className="member-profile-stat">
+                      <div className="member-profile-stat-val">{memberInTrips.length}</div>
+                      <div className="member-profile-stat-lbl">výlety</div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* IBAN */}
+                {memberProfile.iban ? (
+                  <div className="section-card" style={{ padding: '0.6rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div>
+                      <p className="muted" style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>IBAN</p>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.1rem' }}>{memberProfile.iban}</p>
+                    </div>
+                    <button type="button" className="ghost" onClick={() => copyIban(memberProfile.iban)} style={{ flexShrink: 0 }}>
+                      {t('copyIbanBtn')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="section-card" style={{ padding: '0.6rem 0.8rem' }}>
+                    <p className="muted" style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>IBAN</p>
+                    <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.15rem' }}>{t('ibanNotSet')}</p>
+                  </div>
+                )}
+
+                {/* Shared trips */}
+                {memberInTrips.length > 0 ? (
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                      Spoločné výlety
+                    </p>
+                    <div className="member-trip-chips">
+                      {memberInTrips.slice(0, 6).map((tr) => (
+                        <span key={tr.id} className="member-trip-chip">
+                          {tr.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        );
+      })() : null}
 
       {showVisitsModal ? (
         <div className="modal-overlay" role="presentation" onClick={() => setShowVisitsModal(false)}>
