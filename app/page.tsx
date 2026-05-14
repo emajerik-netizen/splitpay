@@ -1157,6 +1157,7 @@ type DeletedAccountEntry = {
 type MemberProfileView = {
   userId: string;
   name: string;
+  tripName: string;
   email: string;
   iban: string;
 };
@@ -4552,6 +4553,7 @@ export default function SplitPayWebApp() {
       return {
         userId: appSession.userId,
         name: appSession.name,
+        tripName: memberName,
         email: appSession.email,
         iban: selfIban.trim(),
       } satisfies MemberProfileView;
@@ -4575,6 +4577,7 @@ export default function SplitPayWebApp() {
         return {
           userId: profileByEmail.user_id,
           name: profileByEmail.user_name || memberName,
+          tripName: memberName,
           email: profileByEmail.user_email || inviteEmail,
           iban: (profileByEmail.iban as string | undefined) || '',
         } satisfies MemberProfileView;
@@ -4597,6 +4600,7 @@ export default function SplitPayWebApp() {
         return {
           userId: presenceByEmail.user_id,
           name: presenceByEmail.user_name || memberName,
+          tripName: memberName,
           email: presenceByEmail.user_email || inviteEmail,
           iban: (profileData?.iban as string | undefined) || '',
         } satisfies MemberProfileView;
@@ -4628,6 +4632,7 @@ export default function SplitPayWebApp() {
     return {
       userId: memberPresence.user_id,
       name: memberPresence.user_name || memberName,
+      tripName: memberName,
       email: memberPresence.user_email || '',
       iban: (profileData?.iban as string | undefined) || '',
     } satisfies MemberProfileView;
@@ -8839,11 +8844,13 @@ export default function SplitPayWebApp() {
         const initial = profileEmoji ?? memberProfile.name.charAt(0).toUpperCase();
 
         const memberPaidTotal = normalizedExpenses
-          .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' && e.payer === memberProfile.name)
+          .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' &&
+            (e.payer === memberProfile.tripName || e.payer === memberProfile.name ||
+              (memberProfile.userId && (e as any).payerId === memberProfile.userId)))
           .reduce((s, e) => s + e.amount, 0);
 
         const memberBalanceEntry = Object.entries(balances).find(
-          ([k]) => k === memberProfile.name || k === memberProfile.userId
+          ([k]) => k === memberProfile.tripName || k === memberProfile.name || k === memberProfile.userId
         );
         const rawBalance = memberBalanceEntry ? memberBalanceEntry[1] : null;
 
@@ -8940,7 +8947,7 @@ export default function SplitPayWebApp() {
                 {memberInTrips.length > 0 ? (
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-                      Spoločné výlety
+                      {memberProfile.userId === appSession?.userId ? 'Moje výlety' : 'Spoločné výlety'}
                     </p>
                     <div className="member-trip-chips">
                       {memberInTrips.slice(0, 6).map((tr) => (
