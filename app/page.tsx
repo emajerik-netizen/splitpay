@@ -6199,28 +6199,33 @@ export default function SplitPayWebApp() {
                 <h3>{t('myProfile')}</h3>
                 <p className="muted">{appSession?.name}</p>
                 <p className="muted">{appSession?.email}</p>
-                <div className="emoji-picker-section">
-                  <p className="emoji-picker-label">{lang === 'sk' ? 'Profilový avatar' : 'Profile avatar'}</p>
-                  <div className="emoji-picker-grid">
-                    {AVATAR_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        className={`emoji-btn${selfAvatarEmoji === emoji ? ' emoji-btn-active' : ''}`}
-                        onClick={() => saveAvatarEmoji(selfAvatarEmoji === emoji ? null : emoji)}
-                        disabled={savingEmoji}
-                        aria-label={emoji}
-                      >
-                        {emoji}
+                <details className="emoji-picker-details">
+                  <summary className="emoji-picker-summary">
+                    <span className="emoji-picker-summary-label">{lang === 'sk' ? 'Profilový avatar' : 'Profile avatar'}</span>
+                    {selfAvatarEmoji ? <span className="emoji-picker-current">{selfAvatarEmoji}</span> : null}
+                  </summary>
+                  <div className="emoji-picker-body">
+                    <div className="emoji-picker-grid">
+                      {AVATAR_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          className={`emoji-btn${selfAvatarEmoji === emoji ? ' emoji-btn-active' : ''}`}
+                          onClick={() => saveAvatarEmoji(selfAvatarEmoji === emoji ? null : emoji)}
+                          disabled={savingEmoji}
+                          aria-label={emoji}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    {selfAvatarEmoji ? (
+                      <button type="button" className="ghost" style={{marginTop:'0.35rem',fontSize:'0.8rem',minHeight:'1.8rem',padding:'0.2rem 0.55rem'}} onClick={() => saveAvatarEmoji(null)}>
+                        {lang === 'sk' ? '✕ Odstrániť' : '✕ Remove'}
                       </button>
-                    ))}
+                    ) : null}
                   </div>
-                  {selfAvatarEmoji ? (
-                    <button type="button" className="ghost" style={{marginTop:'0.35rem',fontSize:'0.8rem',minHeight:'1.8rem',padding:'0.2rem 0.55rem'}} onClick={() => saveAvatarEmoji(null)}>
-                      {lang === 'sk' ? '✕ Odstrániť avatar' : '✕ Remove avatar'}
-                    </button>
-                  ) : null}
-                </div>
+                </details>
                 <div className="profile-iban-editor">
                   <label className="field-block">
                     <span>{t('ibanLabel')}</span>
