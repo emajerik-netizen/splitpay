@@ -4725,28 +4725,29 @@ button:disabled {
   align-items: center;
   gap: 0.3rem;
   min-height: auto;
-  padding: 0.35rem 0.85rem;
-  font-size: 0.8rem;
+  padding: 0.32rem 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #1f9e47, #177a37);
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.18);
-  box-shadow: 0 3px 10px rgba(31, 158, 71, 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  border-radius: 0.6rem;
+  background: #ffffff;
+  color: #177a37;
+  border: 1.5px solid #1f9e47;
+  box-shadow: 0 1px 4px rgba(31, 158, 71, 0.15);
   white-space: nowrap;
   cursor: pointer;
-  transition: transform 100ms ease, box-shadow 100ms ease, background 100ms ease;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 100ms ease;
 }
 
 .mark-paid-btn:hover {
-  background: linear-gradient(135deg, #25b552, #1a8f40);
-  box-shadow: 0 5px 14px rgba(31, 158, 71, 0.38), inset 0 1px 0 rgba(255,255,255,0.2);
+  background: #1f9e47;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(31, 158, 71, 0.3);
   transform: translateY(-1px);
 }
 
 .mark-paid-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(31, 158, 71, 0.2);
+  box-shadow: 0 1px 4px rgba(31, 158, 71, 0.15);
 }
 
 /* ── Receipt scanner dark overrides ── */
