@@ -8843,20 +8843,31 @@ export default function SplitPayWebApp() {
         const { photo: profilePhoto, emoji: profileEmoji } = getAvatarData(memberProfile.name);
         const initial = profileEmoji ?? memberProfile.name.charAt(0).toUpperCase();
 
+        const normStr = (s?: string | null) => (s || '').trim().toLowerCase();
+        const payerMatches = (e: TripExpense) =>
+          normStr(e.payer) === normStr(memberProfile.tripName) ||
+          normStr(e.payer) === normStr(memberProfile.name) ||
+          (!!memberProfile.userId && (e as any).payerId === memberProfile.userId);
+
         const memberPaidTotal = normalizedExpenses
-          .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' &&
-            (e.payer === memberProfile.tripName || e.payer === memberProfile.name ||
-              (memberProfile.userId && (e as any).payerId === memberProfile.userId)))
+          .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' && payerMatches(e))
           .reduce((s, e) => s + e.amount, 0);
 
-        const memberBalanceEntry = Object.entries(balances).find(
-          ([k]) => k === memberProfile.tripName || k === memberProfile.name || k === memberProfile.userId
+        const memberBalanceEntry = Object.entries(balances).find(([k]) =>
+          k === memberProfile.userId ||
+          normStr(k) === normStr(memberProfile.tripName) ||
+          normStr(k) === normStr(memberProfile.name)
         );
         const rawBalance = memberBalanceEntry ? memberBalanceEntry[1] : null;
 
+        const isSelfProfile = memberProfile.userId === appSession?.userId;
         const memberInTrips = trips.filter((t) =>
           t.members.some((m) =>
-            typeof m === 'string' ? m === memberProfile.name : m.name === memberProfile.name || (m.id && m.id === memberProfile.userId)
+            isSelfProfile
+              ? isSelfName(m)
+              : typeof m === 'string'
+                ? normStr(m) === normStr(memberProfile.name)
+                : normStr(m.name) === normStr(memberProfile.name) || (m.id && m.id === memberProfile.userId)
           )
         );
 
@@ -8952,6 +8963,9 @@ export default function SplitPayWebApp() {
                     <div className="member-trip-chips">
                       {memberInTrips.slice(0, 6).map((tr) => (
                         <span key={tr.id} className="member-trip-chip">
+                          {tr.archived ? (
+                            <span style={{ fontSize: '0.6rem', background: 'var(--muted)', color: '#fff', borderRadius: '999px', padding: '0.05rem 0.35rem', marginRight: '0.3rem', verticalAlign: 'middle', fontWeight: 700, letterSpacing: '0.03em' }}>arch</span>
+                          ) : null}
                           {tr.name}
                         </span>
                       ))}
