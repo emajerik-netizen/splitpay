@@ -8323,6 +8323,9 @@ export default function SplitPayWebApp() {
                           <h2 className="trip-chat-modal-title">
                             <span className="trip-chat-icon">✦</span> {currentTrip.name}
                           </h2>
+                          <p className="trip-chat-visibility-note">
+                            👥 {lang === 'sk' ? 'Chat je viditeľný pre všetkých členov výletu' : 'Chat is visible to all trip members'}
+                          </p>
                         </div>
                         <button type="button" className="ghost" onClick={() => setShowChatModal(false)}>{t('close')}</button>
                       </div>

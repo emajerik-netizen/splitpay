@@ -4177,6 +4177,7 @@ button:disabled {
 .trip-chat-modal-card .modal-head { flex-shrink: 0; }
 .trip-chat-modal-title { display: flex; align-items: center; gap: 0.4rem; }
 .trip-chat-modal-limit { font-size: 0.75rem; color: var(--muted); font-weight: 600; padding: 0 0.1rem 0.4rem; flex-shrink: 0; }
+.trip-chat-visibility-note { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
 .trip-chat-messages-modal {
   flex: 1;
   min-height: 0;
