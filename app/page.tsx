@@ -1523,6 +1523,7 @@ export default function SplitPayWebApp() {
   const [gravatarFailed, setGravatarFailed] = useState(false);
   const [selfAvatarEmoji, setSelfAvatarEmoji] = useState<string | null>(null);
   const [savingEmoji, setSavingEmoji] = useState(false);
+  const [memberAvatarEmojis, setMemberAvatarEmojis] = useState<Record<string, string>>({});
   const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
   const [memberIbanByName, setMemberIbanByName] = useState<Record<string, string>>({});
   const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
@@ -1905,12 +1906,15 @@ export default function SplitPayWebApp() {
     const loadSelfProfile = async () => {
       const { data } = await supabase
         .from('user_profiles')
-        .select('iban')
+        .select('iban, avatar_emoji')
         .eq('user_id', appSession.userId)
         .maybeSingle();
 
       if (cancelled) return;
       setSelfIban(formatIbanForDisplay((data?.iban as string | undefined) || ''));
+      if (typeof (data as Record<string, unknown> | null)?.avatar_emoji === 'string') {
+        setSelfAvatarEmoji((data as Record<string, unknown>).avatar_emoji as string);
+      }
     };
 
     loadSelfProfile();
@@ -3149,6 +3153,28 @@ export default function SplitPayWebApp() {
   }, [activeTripId, adminTrips, isAdmin, trips]);
 
   useEffect(() => {
+    if (!supabase || !currentTrip) return;
+    const ids = currentTrip.members
+      .map((m) => (typeof m === 'object' && m.id && isUuid(m.id) ? m.id : null))
+      .filter((id): id is string => !!id);
+    if (!ids.length) return;
+    supabase
+      .from('user_profiles')
+      .select('user_name, avatar_emoji')
+      .in('user_id', ids)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string> = {};
+        for (const row of data as Array<{ user_name: string; avatar_emoji: string | null }>) {
+          if (row.user_name && row.avatar_emoji) {
+            map[row.user_name.trim().toLowerCase()] = row.avatar_emoji;
+          }
+        }
+        setMemberAvatarEmojis((prev) => ({ ...prev, ...map }));
+      });
+  }, [currentTrip?.id, supabase]);
+
+  useEffect(() => {
     const shouldWaitForDbLoad = Boolean(
       supabase && authResolved && canSyncWithDb && !dbLoadedRef.current
     );
@@ -4355,10 +4381,19 @@ export default function SplitPayWebApp() {
   }
 
   async function saveAvatarEmoji(emoji: string | null) {
-    if (!supabase) return;
+    if (!supabase || !appSession?.userId) return;
     setSavingEmoji(true);
     try {
-      await supabase.auth.updateUser({ data: { avatar_emoji: emoji } });
+      await Promise.all([
+        supabase.auth.updateUser({ data: { avatar_emoji: emoji } }),
+        supabase.from('user_profiles').upsert({
+          user_id: appSession.userId,
+          user_name: appSession.name,
+          user_email: appSession.email,
+          avatar_emoji: emoji,
+          updated_at: new Date().toISOString(),
+        }),
+      ]);
       setSelfAvatarEmoji(emoji);
     } finally {
       setSavingEmoji(false);
@@ -5965,6 +6000,12 @@ export default function SplitPayWebApp() {
     return t('eventDeleted');
   }
 
+  function getAvatarEmoji(name: string): string | null {
+    const key = name.trim().toLowerCase();
+    if (appSession && key === appSession.name.trim().toLowerCase()) return selfAvatarEmoji;
+    return memberAvatarEmojis[key] || null;
+  }
+
   return (
     <>
       {isOffline ? (
@@ -7371,7 +7412,17 @@ export default function SplitPayWebApp() {
                   <div className="member-list">
                     {members.map((name) => (
                       <div key={name} className="member-row">
-                        <div className="member-avatar">{formatMemberName(name).slice(0, 1)}</div>
+                        {(() => {
+                          const emoji = getAvatarEmoji(formatMemberName(name));
+                          return (
+                            <div
+                              className="member-avatar"
+                              style={emoji ? { fontSize: '1.1rem', background: 'var(--accent-soft)' } : undefined}
+                            >
+                              {emoji ?? formatMemberName(name).slice(0, 1)}
+                            </div>
+                          );
+                        })()}
                         <button
                           type="button"
                           className="member-profile-open"
@@ -7998,13 +8049,14 @@ export default function SplitPayWebApp() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.38rem' }}>
                           {sortedMembers.map(([payer, amt], idx) => {
                             const displayName = formatMemberName(payer);
-                            const initial = displayName.charAt(0).toUpperCase();
+                            const payerEmoji = getAvatarEmoji(displayName);
+                            const initial = payerEmoji ?? displayName.charAt(0).toUpperCase();
                             const pct = Math.round((amt / maxMember) * 100);
                             const color = memberColors[idx] || '#9ca3af';
                             return (
                               <div key={payer} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                 <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', width: '1rem', flexShrink: 0 }}>{idx + 1}.</span>
-                                <span style={{ width: '1.55rem', height: '1.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#fff', background: `linear-gradient(135deg,${color},${color}bb)`, flexShrink: 0 }}>{initial}</span>
+                                <span style={{ width: '1.55rem', height: '1.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: payerEmoji ? '0.95rem' : '0.62rem', fontWeight: 800, color: payerEmoji ? 'inherit' : '#fff', background: payerEmoji ? 'var(--accent-soft)' : `linear-gradient(135deg,${color},${color}bb)`, flexShrink: 0 }}>{initial}</span>
                                 <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
                                 <div style={{ width: '4rem', height: '0.4rem', background: 'var(--stroke)', borderRadius: '99px', overflow: 'hidden', flexShrink: 0 }}>
                                   <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${color},${color}99)`, borderRadius: '99px' }} />
@@ -8536,7 +8588,8 @@ export default function SplitPayWebApp() {
       {memberProfile ? (() => {
         const memberColors = ['#2c79f6', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#f97316'];
         const avatarColor = memberColors[memberProfile.name.charCodeAt(0) % memberColors.length];
-        const initial = memberProfile.name.charAt(0).toUpperCase();
+        const profileEmoji = getAvatarEmoji(memberProfile.name);
+        const initial = profileEmoji ?? memberProfile.name.charAt(0).toUpperCase();
 
         const memberPaidTotal = normalizedExpenses
           .filter((e) => !e.deletedAt && e.expenseType !== 'transfer' && e.payer === memberProfile.name)
@@ -8574,7 +8627,7 @@ export default function SplitPayWebApp() {
                 <div className="member-profile-hero">
                   <div
                     className="member-profile-av"
-                    style={{ background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)` }}
+                    style={profileEmoji ? { background: 'var(--accent-soft)', fontSize: '1.9rem' } : { background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)` }}
                   >
                     {initial}
                   </div>
