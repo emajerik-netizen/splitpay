@@ -1524,6 +1524,9 @@ export default function SplitPayWebApp() {
   const [selfAvatarEmoji, setSelfAvatarEmoji] = useState<string | null>(null);
   const [savingEmoji, setSavingEmoji] = useState(false);
   const [memberAvatarEmojis, setMemberAvatarEmojis] = useState<Record<string, string>>({});
+  const [selfAvatarUrl, setSelfAvatarUrl] = useState<string | null>(null);
+  const [memberAvatarUrls, setMemberAvatarUrls] = useState<Record<string, string>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
   const [memberIbanByName, setMemberIbanByName] = useState<Record<string, string>>({});
   const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
@@ -1561,6 +1564,7 @@ export default function SplitPayWebApp() {
   const [visitsYearCount, setVisitsYearCount] = useState(0);
   const [showAllMembersOverflow, setShowAllMembersOverflow] = useState(false);
   const memberAvatarListRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
   const [totalUsersSeen, setTotalUsersSeen] = useState(0);
   const [totalTripsStored, setTotalTripsStored] = useState(0);
@@ -1906,15 +1910,15 @@ export default function SplitPayWebApp() {
     const loadSelfProfile = async () => {
       const { data } = await supabase
         .from('user_profiles')
-        .select('iban, avatar_emoji')
+        .select('iban, avatar_emoji, avatar_url')
         .eq('user_id', appSession.userId)
         .maybeSingle();
 
       if (cancelled) return;
-      setSelfIban(formatIbanForDisplay((data?.iban as string | undefined) || ''));
-      if (typeof (data as Record<string, unknown> | null)?.avatar_emoji === 'string') {
-        setSelfAvatarEmoji((data as Record<string, unknown>).avatar_emoji as string);
-      }
+      const d = data as Record<string, unknown> | null;
+      setSelfIban(formatIbanForDisplay((d?.iban as string | undefined) || ''));
+      if (typeof d?.avatar_emoji === 'string') setSelfAvatarEmoji(d.avatar_emoji as string);
+      if (typeof d?.avatar_url === 'string') setSelfAvatarUrl(d.avatar_url as string);
     };
 
     loadSelfProfile();
@@ -3160,17 +3164,20 @@ export default function SplitPayWebApp() {
     if (!ids.length) return;
     supabase
       .from('user_profiles')
-      .select('user_name, avatar_emoji')
+      .select('user_name, avatar_emoji, avatar_url')
       .in('user_id', ids)
       .then(({ data }) => {
         if (!data) return;
-        const map: Record<string, string> = {};
-        for (const row of data as Array<{ user_name: string; avatar_emoji: string | null }>) {
-          if (row.user_name && row.avatar_emoji) {
-            map[row.user_name.trim().toLowerCase()] = row.avatar_emoji;
-          }
+        const emojiMap: Record<string, string> = {};
+        const urlMap: Record<string, string> = {};
+        for (const row of data as Array<{ user_name: string; avatar_emoji: string | null; avatar_url: string | null }>) {
+          if (!row.user_name) continue;
+          const key = row.user_name.trim().toLowerCase();
+          if (row.avatar_emoji) emojiMap[key] = row.avatar_emoji;
+          if (row.avatar_url) urlMap[key] = row.avatar_url;
         }
-        setMemberAvatarEmojis((prev) => ({ ...prev, ...map }));
+        setMemberAvatarEmojis((prev) => ({ ...prev, ...emojiMap }));
+        setMemberAvatarUrls((prev) => ({ ...prev, ...urlMap }));
       });
   }, [currentTrip?.id, supabase]);
 
@@ -4398,6 +4405,48 @@ export default function SplitPayWebApp() {
     } finally {
       setSavingEmoji(false);
     }
+  }
+
+  async function uploadProfilePhoto(file: File) {
+    if (!supabase || !appSession?.userId) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${appSession.userId}.${ext}`;
+      const { error } = await supabase.storage
+        .from('profile-photos')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
+      const url = `${urlData.publicUrl}?v=${Date.now()}`;
+      await supabase.from('user_profiles').upsert({
+        user_id: appSession.userId,
+        user_name: appSession.name,
+        user_email: appSession.email,
+        avatar_url: url,
+        updated_at: new Date().toISOString(),
+      });
+      setSelfAvatarUrl(url);
+    } catch {
+      setInfoMessage(lang === 'sk' ? 'Nahrávanie fotky zlyhalo.' : 'Photo upload failed.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function removeProfilePhoto() {
+    if (!supabase || !appSession?.userId) return;
+    await Promise.allSettled([
+      supabase.storage.from('profile-photos').remove([`${appSession.userId}.jpg`, `${appSession.userId}.png`, `${appSession.userId}.webp`]),
+      supabase.from('user_profiles').upsert({
+        user_id: appSession.userId,
+        user_name: appSession.name,
+        user_email: appSession.email,
+        avatar_url: null,
+        updated_at: new Date().toISOString(),
+      }),
+    ]);
+    setSelfAvatarUrl(null);
   }
 
   async function resolveMemberProfile(memberName: string, options?: { silent?: boolean }) {
@@ -6000,10 +6049,13 @@ export default function SplitPayWebApp() {
     return t('eventDeleted');
   }
 
-  function getAvatarEmoji(name: string): string | null {
+  function getAvatarData(name: string): { photo: string | null; emoji: string | null } {
     const key = name.trim().toLowerCase();
-    if (appSession && key === appSession.name.trim().toLowerCase()) return selfAvatarEmoji;
-    return memberAvatarEmojis[key] || null;
+    const isSelf = Boolean(appSession && key === appSession.name.trim().toLowerCase());
+    return {
+      photo: isSelf ? selfAvatarUrl : (memberAvatarUrls[key] || null),
+      emoji: isSelf ? selfAvatarEmoji : (memberAvatarEmojis[key] || null),
+    };
   }
 
   return (
@@ -6222,7 +6274,9 @@ export default function SplitPayWebApp() {
           {isOffline ? <div className="offline-banner">{t('offlineBanner')}</div> : null}
           <div className="profile-fab-wrap" ref={profileMenuWrapRef}>
             <button type="button" className="profile-fab" onClick={() => setProfileOpen((prev) => !prev)}>
-              {selfAvatarEmoji ? (
+              {selfAvatarUrl ? (
+                <img src={selfAvatarUrl} className="profile-fab-gravatar" alt="" />
+              ) : selfAvatarEmoji ? (
                 <span style={{fontSize:'1.25rem',lineHeight:1}}>{selfAvatarEmoji}</span>
               ) : gravatarHash && !gravatarFailed ? (
                 <img
@@ -6240,6 +6294,40 @@ export default function SplitPayWebApp() {
                 <h3>{t('myProfile')}</h3>
                 <p className="muted">{appSession?.name}</p>
                 <p className="muted">{appSession?.email}</p>
+                <div className="profile-photo-upload-row">
+                  <div className="profile-photo-preview">
+                    {selfAvatarUrl ? (
+                      <img src={selfAvatarUrl} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'999px',display:'block'}} alt="" />
+                    ) : selfAvatarEmoji ? (
+                      <span style={{fontSize:'1.4rem',lineHeight:1}}>{selfAvatarEmoji}</span>
+                    ) : (
+                      <span style={{fontSize:'1.1rem',fontWeight:800}}>{(appSession?.name||'U').slice(0,1).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:'0.28rem',flex:1,minWidth:0}}>
+                    <button
+                      type="button"
+                      className="ghost"
+                      style={{fontSize:'0.82rem',minHeight:'1.9rem',padding:'0.28rem 0.7rem'}}
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                    >
+                      {uploadingPhoto ? (lang === 'sk' ? 'Nahrávam…' : 'Uploading…') : (lang === 'sk' ? '📷 Nahrať fotku' : '📷 Upload photo')}
+                    </button>
+                    {selfAvatarUrl ? (
+                      <button type="button" className="ghost danger-btn" style={{fontSize:'0.75rem',minHeight:'1.6rem',padding:'0.18rem 0.5rem'}} onClick={removeProfilePhoto}>
+                        {lang === 'sk' ? '✕ Odstrániť fotku' : '✕ Remove photo'}
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{display:'none'}}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadProfilePhoto(f); e.target.value = ''; }}
+                  />
+                </div>
                 <details className="emoji-picker-details">
                   <summary className="emoji-picker-summary">
                     <span className="emoji-picker-summary-label">{lang === 'sk' ? 'Profilový avatar' : 'Profile avatar'}</span>
@@ -7413,13 +7501,13 @@ export default function SplitPayWebApp() {
                     {members.map((name) => (
                       <div key={name} className="member-row">
                         {(() => {
-                          const emoji = getAvatarEmoji(formatMemberName(name));
+                          const av = getAvatarData(formatMemberName(name));
                           return (
                             <div
                               className="member-avatar"
-                              style={emoji ? { fontSize: '1.1rem', background: 'var(--accent-soft)' } : undefined}
+                              style={av.photo ? {overflow:'hidden',padding:0,background:'transparent'} : av.emoji ? {fontSize:'1.1rem',background:'var(--accent-soft)'} : undefined}
                             >
-                              {emoji ?? formatMemberName(name).slice(0, 1)}
+                              {av.photo ? <img src={av.photo} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="" /> : av.emoji ?? formatMemberName(name).slice(0, 1)}
                             </div>
                           );
                         })()}
@@ -8049,14 +8137,16 @@ export default function SplitPayWebApp() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.38rem' }}>
                           {sortedMembers.map(([payer, amt], idx) => {
                             const displayName = formatMemberName(payer);
-                            const payerEmoji = getAvatarEmoji(displayName);
+                            const { photo: payerPhoto, emoji: payerEmoji } = getAvatarData(displayName);
                             const initial = payerEmoji ?? displayName.charAt(0).toUpperCase();
                             const pct = Math.round((amt / maxMember) * 100);
                             const color = memberColors[idx] || '#9ca3af';
                             return (
                               <div key={payer} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                 <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', width: '1rem', flexShrink: 0 }}>{idx + 1}.</span>
-                                <span style={{ width: '1.55rem', height: '1.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: payerEmoji ? '0.95rem' : '0.62rem', fontWeight: 800, color: payerEmoji ? 'inherit' : '#fff', background: payerEmoji ? 'var(--accent-soft)' : `linear-gradient(135deg,${color},${color}bb)`, flexShrink: 0 }}>{initial}</span>
+                                <span style={{ width: '1.55rem', height: '1.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: payerPhoto ? 'hidden' : 'visible', padding: payerPhoto ? 0 : undefined, fontSize: payerEmoji ? '0.95rem' : '0.62rem', fontWeight: 800, color: payerEmoji ? 'inherit' : '#fff', background: payerPhoto ? 'transparent' : payerEmoji ? 'var(--accent-soft)' : `linear-gradient(135deg,${color},${color}bb)`, flexShrink: 0 }}>
+                                  {payerPhoto ? <img src={payerPhoto} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="" /> : initial}
+                                </span>
                                 <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
                                 <div style={{ width: '4rem', height: '0.4rem', background: 'var(--stroke)', borderRadius: '99px', overflow: 'hidden', flexShrink: 0 }}>
                                   <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg,${color},${color}99)`, borderRadius: '99px' }} />
@@ -8588,7 +8678,7 @@ export default function SplitPayWebApp() {
       {memberProfile ? (() => {
         const memberColors = ['#2c79f6', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#f97316'];
         const avatarColor = memberColors[memberProfile.name.charCodeAt(0) % memberColors.length];
-        const profileEmoji = getAvatarEmoji(memberProfile.name);
+        const { photo: profilePhoto, emoji: profileEmoji } = getAvatarData(memberProfile.name);
         const initial = profileEmoji ?? memberProfile.name.charAt(0).toUpperCase();
 
         const memberPaidTotal = normalizedExpenses
@@ -8627,9 +8717,9 @@ export default function SplitPayWebApp() {
                 <div className="member-profile-hero">
                   <div
                     className="member-profile-av"
-                    style={profileEmoji ? { background: 'var(--accent-soft)', fontSize: '1.9rem' } : { background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)` }}
+                    style={profilePhoto ? {overflow:'hidden',padding:0,background:'transparent'} : profileEmoji ? {background:'var(--accent-soft)',fontSize:'1.9rem'} : {background:`linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)`}}
                   >
-                    {initial}
+                    {profilePhoto ? <img src={profilePhoto} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',borderRadius:'999px'}} alt="" /> : initial}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{ fontSize: '1.05rem', fontWeight: 800, display: 'block' }}>{memberProfile.name}</strong>
