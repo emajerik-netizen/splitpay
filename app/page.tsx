@@ -5406,6 +5406,7 @@ export default function SplitPayWebApp() {
     const normalizedTransferTo = resolveToCurrentName(storedTransferTo, found.transferToId ?? undefined) ?? storedTransferTo;
 
     setEditingExpenseId(expenseId);
+    setReceiptCategory(found.category || '');
     setDraft({
       title: found.title,
       amount: String(found.amount),
@@ -8543,6 +8544,21 @@ export default function SplitPayWebApp() {
                           placeholder={t('amountPlaceholder')}
                         />
                       )}
+                      {draft.expenseType !== 'transfer' ? (() => {
+                        const activeCat = receiptCategory || inferCategory(draft.title);
+                        const cats = ['jedlo','doprava','ubytovanie','zabava','nakupy','zdravie','sport','kultura','technika','ostatne'] as const;
+                        const catLabels: Record<string,string> = { jedlo:t('categoryFood'), doprava:t('categoryTransport'), ubytovanie:t('categoryAccom'), zabava:t('categoryFun'), nakupy:t('categoryShopping'), zdravie:t('categoryHealth'), sport:t('categorySport'), kultura:t('categoryKultura'), technika:t('categoryTech'), ostatne:t('categoryOther') };
+                        return (
+                          <div className="expense-form-category-row">
+                            {cats.map((c) => (
+                              <button key={c} type="button"
+                                className={`category-badge category-${c}${c === activeCat ? ' category-selected' : ''}`}
+                                onClick={() => setReceiptCategory(c)}
+                              >{catLabels[c]}</button>
+                            ))}
+                          </div>
+                        );
+                      })() : null}
                       <label className="field-label">{t('paidBy')}</label>
                       <select
                         value={safePayer}
