@@ -343,7 +343,7 @@ const T = {
     settlementAction: 'pošle',
     allSettled: 'Všetko je vyrovnané.',
     balanceTip: 'Pošli kamarátom IBAN alebo sa vyrovnajte v hotovosti.',
-    markAsPaid: 'Zaplatené ✓',
+    markAsPaid: 'Zaplatil som ✓',
     paymentRecorded: 'Platba zaznamenaná v histórii.',
     offlineBanner: 'Ste offline – zobrazujú sa uložené dáta.',
     copyRecipientIbanBtn: 'Kopírovať IBAN príjemcu',
@@ -754,7 +754,7 @@ const T = {
     settlementAction: 'sends',
     allSettled: 'Everything is settled.',
     balanceTip: 'Share your IBAN or settle in cash.',
-    markAsPaid: 'Mark as paid ✓',
+    markAsPaid: 'I paid ✓',
     paymentRecorded: 'Payment recorded in history.',
     offlineBanner: 'You are offline – showing saved data.',
     copyRecipientIbanBtn: 'Copy recipient IBAN',
@@ -8917,10 +8917,10 @@ export default function SplitPayWebApp() {
                     <div className="member-profile-stat">
                       {rawBalance !== null ? (
                         <>
-                          <div className="member-profile-stat-val" style={{ color: rawBalance < 0 ? '#16a34a' : rawBalance > 0 ? '#c0392b' : 'var(--text)' }}>
+                          <div className="member-profile-stat-val" style={{ color: rawBalance > 0 ? '#16a34a' : rawBalance < 0 ? '#c0392b' : 'var(--text)' }}>
                             {eur(Math.abs(rawBalance))}
                           </div>
-                          <div className="member-profile-stat-lbl">{rawBalance < 0 ? 'dostane' : rawBalance > 0 ? 'dlhuje' : 'vyrovnaný'}</div>
+                          <div className="member-profile-stat-lbl">{rawBalance > 0 ? 'dostane' : rawBalance < 0 ? 'dlhuje' : 'vyrovnaný'}</div>
                         </>
                       ) : (
                         <>
