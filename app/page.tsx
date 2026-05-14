@@ -4524,14 +4524,10 @@ export default function SplitPayWebApp() {
     const img = cropImgRef.current;
     const CONT = 240;
     const OUT = 400;
-    const scale = Math.max(CONT / img.naturalWidth, CONT / img.naturalHeight);
-    const renderW = img.naturalWidth * scale * cropZoom;
-    const renderH = img.naturalHeight * scale * cropZoom;
-    const overflowX = Math.max(0, renderW - CONT);
-    const overflowY = Math.max(0, renderH - CONT);
-    const visX = overflowX * (cropPos.x / 100);
-    const visY = overflowY * (cropPos.y / 100);
-    const srcScale = 1 / (scale * cropZoom);
+    const ifs = Math.max(CONT / img.naturalWidth, CONT / img.naturalHeight);
+    const srcSize = CONT / (ifs * cropZoom);
+    const srcX = (cropPos.x / 100) * (img.naturalWidth - srcSize);
+    const srcY = (cropPos.y / 100) * (img.naturalHeight - srcSize);
     const canvas = document.createElement('canvas');
     canvas.width = OUT;
     canvas.height = OUT;
@@ -4539,7 +4535,7 @@ export default function SplitPayWebApp() {
     ctx.beginPath();
     ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(img, visX * srcScale, visY * srcScale, CONT * srcScale, CONT * srcScale, 0, 0, OUT, OUT);
+    ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, OUT, OUT);
     const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
     if (!blob) return;
     closeCropModal();
@@ -6404,15 +6400,14 @@ export default function SplitPayWebApp() {
                   <div style={{display:'flex',flexDirection:'column',gap:'0.28rem',flex:1,minWidth:0}}>
                     <button
                       type="button"
-                      className="ghost"
-                      style={{fontSize:'0.82rem',minHeight:'1.9rem',padding:'0.28rem 0.7rem'}}
+                      className="ghost photo-action-btn"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={uploadingPhoto}
                     >
                       {uploadingPhoto ? (lang === 'sk' ? 'Nahrávam…' : 'Uploading…') : (lang === 'sk' ? '📷 Nahrať fotku' : '📷 Upload photo')}
                     </button>
                     {selfAvatarUrl ? (
-                      <button type="button" className="ghost danger-btn" style={{fontSize:'0.75rem',minHeight:'1.6rem',padding:'0.18rem 0.5rem'}} onClick={removeProfilePhoto}>
+                      <button type="button" className="ghost danger-btn photo-action-btn" onClick={removeProfilePhoto}>
                         {lang === 'sk' ? '✕ Odstrániť fotku' : '✕ Remove photo'}
                       </button>
                     ) : null}
@@ -8805,7 +8800,11 @@ export default function SplitPayWebApp() {
                   ref={cropImgRef}
                   src={cropObjUrl}
                   className="crop-img"
-                  style={{ objectPosition: `${cropPos.x}% ${cropPos.y}%` }}
+                  style={{
+                    objectPosition: `${cropPos.x}% ${cropPos.y}%`,
+                    transform: `scale(${cropZoom})`,
+                    transformOrigin: `${cropPos.x}% ${cropPos.y}%`,
+                  }}
                   alt=""
                   draggable={false}
                 />

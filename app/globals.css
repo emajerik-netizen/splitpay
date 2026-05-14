@@ -5343,6 +5343,15 @@ button:disabled {
   flex-shrink: 0;
 }
 
+/* ── Small photo action buttons ─────────────────────── */
+.photo-action-btn {
+  min-height: 1.75rem !important;
+  padding: 0.22rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 0.55rem !important;
+  line-height: 1 !important;
+}
+
 /* ── Profile Gravatar + Emoji picker ─────────────────── */
 .profile-fab-gravatar {
   width: 100%;
