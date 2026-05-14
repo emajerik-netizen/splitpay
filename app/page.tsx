@@ -1527,6 +1527,9 @@ export default function SplitPayWebApp() {
   const [selfAvatarUrl, setSelfAvatarUrl] = useState<string | null>(null);
   const [memberAvatarUrls, setMemberAvatarUrls] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropObjUrl, setCropObjUrl] = useState<string | null>(null);
+  const [cropPos, setCropPos] = useState({ x: 50, y: 50 });
+  const [cropZoom, setCropZoom] = useState(1);
   const [memberProfile, setMemberProfile] = useState<MemberProfileView | null>(null);
   const [memberIbanByName, setMemberIbanByName] = useState<Record<string, string>>({});
   const [dismissedStaleTripWarnings, setDismissedStaleTripWarnings] = useState<Record<string, true>>({});
@@ -1565,6 +1568,8 @@ export default function SplitPayWebApp() {
   const [showAllMembersOverflow, setShowAllMembersOverflow] = useState(false);
   const memberAvatarListRef = useRef<HTMLDivElement>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const cropImgRef = useRef<HTMLImageElement | null>(null);
+  const cropDragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const [activeUsersCount, setActiveUsersCount] = useState(0);
   const [totalUsersSeen, setTotalUsersSeen] = useState(0);
   const [totalTripsStored, setTotalTripsStored] = useState(0);
@@ -2599,22 +2604,23 @@ export default function SplitPayWebApp() {
 
       const adminIds = presenceRows.map((r) => r.user_id).filter(Boolean);
       if (adminIds.length) {
-        supabaseClient
-          .from('user_profiles')
-          .select('user_name, avatar_emoji, avatar_url')
-          .in('user_id', adminIds)
-          .then(({ data: avData }) => {
-            if (!avData) return;
-            const emojiMap: Record<string, string> = {};
-            const urlMap: Record<string, string> = {};
-            for (const r of avData as Array<{ user_name: string; avatar_emoji: string | null; avatar_url: string | null }>) {
-              if (!r.user_name) continue;
-              const key = r.user_name.trim().toLowerCase();
-              if (r.avatar_emoji) emojiMap[key] = r.avatar_emoji;
-              if (r.avatar_url) urlMap[key] = r.avatar_url;
+        supabaseClient.from('user_profiles').select('user_name, avatar_emoji').in('user_id', adminIds)
+          .then(({ data }) => {
+            if (!data) return;
+            const map: Record<string, string> = {};
+            for (const r of data as Array<{ user_name: string; avatar_emoji: string | null }>) {
+              if (r.user_name && r.avatar_emoji) map[r.user_name.trim().toLowerCase()] = r.avatar_emoji;
             }
-            setMemberAvatarEmojis((prev) => ({ ...prev, ...emojiMap }));
-            setMemberAvatarUrls((prev) => ({ ...prev, ...urlMap }));
+            setMemberAvatarEmojis((prev) => ({ ...prev, ...map }));
+          });
+        supabaseClient.from('user_profiles').select('user_name, avatar_url').in('user_id', adminIds)
+          .then(({ data }) => {
+            if (!data) return;
+            const map: Record<string, string> = {};
+            for (const r of data as Array<{ user_name: string; avatar_url: string | null }>) {
+              if (r.user_name && r.avatar_url) map[r.user_name.trim().toLowerCase()] = r.avatar_url;
+            }
+            setMemberAvatarUrls((prev) => ({ ...prev, ...map }));
           });
       }
 
@@ -3183,22 +3189,23 @@ export default function SplitPayWebApp() {
       .map((m) => (typeof m === 'object' && m.id && isUuid(m.id) ? m.id : null))
       .filter((id): id is string => !!id);
     if (!ids.length) return;
-    supabase
-      .from('user_profiles')
-      .select('user_name, avatar_emoji, avatar_url')
-      .in('user_id', ids)
+    supabase.from('user_profiles').select('user_name, avatar_emoji').in('user_id', ids)
       .then(({ data }) => {
         if (!data) return;
-        const emojiMap: Record<string, string> = {};
-        const urlMap: Record<string, string> = {};
-        for (const row of data as Array<{ user_name: string; avatar_emoji: string | null; avatar_url: string | null }>) {
-          if (!row.user_name) continue;
-          const key = row.user_name.trim().toLowerCase();
-          if (row.avatar_emoji) emojiMap[key] = row.avatar_emoji;
-          if (row.avatar_url) urlMap[key] = row.avatar_url;
+        const map: Record<string, string> = {};
+        for (const r of data as Array<{ user_name: string; avatar_emoji: string | null }>) {
+          if (r.user_name && r.avatar_emoji) map[r.user_name.trim().toLowerCase()] = r.avatar_emoji;
         }
-        setMemberAvatarEmojis((prev) => ({ ...prev, ...emojiMap }));
-        setMemberAvatarUrls((prev) => ({ ...prev, ...urlMap }));
+        setMemberAvatarEmojis((prev) => ({ ...prev, ...map }));
+      });
+    supabase.from('user_profiles').select('user_name, avatar_url').in('user_id', ids)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string> = {};
+        for (const r of data as Array<{ user_name: string; avatar_url: string | null }>) {
+          if (r.user_name && r.avatar_url) map[r.user_name.trim().toLowerCase()] = r.avatar_url;
+        }
+        setMemberAvatarUrls((prev) => ({ ...prev, ...map }));
       });
   }, [currentTrip?.id, supabase]);
 
@@ -4428,15 +4435,14 @@ export default function SplitPayWebApp() {
     }
   }
 
-  async function uploadProfilePhoto(file: File) {
+  async function uploadProfilePhoto(blob: Blob) {
     if (!supabase || !appSession?.userId) return;
     setUploadingPhoto(true);
     try {
-      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
-      const path = `${appSession.userId}.${ext}`;
+      const path = `${appSession.userId}.jpg`;
       const { error } = await supabase.storage
         .from('profile-photos')
-        .upload(path, file, { upsert: true, contentType: file.type });
+        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
       const url = `${urlData.publicUrl}?v=${Date.now()}`;
@@ -4448,7 +4454,8 @@ export default function SplitPayWebApp() {
         updated_at: new Date().toISOString(),
       });
       setSelfAvatarUrl(url);
-    } catch {
+    } catch (err) {
+      console.error('Photo upload error:', err);
       setInfoMessage(lang === 'sk' ? 'Nahrávanie fotky zlyhalo.' : 'Photo upload failed.');
     } finally {
       setUploadingPhoto(false);
@@ -4458,7 +4465,7 @@ export default function SplitPayWebApp() {
   async function removeProfilePhoto() {
     if (!supabase || !appSession?.userId) return;
     await Promise.allSettled([
-      supabase.storage.from('profile-photos').remove([`${appSession.userId}.jpg`, `${appSession.userId}.png`, `${appSession.userId}.webp`]),
+      supabase.storage.from('profile-photos').remove([`${appSession.userId}.jpg`]),
       supabase.from('user_profiles').upsert({
         user_id: appSession.userId,
         user_name: appSession.name,
@@ -4468,6 +4475,74 @@ export default function SplitPayWebApp() {
       }),
     ]);
     setSelfAvatarUrl(null);
+  }
+
+  function openCropModal(file: File) {
+    const url = URL.createObjectURL(file);
+    setCropObjUrl(url);
+    setCropPos({ x: 50, y: 50 });
+    setCropZoom(1);
+  }
+
+  function closeCropModal() {
+    if (cropObjUrl) URL.revokeObjectURL(cropObjUrl);
+    setCropObjUrl(null);
+  }
+
+  function cropPointerDown(e: React.MouseEvent | React.TouchEvent) {
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    cropDragRef.current = { startX: clientX, startY: clientY, startPosX: cropPos.x, startPosY: cropPos.y };
+  }
+
+  function cropPointerMove(e: React.MouseEvent | React.TouchEvent) {
+    if (!cropDragRef.current || !cropImgRef.current) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const img = cropImgRef.current;
+    const CONT = 240;
+    const scale = Math.max(CONT / img.naturalWidth, CONT / img.naturalHeight);
+    const renderW = img.naturalWidth * scale * cropZoom;
+    const renderH = img.naturalHeight * scale * cropZoom;
+    const overflowX = Math.max(1, renderW - CONT);
+    const overflowY = Math.max(1, renderH - CONT);
+    const dx = clientX - cropDragRef.current.startX;
+    const dy = clientY - cropDragRef.current.startY;
+    setCropPos({
+      x: Math.max(0, Math.min(100, cropDragRef.current.startPosX - (dx / overflowX) * 100)),
+      y: Math.max(0, Math.min(100, cropDragRef.current.startPosY - (dy / overflowY) * 100)),
+    });
+  }
+
+  function cropPointerUp() {
+    cropDragRef.current = null;
+  }
+
+  async function cropAndUpload() {
+    if (!cropObjUrl || !cropImgRef.current) return;
+    const img = cropImgRef.current;
+    const CONT = 240;
+    const OUT = 400;
+    const scale = Math.max(CONT / img.naturalWidth, CONT / img.naturalHeight);
+    const renderW = img.naturalWidth * scale * cropZoom;
+    const renderH = img.naturalHeight * scale * cropZoom;
+    const overflowX = Math.max(0, renderW - CONT);
+    const overflowY = Math.max(0, renderH - CONT);
+    const visX = overflowX * (cropPos.x / 100);
+    const visY = overflowY * (cropPos.y / 100);
+    const srcScale = 1 / (scale * cropZoom);
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT;
+    canvas.height = OUT;
+    const ctx = canvas.getContext('2d')!;
+    ctx.beginPath();
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, visX * srcScale, visY * srcScale, CONT * srcScale, CONT * srcScale, 0, 0, OUT, OUT);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
+    if (!blob) return;
+    closeCropModal();
+    await uploadProfilePhoto(blob);
   }
 
   async function resolveMemberProfile(memberName: string, options?: { silent?: boolean }) {
@@ -6346,7 +6421,7 @@ export default function SplitPayWebApp() {
                     type="file"
                     accept="image/*"
                     style={{display:'none'}}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadProfilePhoto(f); e.target.value = ''; }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) openCropModal(f); e.target.value = ''; }}
                   />
                 </div>
                 <details className="emoji-picker-details">
@@ -8704,6 +8779,56 @@ export default function SplitPayWebApp() {
               {t('registrationNoticeButton')}
             </button>
           </section>
+        </div>
+      ) : null}
+
+      {cropObjUrl ? (
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-card" style={{ maxWidth: '22rem', textAlign: 'center', gap: '1.1rem' }}>
+            <h3 style={{ margin: 0 }}>{lang === 'sk' ? 'Upraviť fotku' : 'Adjust photo'}</h3>
+            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              {lang === 'sk' ? 'Pretiahnite na nastavenie polohy · posúvač = zoom' : 'Drag to reposition · slider = zoom'}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div
+                className="crop-circle"
+                onMouseDown={cropPointerDown}
+                onMouseMove={cropPointerMove}
+                onMouseUp={cropPointerUp}
+                onMouseLeave={cropPointerUp}
+                onTouchStart={cropPointerDown}
+                onTouchMove={(e) => { e.preventDefault(); cropPointerMove(e); }}
+                onTouchEnd={cropPointerUp}
+              >
+                <img
+                  ref={cropImgRef}
+                  src={cropObjUrl}
+                  className="crop-img"
+                  style={{ objectPosition: `${cropPos.x}% ${cropPos.y}%` }}
+                  alt=""
+                  draggable={false}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0 0.2rem' }}>
+              <span style={{ fontSize: '0.9rem' }}>🔍</span>
+              <input
+                type="range" min={1} max={3} step={0.05}
+                value={cropZoom}
+                onChange={(e) => setCropZoom(Number(e.target.value))}
+                style={{ flex: 1, accentColor: 'var(--accent)', cursor: 'pointer', minHeight: 'auto', padding: 0, border: 'none', background: 'transparent' }}
+              />
+              <span style={{ fontSize: '0.9rem' }}>🔎</span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.55rem' }}>
+              <button type="button" className="ghost" style={{ flex: 1 }} onClick={closeCropModal}>
+                {lang === 'sk' ? 'Zrušiť' : 'Cancel'}
+              </button>
+              <button type="button" style={{ flex: 1 }} onClick={cropAndUpload} disabled={uploadingPhoto}>
+                {uploadingPhoto ? (lang === 'sk' ? 'Nahrávam…' : 'Uploading…') : (lang === 'sk' ? 'Uložiť' : 'Save')}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 

@@ -5275,6 +5275,31 @@ button:disabled {
 :root:not([data-theme="light"]) .invite-status-waiting { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
 :root:not([data-theme="light"]) .invite-status-accepted { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
 
+/* ── Photo crop modal ───────────────────────────────── */
+.crop-circle {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: grab;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent);
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.crop-circle:active { cursor: grabbing; }
+
+.crop-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+  display: block;
+}
+
 /* ── Admin user avatar + online dot ─────────────────── */
 .admin-user-av-wrap {
   position: relative;
