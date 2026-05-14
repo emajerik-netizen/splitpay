@@ -7393,47 +7393,79 @@ export default function SplitPayWebApp() {
               {activeDetailScreen === 'invites' ? (
                 <section className="screen-window section-card screen-single full-window">
                   <div className="section-head compact-head">
-                      <p className="eyebrow">{t('invitation')}</p>
-                      <h2>{t('invitesTitle')}</h2>
+                    <p className="eyebrow">{t('invitation')}</p>
+                    <h2>{t('invitesTitle')}</h2>
                   </div>
-                  <div className="invite-code-box">
-                    <span>{t('code')}</span>
-                    <strong>{currentTrip.inviteCode}</strong>
-                    <div className="share-buttons">
-                      <button type="button" className="ghost share-action-btn" onClick={copyInviteCodeToClipboard}>
+
+                  <div className="invite-hero-card">
+                    <div className="invite-hero-code-row">
+                      <div>
+                        <p className="muted" style={{fontSize:'0.72rem',margin:'0 0 0.2rem',fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase'}}>{t('code')}</p>
+                        <span className="invite-hero-code">{currentTrip.inviteCode}</span>
+                      </div>
+                      <button type="button" className="invite-copy-btn" onClick={copyInviteCodeToClipboard}>
                         <Clipboard size={14} aria-hidden="true" />
                         <span>{t('copy')}</span>
                       </button>
-                      <button type="button" className="ghost share-action-btn" onClick={shareViaEmail}>
-                        <Mail size={14} aria-hidden="true" />
-                        <span>{t('shareEmail')}</span>
-                      </button>
-                      <button type="button" className="ghost share-action-btn" onClick={shareViaWhatsApp}>
-                        <Share2 size={14} aria-hidden="true" />
-                        <span>{t('shareWhatsApp')}</span>
-                      </button>
-                      <button type="button" className="ghost share-action-btn" onClick={shareViaSMS}>
-                        <MessageSquare size={14} aria-hidden="true" />
-                        <span>{t('shareSms')}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost share-action-btn"
-                        onClick={() => setShowInviteQr((prev) => !prev)}
-                      >
-                        <QrCode size={14} aria-hidden="true" />
-                        <span>{showInviteQr ? t('hideQr') : t('showQr')}</span>
-                      </button>
                     </div>
-                    {showInviteQr ? (
-                      <div className="qr-share-box">
-                        <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
-                        <div>
-                          <p className="muted">{t('scanQr')}</p>
-                        </div>
+                    {inviteJoinUrl ? (
+                      <div className="invite-url-row">
+                        <Link2 size={13} style={{flexShrink:0,color:'var(--accent)'}} aria-hidden="true" />
+                        <span className="invite-url-text">{inviteJoinUrl}</span>
                       </div>
                     ) : null}
                   </div>
+
+                  <div className="invite-share-grid">
+                    <button type="button" className="invite-share-btn" onClick={shareViaEmail}>
+                      <Mail size={20} aria-hidden="true" />
+                      <span>{t('shareEmail')}</span>
+                    </button>
+                    <button type="button" className="invite-share-btn" onClick={shareViaWhatsApp}>
+                      <Share2 size={20} aria-hidden="true" />
+                      <span>{t('shareWhatsApp')}</span>
+                    </button>
+                    <button type="button" className="invite-share-btn" onClick={shareViaSMS}>
+                      <MessageSquare size={20} aria-hidden="true" />
+                      <span>{t('shareSms')}</span>
+                    </button>
+                    <button type="button" className="invite-share-btn" onClick={() => setShowInviteQr((prev) => !prev)}>
+                      <QrCode size={20} aria-hidden="true" />
+                      <span>{showInviteQr ? t('hideQr') : t('showQr')}</span>
+                    </button>
+                  </div>
+
+                  {showInviteQr ? (
+                    <div className="qr-share-box" style={{gridTemplateColumns:'1fr',textAlign:'center',gap:'0.55rem'}}>
+                      <div style={{display:'flex',justifyContent:'center'}}>
+                        <QRCodeSVG value={inviteJoinUrl || currentTrip.inviteCode} size={160} includeMargin />
+                      </div>
+                      <p className="muted" style={{margin:0,fontSize:'0.85rem'}}>{t('scanQr')}</p>
+                    </div>
+                  ) : null}
+
+                  {currentTrip.pendingInvites && currentTrip.pendingInvites.length > 0 ? (
+                    <div className="invite-pending-section">
+                      <p className="eyebrow" style={{marginBottom:'0.55rem'}}>{lang === 'sk' ? 'Pozvané osoby' : 'Invited people'}</p>
+                      {currentTrip.pendingInvites.map((inv) => {
+                        const initials = inv.name ? inv.name.slice(0, 2).toUpperCase() : '?';
+                        const isAccepted = inv.status === 'Prijate';
+                        return (
+                          <div className="invite-pending-row" key={inv.id}>
+                            <div className="invite-pending-av">{initials}</div>
+                            <div style={{flex:1,minWidth:0}}>
+                              <strong style={{fontSize:'0.9rem'}}>{inv.name}</strong>
+                              {inv.contact ? <p className="muted" style={{margin:0,fontSize:'0.78rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{inv.contact}</p> : null}
+                            </div>
+                            <div className={`invite-pending-status ${isAccepted ? 'invite-status-accepted' : 'invite-status-waiting'}`}>
+                              {isAccepted ? <CheckCircle2 size={12} aria-hidden="true" /> : <Clock size={12} aria-hidden="true" />}
+                              <span>{inv.status}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
 
@@ -7845,7 +7877,7 @@ export default function SplitPayWebApp() {
                       <p className="eyebrow">{t('categoryBreakdown').replace('výdavkov', '').trim() || 'Celková útrata'}</p>
                       <div className="stats-hero-total">{eur(total)}</div>
                       <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.2rem' }}>
-                        {activeExps.length} výdavkov · {members.length} členov
+                        {expenseCountLabel(activeExps.length, lang)} · {memberCountLabel(members.length, lang)}
                       </p>
                     </div>
 

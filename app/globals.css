@@ -5105,3 +5105,172 @@ button:disabled {
 :root:not([data-theme="light"]) .member-profile-hero { background: radial-gradient(circle at 100% 0, rgba(44,121,246,0.12) 0%, transparent 32%), var(--bg-2); border-color: var(--stroke); }
 :root:not([data-theme="light"]) .member-profile-stat { background: var(--bg-3); border-color: var(--stroke); }
 :root:not([data-theme="light"]) .member-trip-chip { background: var(--bg-3); border-color: var(--stroke); }
+
+/* ── Invite tab redesign ─────────────────────────────── */
+.invite-hero-card {
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--trip-accent, var(--accent)) 11%, var(--bg-1)), color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 52%, #ffffff));
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 25%, var(--stroke));
+  padding: 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.invite-hero-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.invite-hero-code {
+  font-size: 1.85rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.invite-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  background: var(--trip-accent, var(--accent));
+  color: #ffffff;
+  border: none;
+  border-radius: 0.78rem;
+  padding: 0.52rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+  min-height: auto;
+}
+
+.invite-copy-btn:hover { opacity: 0.88; }
+
+.invite-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 38%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 16%, var(--stroke));
+  border-radius: 0.7rem;
+  padding: 0.38rem 0.6rem;
+  overflow: hidden;
+}
+
+.invite-url-text {
+  font-size: 0.76rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-share-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.invite-share-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--trip-accent, var(--accent)) 26%, var(--stroke));
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 36%, #ffffff);
+  color: color-mix(in srgb, var(--trip-accent, var(--accent)) 90%, #18335f);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  padding: 0.8rem 0.5rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  min-height: auto;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+.invite-share-btn:hover {
+  background: color-mix(in srgb, var(--trip-accent-soft, var(--accent-soft)) 58%, #ffffff);
+  border-color: color-mix(in srgb, var(--trip-accent, var(--accent)) 50%, var(--stroke));
+}
+
+.invite-pending-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.invite-pending-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #f8fbff;
+  border: 1px solid var(--stroke);
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.invite-pending-av {
+  width: 2.1rem;
+  height: 2.1rem;
+  min-width: 2.1rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--trip-accent, var(--accent)), color-mix(in srgb, var(--trip-accent, var(--accent)) 65%, #8ab4f8));
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.invite-pending-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.invite-status-waiting {
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: #b45309;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+}
+
+.invite-status-accepted {
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  color: #15803d;
+  border: 1px solid color-mix(in srgb, #22c55e 30%, transparent);
+}
+
+:root:not([data-theme="light"]) .invite-hero-card {
+  background: linear-gradient(135deg, rgba(44,121,246,0.1), var(--bg-2));
+  border-color: var(--stroke);
+}
+:root:not([data-theme="light"]) .invite-url-row {
+  background: rgba(44,121,246,0.08);
+  border-color: var(--stroke);
+}
+:root:not([data-theme="light"]) .invite-share-btn {
+  background: rgba(44,121,246,0.12);
+  border-color: var(--stroke);
+  color: var(--accent);
+}
+:root:not([data-theme="light"]) .invite-share-btn:hover { background: rgba(44,121,246,0.22); }
+:root:not([data-theme="light"]) .invite-pending-row { background: var(--bg-3); border-color: var(--stroke); }
+:root:not([data-theme="light"]) .invite-status-waiting { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
+:root:not([data-theme="light"]) .invite-status-accepted { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
