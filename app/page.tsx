@@ -8239,7 +8239,7 @@ export default function SplitPayWebApp() {
                     {/* Category breakdown */}
                     {sortedCats.length > 0 ? (
                       <div className="section-card" style={{ padding: '0.7rem 0.9rem' }}>
-                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>{t('totalPaidLabel')}</h3>
+                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>{t('categoryBreakdown')}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
                           {sortedCats.map(([cat, amt]) => (
                             <div className="cat-bar-row" key={cat}>
