@@ -563,6 +563,7 @@ const T = {
     categoryOther: 'Ostatné',
     categoryTransfer: 'Prevod',
     categoryBreakdown: 'Kategórie výdavkov',
+    totalPaidLabel: 'Spolu zaplatené',
   },
   en: {
     resumingSession: 'Resuming session',
@@ -974,6 +975,7 @@ const T = {
     categoryOther: 'Other',
     categoryTransfer: 'Transfer',
     categoryBreakdown: 'Expense categories',
+    totalPaidLabel: 'Total paid',
   },
 } as const;
 
@@ -8227,7 +8229,7 @@ export default function SplitPayWebApp() {
 
                     {/* Hero total */}
                     <div className="hero-panel" style={{ marginBottom: '0.5rem' }}>
-                      <p className="eyebrow">{t('categoryBreakdown').replace('výdavkov', '').trim() || 'Celková útrata'}</p>
+                      <p className="eyebrow">{t('totalPaidLabel')}</p>
                       <div className="stats-hero-total">{eur(total)}</div>
                       <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.2rem' }}>
                         {expenseCountLabel(activeExps.length, lang)} · {memberCountLabel(members.length, lang)}
@@ -8237,7 +8239,7 @@ export default function SplitPayWebApp() {
                     {/* Category breakdown */}
                     {sortedCats.length > 0 ? (
                       <div className="section-card" style={{ padding: '0.7rem 0.9rem' }}>
-                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>{t('categoryBreakdown')}</h3>
+                        <h3 style={{ fontSize: '0.82rem', fontWeight: 800, marginBottom: '0.55rem' }}>{t('totalPaidLabel')}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.42rem' }}>
                           {sortedCats.map(([cat, amt]) => (
                             <div className="cat-bar-row" key={cat}>
