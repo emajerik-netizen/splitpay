@@ -138,6 +138,16 @@ function expenseIdTimestamp(value: string) {
   return parsed;
 }
 
+// Returns true only when the trip date is today or in the past (trip has happened).
+function tripHasStarted(dateStr: string) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return true;
+  const d = new Date(`${dateStr.trim()}T00:00:00`);
+  if (!Number.isFinite(d.getTime())) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d <= today;
+}
+
 function memberKey(value: string) {
   return value.trim().toLowerCase();
 }
@@ -5701,6 +5711,7 @@ export default function SplitPayWebApp() {
         const next = prev.map((trip) => {
           if (trip.archived) return trip;
           if (!trip.expenses.length) return trip;
+          if (!tripHasStarted(trip.date)) return trip;
 
           let latestExpenseTs = 0;
           for (const expense of trip.expenses) {
@@ -7058,6 +7069,7 @@ export default function SplitPayWebApp() {
 
                     const archiveDaysLeft = (() => {
                       if (trip.archived || !activeExpenses.length) return null;
+                      if (!tripHasStarted(trip.date)) return null;
                       const isFullySettled = Object.values(tripBalances).every((v) => Math.abs(Number(v)) < 0.01);
                       if (!isFullySettled) return null;
                       let latestTs = 0;
@@ -7212,6 +7224,7 @@ export default function SplitPayWebApp() {
                       <h1>{currentTrip.name}</h1>
                       {(() => {
                         if (currentTrip.archived || !currentTrip.expenses.length) return null;
+                        if (!tripHasStarted(currentTrip.date)) return null;
                         if (settlements.length > 0) return null;
                         let latestTs = 0;
                         for (const e of currentTrip.expenses) {
